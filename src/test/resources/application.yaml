@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+    hikari:
+      maximum-pool-size: 10
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        globally_quoted_identifiers: true
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+    show-sql: false
+
+  data:
+    jdbc:
+      dialect: postgresql
+
+jwt:
+  access_token:
+    secret_key: ${JWT_SECRET_KEY:0d257eecaf477c4cc83eb0ddf7cf66b6c01e5be1c69380263f41ee148efdf6c19131d21cddad1051a2c0638c77b37fbf3f305ef54c7a8318f479bcb19b0a735c2d26ab571df3b67f18b9bce476ddb3706000ae94a16cf0847164a68fc57547e449c09ea4c2906350a256fe9d16f843a0488aff928a9c1648de744ab8188766344994eea6662d57d8fa85fb87cb8340d2581bb0c683efa14d3c2d0431c22c7690cdddfed35e73bd0e6106b1656c6b3adf674f620a034298ba0f311fbce6273f154b714e5563e6569885580e5ce6faba3d8b26498e7865959f5ad89deb34b8911543c2d095395a1c7d1e0f545ca501fc805804dfce5d4b36adcff5889aac3bfc68}
+    ttl: ${JWT_ACCESS_TOKEN_TTL_MS:86400000}

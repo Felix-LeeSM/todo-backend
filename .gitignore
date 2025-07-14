@@ -1,0 +1,42 @@
+# IDE 설정 파일
+.idea/
+.vscode/
+
+# 환경 변수
+.envrc.*
+.env*
+
+# Docker Volumes
+/data/nginx-proxy-manager/
+/letsencrypt/
+/data/mariadb/
+
+# OS에서 생성되는 불필요한 파일들
+.DS_Store
+Thumbs.db
+
+# Gradle 빌드 산출물 및 캐시 디렉토리
+.gradle/
+
+# ------------- Back (Gradle/Java) -------------
+# Gradle 빌드 산출물 및 캐시 디렉토리
+build/
+bin/
+.gradle/
+
+# Eclipse/IntelliJ 등 IDE 관련 파일 (필요 시 back 디렉토리 내부에 IDE 설정 파일도 추가)
+*.iml
+.idea/
+
+# Maven 빌드 산출물 (혹시 사용 시)
+target/
+
+# 로그 파일
+*.log
+
+# Optional: 기타 불필요 파일
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+.envrc.private

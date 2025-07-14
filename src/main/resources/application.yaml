@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: back
+  datasource:
+    url: jdbc:postgresql://${DATABASE_HOST:127.0.0.1}:${DATABASE_PORT:5432}/${DATABASE_DATABASE:min_chan}?currentSchema=${DATABASE_SCHEMA:public}
+    username: ${DATABASE_USER:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        globally_quoted_identifiers: true
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+    show-sql: true
+
+  data:
+    jdbc:
+      dialect: postgresql
+
+jwt:
+  access_token:
+    secret_key: ${JWT_SECRET_KEY}
+    ttl: ${JWT_ACCESS_TOKEN_TTL_MS:86400000}

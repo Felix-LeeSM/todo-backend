@@ -1,0 +1,5 @@
+nodejs 22.13.0
+yarn 1.22.22
+java openjdk-21.0.2
+gradle 8.12
+direnv 2.35.0
