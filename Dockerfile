@@ -1,7 +1,7 @@
 # back/Dockerfile
 
 # Build stage: Gradle 8.12 with JDK 21
-FROM gradle:8.12-jdk21 as builder
+FROM gradle:8.12-jdk21 AS builder
 WORKDIR /home/gradle/project
 COPY . .
 RUN gradle clean build --no-daemon -x spotlessJavaCheck
