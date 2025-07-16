@@ -1,4 +1,6 @@
-package rest.felix.back.common.exception.throwable.badrequest;
+package rest.felix.back.user.exception;
+
+import rest.felix.back.common.exception.throwable.badrequest.BadRequestException;
 
 public class ConfirmPasswordMismatchException extends BadRequestException {
 

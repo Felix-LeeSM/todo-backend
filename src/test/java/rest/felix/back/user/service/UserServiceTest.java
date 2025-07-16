@@ -9,12 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
-import rest.felix.back.common.exception.throwable.badrequest.ConfirmPasswordMismatchException;
-import rest.felix.back.common.exception.throwable.badrequest.UsernameTakenException;
 import rest.felix.back.user.dto.SignupDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
 import rest.felix.back.user.dto.UserDTO;
 import rest.felix.back.user.entity.User;
+import rest.felix.back.user.exception.ConfirmPasswordMismatchException;
+import rest.felix.back.user.exception.UsernameTakenException;
 import rest.felix.back.user.repository.UserRepository;
 
 @SpringBootTest

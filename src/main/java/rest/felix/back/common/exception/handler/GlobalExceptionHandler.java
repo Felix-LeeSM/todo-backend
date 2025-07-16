@@ -8,9 +8,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import rest.felix.back.common.exception.ErrorResponseDTO;
 import rest.felix.back.common.exception.throwable.badrequest.BadRequestException;
-import rest.felix.back.common.exception.throwable.forbidden.UserAccessDeniedException;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
 import rest.felix.back.common.exception.throwable.unauthorized.UnauthorizedException;
+import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {

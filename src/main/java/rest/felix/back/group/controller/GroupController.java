@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import rest.felix.back.common.exception.throwable.forbidden.UserAccessDeniedException;
-import rest.felix.back.common.exception.throwable.unauthorized.NoMatchingUserException;
 import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.CreateGroupRequestDTO;
 import rest.felix.back.group.dto.GroupDTO;
@@ -22,6 +20,8 @@ import rest.felix.back.group.dto.GroupResponseDTO;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.group.service.GroupService;
 import rest.felix.back.user.dto.UserDTO;
+import rest.felix.back.user.exception.NoMatchingUserException;
+import rest.felix.back.user.exception.UserAccessDeniedException;
 import rest.felix.back.user.service.UserService;
 
 @RestController

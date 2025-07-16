@@ -26,10 +26,8 @@ import rest.felix.back.user.entity.User;
 @ActiveProfiles("test")
 class TodoServiceTest {
 
-  @Autowired
-  private EntityManager em;
-  @Autowired
-  private TodoService todoService;
+  @Autowired private EntityManager em;
+  @Autowired private TodoService todoService;
 
   @Test
   void getTodosInGroup_HappyPath() {
@@ -48,7 +46,7 @@ class TodoServiceTest {
 
     em.persist(group);
 
-    Arrays.stream(new int[] { 1, 2, 3 })
+    Arrays.stream(new int[] {1, 2, 3})
         .forEach(
             idx -> {
               Todo todo = new Todo();
@@ -186,8 +184,9 @@ class TodoServiceTest {
 
     em.flush();
 
-    CreateTodoDTO createTodoDTO = new CreateTodoDTO(
-        "todo title", "todo description", "todo order", user.getId(), group.getId());
+    CreateTodoDTO createTodoDTO =
+        new CreateTodoDTO(
+            "todo title", "todo description", "todo order", user.getId(), group.getId());
 
     // When
 
@@ -226,8 +225,9 @@ class TodoServiceTest {
 
     em.flush();
 
-    CreateTodoDTO createTodoDTO = new CreateTodoDTO(
-        "todo title", "todo description", "todo order", user.getId(), group.getId());
+    CreateTodoDTO createTodoDTO =
+        new CreateTodoDTO(
+            "todo title", "todo description", "todo order", user.getId(), group.getId());
 
     // When
 
@@ -261,8 +261,9 @@ class TodoServiceTest {
 
     em.flush();
 
-    CreateTodoDTO createTodoDTO = new CreateTodoDTO(
-        "todo title", "todo description", "todo order", user.getId(), group.getId());
+    CreateTodoDTO createTodoDTO =
+        new CreateTodoDTO(
+            "todo title", "todo description", "todo order", user.getId(), group.getId());
 
     // When
 
@@ -302,8 +303,9 @@ class TodoServiceTest {
 
     em.flush();
 
-    CreateTodoDTO createTodoDTO = new CreateTodoDTO(
-        "new todo title", "new todo description", "todo order", user.getId(), group.getId());
+    CreateTodoDTO createTodoDTO =
+        new CreateTodoDTO(
+            "new todo title", "new todo description", "todo order", user.getId(), group.getId());
 
     // When
 
@@ -331,27 +333,28 @@ class TodoServiceTest {
 
     em.persist(group);
 
-    List<Todo> todos = Stream.of(
-        new Pair<>(TodoStatus.TO_DO, 1),
-        new Pair<>(TodoStatus.IN_PROGRESS, 2),
-        new Pair<>(TodoStatus.DONE, 3),
-        new Pair<>(TodoStatus.ON_HOLD, 4))
-        .map(
-            pair -> {
-              TodoStatus todoStatus = pair.first();
-              int idx = pair.second();
+    List<Todo> todos =
+        Stream.of(
+                new Pair<>(TodoStatus.TO_DO, 1),
+                new Pair<>(TodoStatus.IN_PROGRESS, 2),
+                new Pair<>(TodoStatus.DONE, 3),
+                new Pair<>(TodoStatus.ON_HOLD, 4))
+            .map(
+                pair -> {
+                  TodoStatus todoStatus = pair.first();
+                  int idx = pair.second();
 
-              Todo todo = new Todo();
-              todo.setTitle(String.format("todo %d", idx));
-              todo.setDescription(String.format("todo %d description", idx));
-              todo.setOrder(String.format("todo %d order", idx));
-              todo.setTodoStatus(todoStatus);
-              todo.setAuthor(user);
-              todo.setGroup(group);
-              em.persist(todo);
-              return todo;
-            })
-        .toList();
+                  Todo todo = new Todo();
+                  todo.setTitle(String.format("todo %d", idx));
+                  todo.setDescription(String.format("todo %d description", idx));
+                  todo.setOrder(String.format("todo %d order", idx));
+                  todo.setTodoStatus(todoStatus);
+                  todo.setAuthor(user);
+                  todo.setGroup(group);
+                  em.persist(todo);
+                  return todo;
+                })
+            .toList();
 
     em.flush();
 
@@ -619,12 +622,13 @@ class TodoServiceTest {
 
     em.flush();
 
-    UpdateTodoDTO updateTodoDTO = new UpdateTodoDTO(
-        todo.getId(),
-        "todo updated title",
-        "todo updated description",
-        "todo updated order",
-        TodoStatus.DONE);
+    UpdateTodoDTO updateTodoDTO =
+        new UpdateTodoDTO(
+            todo.getId(),
+            "todo updated title",
+            "todo updated description",
+            "todo updated order",
+            TodoStatus.DONE);
 
     // When
 
@@ -642,8 +646,9 @@ class TodoServiceTest {
     Assertions.assertEquals("todo updated order", todoDTO.getOrder());
     Assertions.assertEquals(TodoStatus.DONE, todoDTO.getStatus());
 
-    Todo updatedTodo = em.createQuery(
-        """
+    Todo updatedTodo =
+        em.createQuery(
+                """
             SELECT
               t
             FROM
@@ -651,9 +656,9 @@ class TodoServiceTest {
             WHERE
               t.id = :todoId
             """,
-        Todo.class)
-        .setParameter("todoId", todo.getId())
-        .getSingleResult();
+                Todo.class)
+            .setParameter("todoId", todo.getId())
+            .getSingleResult();
 
     Assertions.assertEquals("todo updated title", updatedTodo.getTitle());
     Assertions.assertEquals("todo updated description", updatedTodo.getDescription());
@@ -694,12 +699,13 @@ class TodoServiceTest {
 
     em.flush();
 
-    UpdateTodoDTO updateTodoDTO = new UpdateTodoDTO(
-        todo.getId(),
-        "updated todo title",
-        "updated todo description",
-        "someOrder",
-        TodoStatus.DONE);
+    UpdateTodoDTO updateTodoDTO =
+        new UpdateTodoDTO(
+            todo.getId(),
+            "updated todo title",
+            "updated todo description",
+            "someOrder",
+            TodoStatus.DONE);
 
     // When
 
@@ -748,12 +754,13 @@ class TodoServiceTest {
 
     em.flush();
 
-    UpdateTodoDTO updateTodoDTO = new UpdateTodoDTO(
-        todo2.getId(),
-        "updated todo title",
-        "updated todo description",
-        "todo1 order",
-        TodoStatus.IN_PROGRESS);
+    UpdateTodoDTO updateTodoDTO =
+        new UpdateTodoDTO(
+            todo2.getId(),
+            "updated todo title",
+            "updated todo description",
+            "todo1 order",
+            TodoStatus.IN_PROGRESS);
 
     // When
 

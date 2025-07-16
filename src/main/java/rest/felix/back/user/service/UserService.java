@@ -4,13 +4,13 @@ import jakarta.transaction.Transactional;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
-import rest.felix.back.common.exception.throwable.badrequest.ConfirmPasswordMismatchException;
-import rest.felix.back.common.exception.throwable.badrequest.UsernameTakenException;
-import rest.felix.back.common.exception.throwable.unauthorized.NoMatchingUserException;
 import rest.felix.back.user.dto.SignupDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
 import rest.felix.back.user.dto.UserDTO;
 import rest.felix.back.user.entity.User;
+import rest.felix.back.user.exception.ConfirmPasswordMismatchException;
+import rest.felix.back.user.exception.NoMatchingUserException;
+import rest.felix.back.user.exception.UsernameTakenException;
 import rest.felix.back.user.repository.UserRepository;
 
 @Service

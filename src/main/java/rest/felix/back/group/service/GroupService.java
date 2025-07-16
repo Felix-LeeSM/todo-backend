@@ -4,7 +4,6 @@ import jakarta.transaction.Transactional;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
-import rest.felix.back.common.exception.throwable.forbidden.UserAccessDeniedException;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
 import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.GroupDTO;
@@ -13,6 +12,7 @@ import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.group.repository.GroupRepository;
 import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.repository.TodoRepository;
+import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @Service
 @Transactional

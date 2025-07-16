@@ -7,9 +7,9 @@ import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
-import rest.felix.back.common.exception.throwable.badrequest.UsernameTakenException;
 import rest.felix.back.user.dto.SignupDTO;
 import rest.felix.back.user.entity.User;
+import rest.felix.back.user.exception.UsernameTakenException;
 
 @Repository
 @AllArgsConstructor

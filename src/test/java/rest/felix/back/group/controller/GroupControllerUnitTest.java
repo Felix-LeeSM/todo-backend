@@ -13,8 +13,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-import rest.felix.back.common.exception.throwable.forbidden.UserAccessDeniedException;
-import rest.felix.back.common.exception.throwable.unauthorized.NoMatchingUserException;
 import rest.felix.back.common.util.Pair;
 import rest.felix.back.group.dto.CreateGroupRequestDTO;
 import rest.felix.back.group.dto.GroupResponseDTO;
@@ -24,6 +22,8 @@ import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.user.entity.User;
+import rest.felix.back.user.exception.NoMatchingUserException;
+import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @SpringBootTest
 @Transactional
@@ -63,14 +63,14 @@ public class GroupControllerUnitTest {
     Group createdGroup =
         em.createQuery(
                 """
-        SELECT
-            g
-        FROM
-            Group g
-        WHERE
-            g.id = :groupId
+            SELECT
+                g
+            FROM
+                Group g
+            WHERE
+                g.id = :groupId
 
-        """,
+            """,
                 Group.class)
             .setParameter("groupId", groupResponseDTO.id())
             .getSingleResult();
@@ -81,14 +81,14 @@ public class GroupControllerUnitTest {
     UserGroup userGroup =
         em.createQuery(
                 """
-        SELECT
-            ug
-        FROM
-            UserGroup ug
-        WHERE
-            ug.group.id = :groupId AND
-            ug.user.id = :userId
-        """,
+            SELECT
+                ug
+            FROM
+                UserGroup ug
+            WHERE
+                ug.group.id = :groupId AND
+                ug.user.id = :userId
+            """,
                 UserGroup.class)
             .setParameter("groupId", groupResponseDTO.id())
             .setParameter("userId", user.getId())
@@ -435,13 +435,13 @@ public class GroupControllerUnitTest {
     Assertions.assertTrue(
         em.createQuery(
                 """
-            SELECT
-              g
-            FROM
-              Group g
-            WHERE
-              g.id = :groupId
-            """,
+                SELECT
+                  g
+                FROM
+                  Group g
+                WHERE
+                  g.id = :groupId
+                """,
                 Group.class)
             .setParameter("groupId", group.getId())
             .getResultStream()
@@ -451,13 +451,13 @@ public class GroupControllerUnitTest {
     Assertions.assertTrue(
         em.createQuery(
                 """
-            SELECT
-              t
-            FROM
-              Todo t
-            WHERE
-              t.group.id = :groupId
-            """,
+                SELECT
+                  t
+                FROM
+                  Todo t
+                WHERE
+                  t.group.id = :groupId
+                """,
                 Todo.class)
             .setParameter("groupId", group.getId())
             .getResultStream()
@@ -467,13 +467,13 @@ public class GroupControllerUnitTest {
     Assertions.assertTrue(
         em.createQuery(
                 """
-            SELECT
-              ug
-            FROM
-              UserGroup ug
-            WHERE
-              ug.group.id = :groupId
-            """,
+                SELECT
+                  ug
+                FROM
+                  UserGroup ug
+                WHERE
+                  ug.group.id = :groupId
+                """,
                 UserGroup.class)
             .setParameter("groupId", group.getId())
             .getResultStream()
@@ -540,13 +540,13 @@ public class GroupControllerUnitTest {
               Assertions.assertTrue(
                   em.createQuery(
                           """
-                  SELECT
-                    g
-                  FROM
-                    Group g
-                  WHERE
-                    g.id = :groupId
-                  """,
+                          SELECT
+                            g
+                          FROM
+                            Group g
+                          WHERE
+                            g.id = :groupId
+                          """,
                           Group.class)
                       .setParameter("groupId", group.getId())
                       .getResultStream()
@@ -556,13 +556,13 @@ public class GroupControllerUnitTest {
               Assertions.assertTrue(
                   em.createQuery(
                           """
-                  SELECT
-                    t
-                  FROM
-                    Todo t
-                  WHERE
-                    t.group.id = :groupId
-                  """,
+                          SELECT
+                            t
+                          FROM
+                            Todo t
+                          WHERE
+                            t.group.id = :groupId
+                          """,
                           Todo.class)
                       .setParameter("groupId", group.getId())
                       .getResultStream()
@@ -572,13 +572,13 @@ public class GroupControllerUnitTest {
               Assertions.assertTrue(
                   em.createQuery(
                           """
-                  SELECT
-                    ug
-                  FROM
-                    UserGroup ug
-                  WHERE
-                    ug.group.id = :groupId
-                  """,
+                          SELECT
+                            ug
+                          FROM
+                            UserGroup ug
+                          WHERE
+                            ug.group.id = :groupId
+                          """,
                           UserGroup.class)
                       .setParameter("groupId", group.getId())
                       .getResultStream()
@@ -629,13 +629,13 @@ public class GroupControllerUnitTest {
     Assertions.assertTrue(
         em.createQuery(
                 """
-            SELECT
-              g
-            FROM
-              Group g
-            WHERE
-              g.id = :groupId
-            """,
+                SELECT
+                  g
+                FROM
+                  Group g
+                WHERE
+                  g.id = :groupId
+                """,
                 Group.class)
             .setParameter("groupId", group.getId())
             .getResultStream()
@@ -684,13 +684,13 @@ public class GroupControllerUnitTest {
     Assertions.assertTrue(
         em.createQuery(
                 """
-            SELECT
-              g
-            FROM
-              Group g
-            WHERE
-              g.id = :groupId
-            """,
+                SELECT
+                  g
+                FROM
+                  Group g
+                WHERE
+                  g.id = :groupId
+                """,
                 Group.class)
             .setParameter("groupId", group.getId())
             .getResultStream()

@@ -1,6 +1,7 @@
-package rest.felix.back.common.exception.throwable.badrequest;
+package rest.felix.back.user.exception;
 
 import lombok.Getter;
+import rest.felix.back.common.exception.throwable.badrequest.BadRequestException;
 
 @Getter
 public class UsernameTakenException extends BadRequestException {

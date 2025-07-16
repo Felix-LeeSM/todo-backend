@@ -12,9 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import rest.felix.back.common.exception.throwable.forbidden.UserAccessDeniedException;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
-import rest.felix.back.common.exception.throwable.unauthorized.NoMatchingUserException;
 import rest.felix.back.common.util.Trio;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
@@ -26,15 +24,15 @@ import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.user.entity.User;
+import rest.felix.back.user.exception.NoMatchingUserException;
+import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @SpringBootTest
 @Transactional
 public class TodoControllerUnitTest {
 
-  @Autowired
-  private EntityManager em;
-  @Autowired
-  private TodoController todoController;
+  @Autowired private EntityManager em;
+  @Autowired private TodoController todoController;
 
   @Test
   void getTodos_HappyPath() {
@@ -60,11 +58,12 @@ public class TodoControllerUnitTest {
 
     em.persist(userGroup);
 
-    List<Trio<TodoStatus, String, Integer>> list = Arrays.asList(
-        new Trio<>(TodoStatus.TO_DO, "c", 1),
-        new Trio<>(TodoStatus.IN_PROGRESS, "a", 2),
-        new Trio<>(TodoStatus.DONE, "b", 3),
-        new Trio<>(TodoStatus.ON_HOLD, "d", 4));
+    List<Trio<TodoStatus, String, Integer>> list =
+        Arrays.asList(
+            new Trio<>(TodoStatus.TO_DO, "c", 1),
+            new Trio<>(TodoStatus.IN_PROGRESS, "a", 2),
+            new Trio<>(TodoStatus.DONE, "b", 3),
+            new Trio<>(TodoStatus.ON_HOLD, "d", 4));
 
     list.forEach(
         trio -> {
@@ -88,7 +87,8 @@ public class TodoControllerUnitTest {
 
     // When
 
-    ResponseEntity<List<TodoResponseDTO>> responseEntity = todoController.getTodos(principal, group.getId());
+    ResponseEntity<List<TodoResponseDTO>> responseEntity =
+        todoController.getTodos(principal, group.getId());
 
     // Then
 
@@ -162,7 +162,8 @@ public class TodoControllerUnitTest {
 
     // When
 
-    ResponseEntity<List<TodoResponseDTO>> responseEntity = todoController.getTodos(principal, group.getId());
+    ResponseEntity<List<TodoResponseDTO>> responseEntity =
+        todoController.getTodos(principal, group.getId());
 
     // Then
 
@@ -315,13 +316,13 @@ public class TodoControllerUnitTest {
 
     Principal principal = user::getUsername;
 
-    CreateTodoRequestDTO createTodoRequestDTO = new CreateTodoRequestDTO("todo title", "todo description",
-        "todo order");
+    CreateTodoRequestDTO createTodoRequestDTO =
+        new CreateTodoRequestDTO("todo title", "todo description", "todo order");
 
     // When
 
-    ResponseEntity<TodoResponseDTO> responseEntity = todoController.createTodo(principal, group.getId(),
-        createTodoRequestDTO);
+    ResponseEntity<TodoResponseDTO> responseEntity =
+        todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
 
     // Then
 
@@ -365,12 +366,13 @@ public class TodoControllerUnitTest {
 
     Principal principal = user::getUsername;
 
-    CreateTodoRequestDTO createTodoRequestDTO = new CreateTodoRequestDTO("todo title", "todo description",
-        "todo order");
+    CreateTodoRequestDTO createTodoRequestDTO =
+        new CreateTodoRequestDTO("todo title", "todo description", "todo order");
 
     // When
 
-    Runnable lambda = () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
+    Runnable lambda =
+        () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
 
     // Then
 
@@ -409,12 +411,13 @@ public class TodoControllerUnitTest {
 
     Principal principal = user::getUsername;
 
-    CreateTodoRequestDTO createTodoRequestDTO = new CreateTodoRequestDTO("todo title", "todo description",
-        "todo order");
+    CreateTodoRequestDTO createTodoRequestDTO =
+        new CreateTodoRequestDTO("todo title", "todo description", "todo order");
 
     // When
 
-    Runnable lambda = () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
+    Runnable lambda =
+        () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
 
     // Then
 
@@ -453,12 +456,13 @@ public class TodoControllerUnitTest {
 
     Principal principal = user::getUsername;
 
-    CreateTodoRequestDTO createTodoRequestDTO = new CreateTodoRequestDTO("todo title", "todo description",
-        "todo order");
+    CreateTodoRequestDTO createTodoRequestDTO =
+        new CreateTodoRequestDTO("todo title", "todo description", "todo order");
 
     // When
 
-    Runnable lambda = () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
+    Runnable lambda =
+        () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
 
     // Then
 
@@ -496,12 +500,13 @@ public class TodoControllerUnitTest {
 
     Principal principal = user::getUsername;
 
-    CreateTodoRequestDTO createTodoRequestDTO = new CreateTodoRequestDTO("todo title", "todo description",
-        "todo order");
+    CreateTodoRequestDTO createTodoRequestDTO =
+        new CreateTodoRequestDTO("todo title", "todo description", "todo order");
 
     // When
 
-    Runnable lambda = () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
+    Runnable lambda =
+        () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
 
     // Then
 
@@ -547,12 +552,13 @@ public class TodoControllerUnitTest {
 
     Principal principal = user::getUsername;
 
-    CreateTodoRequestDTO createTodoRequestDTO = new CreateTodoRequestDTO("todo title", "todo description",
-        "todo order");
+    CreateTodoRequestDTO createTodoRequestDTO =
+        new CreateTodoRequestDTO("todo title", "todo description", "todo order");
 
     // When
 
-    Runnable lambda = () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
+    Runnable lambda =
+        () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
 
     // Then
 
@@ -599,7 +605,8 @@ public class TodoControllerUnitTest {
 
     // When
 
-    ResponseEntity<Void> responseEntity = todoController.deleteTodo(principal, group.getId(), todo.getId());
+    ResponseEntity<Void> responseEntity =
+        todoController.deleteTodo(principal, group.getId(), todo.getId());
 
     // Then
 
@@ -607,7 +614,7 @@ public class TodoControllerUnitTest {
 
     Assertions.assertTrue(
         em.createQuery(
-            """
+                """
                 SELECT
                   t
                 FROM
@@ -615,7 +622,7 @@ public class TodoControllerUnitTest {
                 WHERE
                   t.id = :todoId
                 """,
-            Todo.class)
+                Todo.class)
             .setParameter("todoId", todo.getId())
             .getResultStream()
             .findFirst()
@@ -967,18 +974,19 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    UpdateTodoRequestDTO updateTodoRequestDTO = new UpdateTodoRequestDTO(
-        "updated todo title",
-        "updated todo description",
-        TodoStatus.DONE,
-        "updated todo order");
+    UpdateTodoRequestDTO updateTodoRequestDTO =
+        new UpdateTodoRequestDTO(
+            "updated todo title",
+            "updated todo description",
+            TodoStatus.DONE,
+            "updated todo order");
 
     Principal principal = user::getUsername;
 
     // When
 
-    ResponseEntity<TodoDTO> responseEntity = todoController.updateTodo(principal, group.getId(), todo.getId(),
-        updateTodoRequestDTO);
+    ResponseEntity<TodoDTO> responseEntity =
+        todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
@@ -993,8 +1001,9 @@ public class TodoControllerUnitTest {
     Assertions.assertEquals(TodoStatus.DONE, todoDTO.getStatus());
     Assertions.assertEquals("updated todo order", todoDTO.getOrder());
 
-    Todo updatedTodo = em.createQuery(
-        """
+    Todo updatedTodo =
+        em.createQuery(
+                """
             SELECT
               t
             FROM
@@ -1002,9 +1011,9 @@ public class TodoControllerUnitTest {
             WHERE
               t.id = :todoId
             """,
-        Todo.class)
-        .setParameter("todoId", todo.getId())
-        .getSingleResult();
+                Todo.class)
+            .setParameter("todoId", todo.getId())
+            .getSingleResult();
 
     Assertions.assertEquals(updatedTodo.getId(), updatedTodo.getId());
     Assertions.assertEquals(user.getId(), updatedTodo.getAuthor().getId());
@@ -1057,17 +1066,20 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    UpdateTodoRequestDTO updateTodoRequestDTO = new UpdateTodoRequestDTO(
-        "updated todo title",
-        "updated todo description",
-        TodoStatus.DONE,
-        "updated todo order");
+    UpdateTodoRequestDTO updateTodoRequestDTO =
+        new UpdateTodoRequestDTO(
+            "updated todo title",
+            "updated todo description",
+            TodoStatus.DONE,
+            "updated todo order");
 
     Principal principal = user::getUsername;
 
     // When
 
-    Runnable lambda = () -> todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+    Runnable lambda =
+        () ->
+            todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
@@ -1114,17 +1126,20 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    UpdateTodoRequestDTO updateTodoRequestDTO = new UpdateTodoRequestDTO(
-        "updated todo title",
-        "updated todo description",
-        TodoStatus.DONE,
-        "updated todo order");
+    UpdateTodoRequestDTO updateTodoRequestDTO =
+        new UpdateTodoRequestDTO(
+            "updated todo title",
+            "updated todo description",
+            TodoStatus.DONE,
+            "updated todo order");
 
     Principal principal = user::getUsername;
 
     // When
 
-    Runnable lambda = () -> todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+    Runnable lambda =
+        () ->
+            todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
@@ -1167,17 +1182,20 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    UpdateTodoRequestDTO updateTodoRequestDTO = new UpdateTodoRequestDTO(
-        "updated todo title",
-        "updated todo description",
-        TodoStatus.DONE,
-        "updated todo order");
+    UpdateTodoRequestDTO updateTodoRequestDTO =
+        new UpdateTodoRequestDTO(
+            "updated todo title",
+            "updated todo description",
+            TodoStatus.DONE,
+            "updated todo order");
 
     Principal principal = user::getUsername;
 
     // When
 
-    Runnable lambda = () -> todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+    Runnable lambda =
+        () ->
+            todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
@@ -1226,17 +1244,20 @@ public class TodoControllerUnitTest {
     em.persist(todo);
 
     em.flush();
-    UpdateTodoRequestDTO updateTodoRequestDTO = new UpdateTodoRequestDTO(
-        "updated todo title",
-        "updated todo description",
-        TodoStatus.DONE,
-        "updated todo order");
+    UpdateTodoRequestDTO updateTodoRequestDTO =
+        new UpdateTodoRequestDTO(
+            "updated todo title",
+            "updated todo description",
+            TodoStatus.DONE,
+            "updated todo order");
 
     Principal principal = author::getUsername;
 
     // When
 
-    Runnable lambda = () -> todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+    Runnable lambda =
+        () ->
+            todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
@@ -1285,17 +1306,20 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    UpdateTodoRequestDTO updateTodoRequestDTO = new UpdateTodoRequestDTO(
-        "updated todo title",
-        "updated todo description",
-        TodoStatus.DONE,
-        "updated todo order");
+    UpdateTodoRequestDTO updateTodoRequestDTO =
+        new UpdateTodoRequestDTO(
+            "updated todo title",
+            "updated todo description",
+            TodoStatus.DONE,
+            "updated todo order");
 
     Principal principal = user::getUsername;
 
     // When
 
-    Runnable lambda = () -> todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+    Runnable lambda =
+        () ->
+            todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
@@ -1342,17 +1366,20 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    UpdateTodoRequestDTO updateTodoRequestDTO = new UpdateTodoRequestDTO(
-        "updated todo title",
-        "updated todo description",
-        TodoStatus.DONE,
-        "updated todo order");
+    UpdateTodoRequestDTO updateTodoRequestDTO =
+        new UpdateTodoRequestDTO(
+            "updated todo title",
+            "updated todo description",
+            TodoStatus.DONE,
+            "updated todo order");
 
     Principal principal = user::getUsername;
 
     // When
 
-    Runnable lambda = () -> todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+    Runnable lambda =
+        () ->
+            todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
@@ -1404,18 +1431,21 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    UpdateTodoRequestDTO updateTodoRequestDTO = new UpdateTodoRequestDTO(
-        "updated todo title",
-        "updated todo description",
-        TodoStatus.IN_PROGRESS,
-        "todo1 order");
+    UpdateTodoRequestDTO updateTodoRequestDTO =
+        new UpdateTodoRequestDTO(
+            "updated todo title",
+            "updated todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo1 order");
 
     Principal principal = user::getUsername;
 
     // When
 
-    Runnable lambda = () -> todoController.updateTodo(
-        principal, group.getId(), todo2.getId(), updateTodoRequestDTO);
+    Runnable lambda =
+        () ->
+            todoController.updateTodo(
+                principal, group.getId(), todo2.getId(), updateTodoRequestDTO);
 
     // Then
 

@@ -1,4 +1,6 @@
-package rest.felix.back.common.exception.throwable.forbidden;
+package rest.felix.back.user.exception;
+
+import rest.felix.back.common.exception.throwable.forbidden.ForbiddenException;
 
 public class UserAccessDeniedException extends ForbiddenException {
 

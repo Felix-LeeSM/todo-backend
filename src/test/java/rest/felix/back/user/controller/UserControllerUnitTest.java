@@ -9,14 +9,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-import rest.felix.back.common.exception.throwable.badrequest.ConfirmPasswordMismatchException;
-import rest.felix.back.common.exception.throwable.badrequest.UsernameTakenException;
-import rest.felix.back.common.exception.throwable.unauthorized.NoMatchingUserException;
 import rest.felix.back.common.security.JwtTokenProvider;
 import rest.felix.back.user.dto.SignInRequestDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
 import rest.felix.back.user.dto.UserResponseDTO;
 import rest.felix.back.user.entity.User;
+import rest.felix.back.user.exception.ConfirmPasswordMismatchException;
+import rest.felix.back.user.exception.NoMatchingUserException;
+import rest.felix.back.user.exception.UsernameTakenException;
 import rest.felix.back.user.repository.UserRepository;
 
 @SpringBootTest

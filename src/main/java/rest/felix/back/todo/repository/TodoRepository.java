@@ -23,19 +23,19 @@ public class TodoRepository {
     return em
         .createQuery(
             """
-        SELECT
-            t
-        FROM
-            Group g
-        JOIN
-            g.todos t
-        JOIN FETCH
-            t.author
-        WHERE
-            g.id = :groupId
-        ORDER BY
-            t.order ASC
-        """,
+                                SELECT
+                                    t
+                                FROM
+                                    Group g
+                                JOIN
+                                    g.todos t
+                                JOIN FETCH
+                                    t.author
+                                WHERE
+                                    g.id = :groupId
+                                ORDER BY
+                                    t.order ASC
+                                """,
             Todo.class)
         .setParameter("groupId", groupId)
         .getResultList()
@@ -48,18 +48,18 @@ public class TodoRepository {
     return em
         .createQuery(
             """
-        SELECT
-            t
-        FROM
-            Group g
-        JOIN
-            g.todos t
-        WHERE
-            g.id = :groupId AND
-            t.id = :todoId
-        ORDER BY
-            t.order ASC
-        """,
+                                SELECT
+                                    t
+                                FROM
+                                    Group g
+                                JOIN
+                                    g.todos t
+                                WHERE
+                                    g.id = :groupId AND
+                                    t.id = :todoId
+                                ORDER BY
+                                    t.order ASC
+                                """,
             Todo.class)
         .setParameter("groupId", groupId)
         .setParameter("todoId", todoId)
@@ -89,10 +89,10 @@ public class TodoRepository {
   public void deleteTodo(long todoId) {
     em.createQuery(
             """
-        DELETE
-        FROM Todo t
-        WHERE t.id = :todoId
-        """)
+                        DELETE
+                        FROM Todo t
+                        WHERE t.id = :todoId
+                        """)
         .setParameter("todoId", todoId)
         .executeUpdate();
   }
@@ -101,13 +101,13 @@ public class TodoRepository {
     return em
         .createQuery(
             """
-        SELECT
-            t
-        FROM
-            Todo t
-        WHERE
-            t.id = :todoId
-        """,
+                                SELECT
+                                    t
+                                FROM
+                                    Todo t
+                                WHERE
+                                    t.id = :todoId
+                                """,
             Todo.class)
         .setParameter("todoId", updateTodoDTO.getId())
         .getResultList()
@@ -129,12 +129,12 @@ public class TodoRepository {
   public void deleteByGroupId(long groupId) {
     em.createQuery(
             """
-        DELETE
-        FROM
-          Todo t
-        WHERE
-          t.group.id =:groupId
-        """)
+                        DELETE
+                        FROM
+                          Todo t
+                        WHERE
+                          t.group.id =:groupId
+                        """)
         .setParameter("groupId", groupId)
         .executeUpdate();
   }

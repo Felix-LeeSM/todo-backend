@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
-import rest.felix.back.common.exception.throwable.forbidden.UserAccessDeniedException;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
 import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.GroupDTO;
@@ -17,6 +16,7 @@ import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.user.entity.User;
+import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @Transactional
 @SpringBootTest
@@ -411,13 +411,13 @@ class GroupServiceTest {
     Assertions.assertTrue(
         em.createQuery(
                 """
-            SELECT
-              g
-            FROM
-              Group g
-            WHERE
-              g.id = :groupId
-            """,
+                SELECT
+                  g
+                FROM
+                  Group g
+                WHERE
+                  g.id = :groupId
+                """,
                 Group.class)
             .setParameter("groupId", group.getId())
             .getResultStream()
