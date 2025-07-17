@@ -60,9 +60,12 @@ tasks.named('test') {
     
 }
 
-// tasks.withType(Test) {
-//     testLogging {
-//         events "passed", "skipped", "failed"
-//         showStandardStreams = true
-//     }
-// }
+test {
+    testLogging {
+        events "failed"
+        exceptionFormat "full"
+        showExceptions true
+        showCauses true
+        showStackTraces true
+    }
+}

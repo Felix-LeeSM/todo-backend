@@ -1,7 +1,6 @@
 package rest.felix.back.todo.controller;
 
 import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.List;
@@ -13,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
 import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;

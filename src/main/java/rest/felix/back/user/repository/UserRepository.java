@@ -59,8 +59,8 @@ public class UserRepository {
             SELECT new rest.felix.back.group.dto.MemberDTO(
                 u.id,
                 u.username,
-                ug.groupRole,
-                g.id
+                g.id,
+                ug.groupRole
             )
             FROM User u
             JOIN UserGroup ug ON u.id = ug.user.id

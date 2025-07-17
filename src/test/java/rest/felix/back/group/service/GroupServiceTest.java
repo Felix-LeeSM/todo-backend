@@ -1,427 +1,636 @@
 package rest.felix.back.group.service;
 
 import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
+import rest.felix.back.common.security.PasswordService;
+import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.group.dto.CreateGroupDTO;
+import rest.felix.back.group.dto.DetailedGroupDTO;
 import rest.felix.back.group.dto.GroupDTO;
+import rest.felix.back.group.dto.MemberDTO;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
+import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.user.entity.User;
 import rest.felix.back.user.exception.UserAccessDeniedException;
 
-@Transactional
 @SpringBootTest
+@Transactional
+@ActiveProfiles("test")
 class GroupServiceTest {
 
   @Autowired private EntityManager em;
   @Autowired private GroupService groupService;
+  @Autowired private PasswordService passwordService;
 
-  @Test
-  void createGroup_HappyPath() {
-    // Given
+  private EntityFactory entityFactory;
 
-    User user = new User();
-    user.setNickname("nickname");
-    user.setUsername("username");
-    user.setHashedPassword("hashedPassword");
-
-    em.persist(user);
-
-    CreateGroupDTO createGroupDTO =
-        new CreateGroupDTO(user.getId(), "groupName", "group description");
-
-    em.flush();
-
-    // When
-
-    GroupDTO groupDTO = groupService.createGroup(createGroupDTO);
-
-    // Then
-
-    Assertions.assertEquals("groupName", groupDTO.getName());
-
-    Group createdGroup =
-        em.createQuery("SELECT g FROM Group g WHERE g.name = :groupName", Group.class)
-            .setParameter("groupName", "groupName")
-            .getSingleResult();
-
-    Assertions.assertEquals(createdGroup.getId(), groupDTO.getId());
-    Assertions.assertEquals("group description", createdGroup.getDescription());
+  @BeforeEach
+  void setup() {
+    entityFactory = new EntityFactory(passwordService, em);
   }
 
-  @Test
-  void createGroup_Failure_NoSuchUser() {
-    // Given
+  @Nested
+  @DisplayName("그룹 생성 테스트")
+  class CreateGroup {
+    @Test
+    void HappyPath() {
+      // Given
 
-    User user = new User();
-    user.setNickname("nickname");
-    user.setUsername("username");
-    user.setHashedPassword("hashedPassword");
+      User user = entityFactory.insertUser("username", "some password", "nickname");
 
-    em.persist(user);
+      em.flush();
 
-    CreateGroupDTO createGroupDTO =
-        new CreateGroupDTO(user.getId(), "groupName", "group description");
+      CreateGroupDTO createGroupDTO =
+          new CreateGroupDTO(user.getId(), "groupName", "group description");
 
-    em.remove(user);
-    em.flush();
+      // When
 
-    // When
+      GroupDTO groupDTO = groupService.createGroup(createGroupDTO);
 
-    Runnable lambda = () -> groupService.createGroup(createGroupDTO);
+      // Then
 
-    // Then
+      Assertions.assertEquals("groupName", groupDTO.getName());
 
-    Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
+      Group createdGroup =
+          em.createQuery(
+                  """
+            SELECT g
+            FROM Group g
+            WHERE g.name = :groupName
+            """,
+                  Group.class)
+              .setParameter("groupName", "groupName")
+              .getSingleResult();
 
-    // DataIntegrityViolationException
+      Assertions.assertEquals(createdGroup.getId(), groupDTO.getId());
+      Assertions.assertEquals("group description", createdGroup.getDescription());
+    }
+
+    @Test
+    void Failure_NoSuchUser() {
+      // Given
+
+      User user = entityFactory.insertUser("username", "some password", "nickname");
+
+      em.remove(user);
+
+      em.flush();
+
+      CreateGroupDTO createGroupDTO =
+          new CreateGroupDTO(user.getId(), "groupName", "group description");
+
+      // When
+
+      Runnable lambda = () -> groupService.createGroup(createGroupDTO);
+
+      // Then
+
+      Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
+    }
   }
 
-  @Test
-  void getGroupsByUserId_HappyPath() {
+  @Nested
+  @DisplayName("유저 전체 그룹 조회 테스트")
+  class GetGroupsByUserId {
+    @Test
+    void HappyPath() {
 
-    // Given
+      // Given
 
-    User user1 = new User();
-    user1.setNickname("nickname1");
-    user1.setUsername("username1");
-    user1.setHashedPassword("hashedPassword");
+      User user1 = entityFactory.insertUser("usernaem1", "some password", "nickname1");
+      User user2 = entityFactory.insertUser("usernaem2", "some password", "nickname2");
 
-    User user2 = new User();
-    user2.setNickname("nickname2");
-    user2.setUsername("username2");
-    user2.setHashedPassword("hashedPassword");
-
-    em.persist(user1);
-    em.persist(user2);
-
-    Arrays.stream(new int[] {1, 2, 3})
-        .forEach(
-            idx -> {
-              groupService.createGroup(
-                  new CreateGroupDTO(
-                      user1.getId(),
-                      String.format("user1 group%d", idx),
-                      String.format("user1 group%d description", idx)));
-              groupService.createGroup(
-                  new CreateGroupDTO(
-                      user2.getId(),
-                      String.format("user2 group%d", idx),
-                      String.format("user2 group%d description", idx)));
-            });
-
-    em.flush();
-
-    // When
-
-    List<GroupDTO> user1GroupDTOs = groupService.getGroupsByUserId(user1.getId());
-    List<GroupDTO> user2GroupDTOs = groupService.getGroupsByUserId(user2.getId());
-
-    // Then
-
-    Assertions.assertEquals(3, user1GroupDTOs.size());
-    Assertions.assertEquals(3, user2GroupDTOs.size());
-
-    Assertions.assertTrue(
-        user1GroupDTOs.stream()
-            .map(GroupDTO::getName)
-            .toList()
-            .containsAll(List.of("user1 group1", "user1 group2", "user1 group3")));
-
-    Assertions.assertTrue(
-        user1GroupDTOs.stream()
-            .map(GroupDTO::getDescription)
-            .toList()
-            .containsAll(
-                List.of(
-                    "user1 group1 description",
-                    "user1 group2 description",
-                    "user1 group3 description")));
-
-    Assertions.assertTrue(
-        user2GroupDTOs.stream()
-            .map(GroupDTO::getName)
-            .toList()
-            .containsAll(List.of("user2 group1", "user2 group2", "user2 group3")));
-
-    Assertions.assertTrue(
-        user2GroupDTOs.stream()
-            .map(GroupDTO::getDescription)
-            .toList()
-            .containsAll(
-                List.of(
-                    "user2 group1 description",
-                    "user2 group2 description",
-                    "user2 group3 description")));
-  }
-
-  @Test
-  void getGroupsByUserId_HappyPath_NoUser() {
-
-    // Given
-
-    User user = new User();
-    user.setNickname("nickname1");
-    user.setUsername("username1");
-    user.setHashedPassword("hashedPassword");
-
-    em.persist(user);
-    em.remove(user);
-    em.flush();
-
-    // When
-
-    List<GroupDTO> userGroupDTOs = groupService.getGroupsByUserId(user.getId());
-
-    // Then
-
-    Assertions.assertEquals(0, userGroupDTOs.size());
-  }
-
-  @Test
-  void getGroupsByUserId_HappyPath_NoGroup() {
-
-    // Given
-
-    User user = new User();
-    user.setNickname("nickname1");
-    user.setUsername("username1");
-    user.setHashedPassword("hashedPassword");
-
-    em.persist(user);
-
-    em.flush();
-
-    // When
-
-    List<GroupDTO> userGroupDTOs = groupService.getGroupsByUserId(user.getId());
-
-    // Then
-
-    Assertions.assertEquals(0, userGroupDTOs.size());
-  }
-
-  // GroupRole getUserRoleInGroup(long userId, long groupId)
-
-  @Test
-  void getUserRoleInGroup_HappyPath() {
-
-    // Given
-
-    User user = new User();
-    user.setNickname("nickname1");
-    user.setUsername("username1");
-    user.setHashedPassword("hashedPassword");
-
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group");
-    group.setDescription("test group");
-
-    em.persist(group);
-
-    for (GroupRole groupRole :
-        new GroupRole[] {GroupRole.VIEWER, GroupRole.MEMBER, GroupRole.MANAGER, GroupRole.OWNER}) {
-
-      UserGroup userGroup = new UserGroup();
-      userGroup.setGroupRole(groupRole);
-      userGroup.setUser(user);
-      userGroup.setGroup(group);
-
-      em.persist(userGroup);
+      Arrays.stream(new int[] {1, 2, 3})
+          .forEach(
+              idx -> {
+                Group group1 =
+                    entityFactory.insertGroup(
+                        String.format("user1 group%d", idx),
+                        String.format("user1 group%d description", idx));
+                entityFactory.insertUserGroup(user1.getId(), group1.getId(), GroupRole.OWNER);
+                Group group2 =
+                    entityFactory.insertGroup(
+                        String.format("user2 group%d", idx),
+                        String.format("user2 group%d description", idx));
+                entityFactory.insertUserGroup(user2.getId(), group2.getId(), GroupRole.OWNER);
+              });
 
       em.flush();
 
       // When
 
-      GroupRole foundGroupRole = groupService.getUserRoleInGroup(user.getId(), group.getId());
+      List<GroupDTO> user1GroupDTOs = groupService.getGroupsByUserId(user1.getId());
+      List<GroupDTO> user2GroupDTOs = groupService.getGroupsByUserId(user2.getId());
 
       // Then
 
-      Assertions.assertEquals(groupRole, foundGroupRole);
+      Assertions.assertEquals(3, user1GroupDTOs.size());
+      Assertions.assertEquals(3, user2GroupDTOs.size());
 
-      em.remove(userGroup);
+      Assertions.assertTrue(
+          user1GroupDTOs.stream()
+              .map(GroupDTO::getName)
+              .toList()
+              .containsAll(List.of("user1 group1", "user1 group2", "user1 group3")));
+
+      Assertions.assertTrue(
+          user1GroupDTOs.stream()
+              .map(GroupDTO::getDescription)
+              .toList()
+              .containsAll(
+                  List.of(
+                      "user1 group1 description",
+                      "user1 group2 description",
+                      "user1 group3 description")));
+
+      Assertions.assertTrue(
+          user2GroupDTOs.stream()
+              .map(GroupDTO::getName)
+              .toList()
+              .containsAll(List.of("user2 group1", "user2 group2", "user2 group3")));
+
+      Assertions.assertTrue(
+          user2GroupDTOs.stream()
+              .map(GroupDTO::getDescription)
+              .toList()
+              .containsAll(
+                  List.of(
+                      "user2 group1 description",
+                      "user2 group2 description",
+                      "user2 group3 description")));
+    }
+
+    @Test
+    void HappyPath_NoUser() {
+
+      // Given
+
+      User user = entityFactory.insertUser("usernaem1", "some password", "nickname1");
+
+      em.remove(user);
       em.flush();
+
+      // When
+
+      List<GroupDTO> userGroupDTOs = groupService.getGroupsByUserId(user.getId());
+
+      // Then
+
+      Assertions.assertEquals(0, userGroupDTOs.size());
+    }
+
+    @Test
+    void HappyPath_NoGroup() {
+
+      // Given
+
+      User user = entityFactory.insertUser("usernaem1", "some password", "nickname1");
+
+      em.flush();
+
+      // When
+
+      List<GroupDTO> userGroupDTOs = groupService.getGroupsByUserId(user.getId());
+
+      // Then
+
+      Assertions.assertEquals(0, userGroupDTOs.size());
     }
   }
 
-  @Test
-  void getUserRoleInGroup_Failure_NotInGroup() {
+  @Nested
+  @DisplayName("유저 전체 그룹 자세히 조회 테스트")
+  class FindDetailedGroupsByUserId {
 
-    // Given
+    @Test
+    @DisplayName("Happy Path - 2 groups")
+    void HappyPath_1() {
+      // Given
+      User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
+      User otherUser1 = entityFactory.insertUser("otherUser1", "password", "otherUser1Nick");
+      User otherUser2 = entityFactory.insertUser("otherUser2", "password", "otherUser2Nick");
 
-    User user = new User();
-    user.setNickname("nickname1");
-    user.setUsername("username1");
-    user.setHashedPassword("hashedPassword");
+      Group group1 = entityFactory.insertGroup("Group 1", "Description 1");
+      Group group2 = entityFactory.insertGroup("Group 2", "Description 2");
+      entityFactory.insertGroup("Group 3", "Description 3"); // mainUser is not in this group
 
-    em.persist(user);
+      entityFactory.insertUserGroup(mainUser.getId(), group1.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(otherUser1.getId(), group1.getId(), GroupRole.MEMBER);
 
-    Group group = new Group();
-    group.setName("group");
-    group.setDescription("test group");
+      entityFactory.insertUserGroup(mainUser.getId(), group2.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(otherUser1.getId(), group2.getId(), GroupRole.MANAGER);
+      entityFactory.insertUserGroup(otherUser2.getId(), group2.getId(), GroupRole.MEMBER);
 
-    em.persist(group);
+      entityFactory.insertTodo(
+          mainUser.getId(),
+          mainUser.getId(),
+          group1.getId(),
+          "Todo 1-1",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "a",
+          false);
+      entityFactory.insertTodo(
+          otherUser1.getId(),
+          otherUser1.getId(),
+          group1.getId(),
+          "Todo 1-2",
+          "Desc",
+          TodoStatus.DONE,
+          "b",
+          false);
 
-    em.flush();
+      entityFactory.insertTodo(
+          mainUser.getId(),
+          mainUser.getId(),
+          group2.getId(),
+          "Todo 2-1",
+          "Desc",
+          TodoStatus.DONE,
+          "a",
+          false);
+      entityFactory.insertTodo(
+          otherUser1.getId(),
+          otherUser1.getId(),
+          group2.getId(),
+          "Todo 2-2",
+          "Desc",
+          TodoStatus.DONE,
+          "b",
+          false);
+      entityFactory.insertTodo(
+          otherUser2.getId(),
+          otherUser2.getId(),
+          group2.getId(),
+          "Todo 2-3",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "c",
+          false);
 
-    // When
+      em.flush();
 
-    Runnable lambda = () -> groupService.getUserRoleInGroup(user.getId(), group.getId());
+      // When
+      List<DetailedGroupDTO> detailedGroups =
+          groupService.findDetailedGroupsByUserId(mainUser.getId());
 
-    // Then
+      // Then
+      Assertions.assertEquals(2, detailedGroups.size());
 
-    Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+      List<DetailedGroupDTO> sortedGroups = new java.util.ArrayList<>(detailedGroups);
+      sortedGroups.sort((a, b) -> a.getName().compareTo(b.getName()));
+
+      DetailedGroupDTO group1DTO = sortedGroups.get(0);
+      Assertions.assertEquals(group1.getId(), group1DTO.getId());
+      Assertions.assertEquals("Group 1", group1DTO.getName());
+      Assertions.assertEquals("Description 1", group1DTO.getDescription());
+      Assertions.assertEquals(2, group1DTO.getTodoCount());
+      Assertions.assertEquals(1, group1DTO.getCompletedTodoCount());
+      Assertions.assertEquals(2, group1DTO.getMemberCount());
+      Assertions.assertEquals(GroupRole.OWNER, group1DTO.getMyRole());
+
+      List<String> group1MemberNames =
+          group1DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList();
+      Assertions.assertEquals(List.of("mainUser", "otherUser1"), group1MemberNames);
+
+      DetailedGroupDTO group2DTO = detailedGroups.get(1);
+      Assertions.assertEquals(group2.getId(), group2DTO.getId());
+      Assertions.assertEquals("Group 2", group2DTO.getName());
+      Assertions.assertEquals("Description 2", group2DTO.getDescription());
+      Assertions.assertEquals(3, group2DTO.getTodoCount());
+      Assertions.assertEquals(2, group2DTO.getCompletedTodoCount());
+      Assertions.assertEquals(3, group2DTO.getMemberCount());
+      Assertions.assertEquals(GroupRole.MEMBER, group2DTO.getMyRole());
+
+      List<String> group2MemberNames =
+          group2DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList();
+      Assertions.assertEquals(List.of("mainUser", "otherUser1", "otherUser2"), group2MemberNames);
+    }
+
+    @Test
+    @DisplayName("Happy Path - 1 group")
+    void HappyPath_2() {
+      // Given
+      User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
+      User otherUser1 = entityFactory.insertUser("otherUser1", "password", "otherUser1Nick");
+
+      Group group1 = entityFactory.insertGroup("Group 1", "Description 1");
+
+      entityFactory.insertUserGroup(mainUser.getId(), group1.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(otherUser1.getId(), group1.getId(), GroupRole.MEMBER);
+
+      entityFactory.insertTodo(
+          mainUser.getId(),
+          mainUser.getId(),
+          group1.getId(),
+          "Todo 1-1",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "a",
+          false);
+
+      em.flush();
+
+      // When
+      List<DetailedGroupDTO> detailedGroups =
+          groupService.findDetailedGroupsByUserId(mainUser.getId());
+
+      // Then
+      Assertions.assertEquals(1, detailedGroups.size());
+
+      DetailedGroupDTO group1DTO = detailedGroups.get(0);
+      Assertions.assertEquals(group1.getId(), group1DTO.getId());
+      Assertions.assertEquals("Group 1", group1DTO.getName());
+      Assertions.assertEquals("Description 1", group1DTO.getDescription());
+      Assertions.assertEquals(1, group1DTO.getTodoCount());
+      Assertions.assertEquals(0, group1DTO.getCompletedTodoCount());
+      Assertions.assertEquals(2, group1DTO.getMemberCount());
+      Assertions.assertEquals(GroupRole.OWNER, group1DTO.getMyRole());
+
+      List<String> group1MemberNames =
+          group1DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList();
+      Assertions.assertEquals(List.of("mainUser", "otherUser1"), group1MemberNames);
+    }
+
+    @Test
+    @DisplayName("Happy Path - No todos, no other members")
+    void HappyPath_3() {
+      // Given
+      User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
+      Group group1 = entityFactory.insertGroup("Group 1", "Description 1");
+      entityFactory.insertUserGroup(mainUser.getId(), group1.getId(), GroupRole.OWNER);
+
+      em.flush();
+
+      // When
+      List<DetailedGroupDTO> detailedGroups =
+          groupService.findDetailedGroupsByUserId(mainUser.getId());
+
+      // Then
+      Assertions.assertEquals(1, detailedGroups.size());
+
+      DetailedGroupDTO group1DTO = detailedGroups.get(0);
+      Assertions.assertEquals(group1.getId(), group1DTO.getId());
+      Assertions.assertEquals("Group 1", group1DTO.getName());
+      Assertions.assertEquals("Description 1", group1DTO.getDescription());
+      Assertions.assertEquals(0, group1DTO.getTodoCount());
+      Assertions.assertEquals(0, group1DTO.getCompletedTodoCount());
+      Assertions.assertEquals(1, group1DTO.getMemberCount());
+      Assertions.assertEquals(GroupRole.OWNER, group1DTO.getMyRole());
+
+      List<String> group1MemberNames =
+          group1DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList();
+      Assertions.assertEquals(List.of("mainUser"), group1MemberNames);
+    }
+
+    @Test
+    @DisplayName("Happy Path - No such user")
+    void HappyPath_NoUser() {
+      // Given
+      User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
+      long userId = mainUser.getId();
+      em.remove(mainUser);
+      em.flush();
+
+      // When
+      List<DetailedGroupDTO> detailedGroups = groupService.findDetailedGroupsByUserId(userId);
+
+      // Then
+      Assertions.assertEquals(0, detailedGroups.size());
+    }
+
+    @Test
+    @DisplayName("Happy Path - No groups for user")
+    void HappyPath_NoGroup() {
+      // Given
+      User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
+      entityFactory.insertGroup("Group 1", "Description 1");
+      em.flush();
+
+      // When
+      List<DetailedGroupDTO> detailedGroups =
+          groupService.findDetailedGroupsByUserId(mainUser.getId());
+
+      // Then
+      Assertions.assertEquals(0, detailedGroups.size());
+    }
   }
 
-  @Test
-  void getUserRoleInGroup_Failure_NoUser() {
-    // Given
+  @Nested
+  @DisplayName("그룹 내 역할 조회")
+  class GetUserRoleInGroup {
 
-    User user = new User();
-    user.setNickname("nickname1");
-    user.setUsername("username1");
-    user.setHashedPassword("hashedPassword");
+    @Test
+    void HappyPath() {
 
-    em.persist(user);
+      // Given
 
-    Group group = new Group();
-    group.setName("group");
-    group.setDescription("test group");
+      User user = entityFactory.insertUser("username1", "some password", "nickname1");
+      Group group = entityFactory.insertGroup("group name", "group description");
 
-    em.persist(group);
+      em.flush();
 
-    em.flush();
+      for (GroupRole groupRole :
+          new GroupRole[] {
+            GroupRole.VIEWER, GroupRole.MEMBER, GroupRole.MANAGER, GroupRole.OWNER
+          }) {
 
-    em.remove(user);
-    em.flush();
+        UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), groupRole);
 
-    // When
+        em.flush();
 
-    Runnable lambda = () -> groupService.getUserRoleInGroup(user.getId(), group.getId());
+        // When
 
-    // Then
+        GroupRole foundGroupRole = groupService.getUserRoleInGroup(user.getId(), group.getId());
 
-    Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+        // Then
+
+        Assertions.assertEquals(groupRole, foundGroupRole);
+
+        em.remove(userGroup);
+        em.flush();
+      }
+    }
+
+    @Test
+    void Failure_NotInGroup() {
+
+      // Given
+
+      User user = entityFactory.insertUser("username1", "some password", "nickname1");
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      em.flush();
+
+      // When
+
+      Runnable lambda = () -> groupService.getUserRoleInGroup(user.getId(), group.getId());
+
+      // Then
+
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    void Failure_NoUser() {
+      // Given
+
+      User user = entityFactory.insertUser("username1", "some password", "nickname1");
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      em.flush();
+
+      em.remove(user);
+      em.flush();
+
+      // When
+
+      Runnable lambda = () -> groupService.getUserRoleInGroup(user.getId(), group.getId());
+
+      // Then
+
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    void Failure_NoGroup() {
+      // Given
+
+      User user = entityFactory.insertUser("username1", "some password", "nickname1");
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      em.flush();
+
+      em.remove(group);
+      em.flush();
+
+      // When
+
+      Runnable lambda = () -> groupService.getUserRoleInGroup(user.getId(), group.getId());
+
+      // Then
+
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
   }
 
-  @Test
-  void getUserRoleInGroup_Failure_NoGroup() {
-    // Given
+  @Nested
+  @DisplayName("단일 그룹 조회")
+  class GetGroupById {
+    @Test
+    void HappyPath() {
+      // Given
 
-    User user = new User();
-    user.setNickname("nickname1");
-    user.setUsername("username1");
-    user.setHashedPassword("hashedPassword");
+      Group group = entityFactory.insertGroup("group name", "group description");
 
-    em.persist(user);
+      em.flush();
 
-    Group group = new Group();
-    group.setName("group");
-    group.setDescription("test group");
+      // When
 
-    em.persist(group);
+      GroupDTO groupDTO = groupService.getGroupById(group.getId());
 
-    em.flush();
+      // Then
 
-    em.remove(group);
-    em.flush();
+      Assertions.assertNotNull(groupDTO.getId());
+      Assertions.assertEquals("group name", groupDTO.getName());
+      Assertions.assertEquals("group description", groupDTO.getDescription());
+    }
 
-    // When
+    @Test
+    void Failure_NoGroup() {
+      // Given
 
-    Runnable lambda = () -> groupService.getUserRoleInGroup(user.getId(), group.getId());
+      Group group = entityFactory.insertGroup("group name", "group description");
 
-    // Then
+      em.flush();
 
-    Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+      em.remove(group);
+      em.flush();
+
+      // When
+
+      Runnable lambda = () -> groupService.getGroupById(group.getId());
+
+      // Then
+
+      Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
+    }
   }
 
-  @Test
-  void getGroupById_HappyPath() {
-    // Given
+  @Nested
+  @DisplayName("그룹 삭제")
+  class DeleteGroupById {
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
+    @Test
+    void HappyPath() {
+      // Given
 
-    em.persist(group);
-    em.flush();
+      Group group = entityFactory.insertGroup("group name", "group description");
 
-    // When
+      em.flush();
 
-    GroupDTO groupDTO = groupService.getGroupById(group.getId());
+      // When
 
-    // Then
+      groupService.deleteGroupById(group.getId());
 
-    Assertions.assertNotNull(groupDTO.getId());
-    Assertions.assertEquals("group name", groupDTO.getName());
-    Assertions.assertEquals("group description", groupDTO.getDescription());
-  }
+      // Then
 
-  @Test
-  void getGroupById_Failure_NoGroup() {
-    // Given
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-    em.flush();
-
-    em.remove(group);
-    em.flush();
-
-    // When
-
-    Runnable lambda = () -> groupService.getGroupById(group.getId());
-
-    // Then
-
-    Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
-  }
-
-  @Test
-  void deleteGroupById_HappyPath() {
-    // Given
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-    em.flush();
-
-    // When
-
-    groupService.deleteGroupById(group.getId());
-
-    // Then
-
-    Assertions.assertTrue(
-        em.createQuery(
-                """
-                SELECT
-                  g
-                FROM
-                  Group g
-                WHERE
-                  g.id = :groupId
+      Assertions.assertTrue(
+          em.createQuery(
+                  """
+                SELECT g
+                FROM Group g
+                WHERE g.id = :groupId
                 """,
-                Group.class)
-            .setParameter("groupId", group.getId())
-            .getResultStream()
-            .findFirst()
-            .isEmpty());
+                  Group.class)
+              .setParameter("groupId", group.getId())
+              .getResultStream()
+              .findFirst()
+              .isEmpty());
+    }
+
+    @Test
+    void HappyPath_NotCheckGroupExistence() {
+      // Given
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+      em.flush();
+
+      em.remove(group);
+      em.flush();
+
+      // When
+
+      groupService.deleteGroupById(group.getId());
+
+      // Then
+
+      Assertions.assertTrue(
+          em.createQuery(
+                  """
+                SELECT g
+                FROM Group g
+                WHERE g.id = :groupId
+                """,
+                  Group.class)
+              .setParameter("groupId", group.getId())
+              .getResultStream()
+              .findFirst()
+              .isEmpty());
+    }
   }
 }

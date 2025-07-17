@@ -1,9 +1,9 @@
 package rest.felix.back.todo.service;
 
-import jakarta.transaction.Transactional;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
 import rest.felix.back.todo.dto.CreateTodoDTO;
 import rest.felix.back.todo.dto.TodoDTO;

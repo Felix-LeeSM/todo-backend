@@ -1,7 +1,6 @@
 package rest.felix.back.user.controller;
 
 import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.security.JwtTokenProvider;
 import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;

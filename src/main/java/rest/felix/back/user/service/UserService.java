@@ -1,9 +1,9 @@
 package rest.felix.back.user.service;
 
-import jakarta.transaction.Transactional;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.user.dto.SignupDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
 import rest.felix.back.user.dto.UserDTO;

@@ -31,14 +31,11 @@ public class GroupRepository {
   public List<GroupDTO> getGroupsByUserId(long userId) {
     String query =
         """
-        SELECT
-            g
-        FROM
-            UserGroup ug
-        JOIN
-            ug.group g
-        WHERE
-            ug.user.id = :userId
+        SELECT g
+        FROM UserGroup ug
+        JOIN ug.group g
+        WHERE ug.user.id = :userId
+        ORDER BY g.id ASC
         """;
 
     return em
@@ -54,12 +51,9 @@ public class GroupRepository {
     try {
       String query =
           """
-          SELECT
-              g
-          FROM
-              Group g
-          WHERE
-              g.id = :groupId
+          SELECT g
+          FROM Group g
+          WHERE g.id = :groupId
           """;
 
       return Optional.of(
@@ -73,11 +67,8 @@ public class GroupRepository {
   public void deleteGroupById(long groupId) {
     em.createQuery(
             """
-        DELETE
-        FROM
-          Group g
-        WHERE
-          g.id =:groupId
+        DELETE FROM Group g
+        WHERE g.id =:groupId
         """)
         .setParameter("groupId", groupId)
         .executeUpdate();

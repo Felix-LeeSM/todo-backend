@@ -11,10 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.Cookie;
-import jakarta.transaction.Transactional;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -23,6 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.security.JwtTokenProvider;
 import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
@@ -56,109 +58,23 @@ public class GroupControllerWebTest {
     return new Cookie("accessToken", jwtTokenProvider.generateToken(username));
   }
 
-  @Test
-  public void createGroup_HappyPath() throws Exception {
+  @Nested
+  @DisplayName("그룹 생성 테스트")
+  class CreateGroupTest {
 
-    // Given
+    @Test
+    public void HappyPath() throws Exception {
 
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-    em.flush();
-    Cookie cookie = userCookie(user.getUsername());
+      // Given
 
-    String path = "/api/v1/group";
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      em.flush();
+      Cookie cookie = userCookie(user.getUsername());
 
-    CreateGroupRequestDTO createGroupRequestDTO =
-        new CreateGroupRequestDTO("groupName", "group description");
-    String body = objectMapper.writeValueAsString(createGroupRequestDTO);
+      String path = "/api/v1/group";
 
-    // When
-
-    ResultActions result =
-        mvc.perform(
-            post(path)
-                .cookie(cookie)
-                .content(body)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON));
-
-    // Then
-
-    result.andExpect(status().isCreated());
-    result.andExpect(jsonPath("$.id").isNotEmpty());
-    result.andExpect(jsonPath("$.name").value("groupName"));
-    result.andExpect(jsonPath("$.description").value("group description"));
-  }
-
-  @Test
-  public void createGroup_Failure_NoSuchUser() throws Exception {
-
-    // Given
-
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-    em.flush();
-    em.remove(user);
-    em.flush();
-    Cookie cookie = userCookie(user.getUsername());
-
-    String path = "/api/v1/group";
-
-    CreateGroupRequestDTO createGroupRequestDTO =
-        new CreateGroupRequestDTO("groupName", "description");
-    String body = objectMapper.writeValueAsString(createGroupRequestDTO);
-
-    // When
-
-    ResultActions result =
-        mvc.perform(
-            post(path)
-                .cookie(cookie)
-                .content(body)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON));
-
-    // Then
-
-    result.andExpect(status().isUnauthorized());
-  }
-
-  @Test
-  public void createGroup_Failure_NoCookie() throws Exception {
-
-    // Given
-
-    String path = "/api/v1/group";
-
-    CreateGroupRequestDTO createGroupRequestDTO =
-        new CreateGroupRequestDTO("groupName", "group description");
-    String body = objectMapper.writeValueAsString(createGroupRequestDTO);
-
-    // When
-
-    ResultActions result =
-        mvc.perform(
-            post(path)
-                .content(body)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON));
-
-    // Then
-
-    result.andExpect(status().isForbidden());
-  }
-
-  @Test
-  public void createGroup_Failure_InvalidArgument() throws Exception {
-
-    // Given
-
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-    em.flush();
-    Cookie cookie = userCookie(user.getUsername());
-
-    String path = "/api/v1/group";
-
-    for (String[] row : new String[][] {{"groupName", null}, {null, "group description"}}) {
-      CreateGroupRequestDTO createGroupRequestDTO = new CreateGroupRequestDTO(row[0], row[1]);
+      CreateGroupRequestDTO createGroupRequestDTO =
+          new CreateGroupRequestDTO("groupName", "group description");
       String body = objectMapper.writeValueAsString(createGroupRequestDTO);
 
       // When
@@ -173,363 +89,596 @@ public class GroupControllerWebTest {
 
       // Then
 
-      result.andExpect(status().isBadRequest());
+      result.andExpect(status().isCreated());
+      result.andExpect(jsonPath("$.id").isNotEmpty());
+      result.andExpect(jsonPath("$.name").value("groupName"));
+      result.andExpect(jsonPath("$.description").value("group description"));
+    }
+
+    @Test
+    public void Failure_NoSuchUser() throws Exception {
+
+      // Given
+
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      em.flush();
+      em.remove(user);
+      em.flush();
+      Cookie cookie = userCookie(user.getUsername());
+
+      String path = "/api/v1/group";
+
+      CreateGroupRequestDTO createGroupRequestDTO =
+          new CreateGroupRequestDTO("groupName", "description");
+      String body = objectMapper.writeValueAsString(createGroupRequestDTO);
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              post(path)
+                  .cookie(cookie)
+                  .content(body)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+
+      result.andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void Failure_NoCookie() throws Exception {
+
+      // Given
+
+      String path = "/api/v1/group";
+
+      CreateGroupRequestDTO createGroupRequestDTO =
+          new CreateGroupRequestDTO("groupName", "group description");
+      String body = objectMapper.writeValueAsString(createGroupRequestDTO);
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              post(path)
+                  .content(body)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+
+      result.andExpect(status().isForbidden());
+    }
+
+    @Test
+    public void Failure_InvalidArgument() throws Exception {
+
+      // Given
+
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      em.flush();
+      Cookie cookie = userCookie(user.getUsername());
+
+      String path = "/api/v1/group";
+
+      for (String[] row : new String[][] {{"groupName", null}, {null, "group description"}}) {
+        CreateGroupRequestDTO createGroupRequestDTO = new CreateGroupRequestDTO(row[0], row[1]);
+        String body = objectMapper.writeValueAsString(createGroupRequestDTO);
+
+        // When
+
+        ResultActions result =
+            mvc.perform(
+                post(path)
+                    .cookie(cookie)
+                    .content(body)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON));
+
+        // Then
+
+        result.andExpect(status().isBadRequest());
+      }
     }
   }
 
-  @Test
-  public void getUserGroup_HappyPath() throws Exception {
+  @Nested
+  @DisplayName("유저 전체 그룹 조회 테스트")
+  class GetMyDetailedGroupsTest {
+    @Test
+    @DisplayName("Happy Path - 2 groups")
+    public void HappyPath_1() throws Exception {
 
-    // Given
+      // Given
 
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
+      User otherUser1 = entityFactory.insertUser("otherUser1", "password", "otherUser1Nick");
+      User otherUser2 = entityFactory.insertUser("otherUser2", "password", "otherUser2Nick");
 
-    Group group = entityFactory.insertGroup("group name", "group description");
+      Group group1 = entityFactory.insertGroup("Group 1", "Description 1");
+      Group group2 = entityFactory.insertGroup("Group 2", "Description 2");
+      entityFactory.insertGroup("Group 3", "Description 3");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(mainUser.getId(), group1.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(otherUser1.getId(), group1.getId(), GroupRole.MEMBER);
 
-    em.flush();
+      entityFactory.insertUserGroup(mainUser.getId(), group2.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(otherUser1.getId(), group2.getId(), GroupRole.MANAGER);
+      entityFactory.insertUserGroup(otherUser2.getId(), group2.getId(), GroupRole.MEMBER);
 
-    Cookie cookie = userCookie(user.getUsername());
+      entityFactory.insertTodo(
+          mainUser.getId(),
+          mainUser.getId(),
+          group1.getId(),
+          "Todo 1-1",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "a",
+          false);
+      entityFactory.insertTodo(
+          otherUser1.getId(),
+          otherUser1.getId(),
+          group1.getId(),
+          "Todo 1-2",
+          "Desc",
+          TodoStatus.DONE,
+          "b",
+          false);
 
-    String path = String.format("/api/v1/group/%d", group.getId());
+      entityFactory.insertTodo(
+          mainUser.getId(),
+          mainUser.getId(),
+          group2.getId(),
+          "Todo 2-1",
+          "Desc",
+          TodoStatus.DONE,
+          "a",
+          false);
+      entityFactory.insertTodo(
+          otherUser1.getId(),
+          otherUser1.getId(),
+          group2.getId(),
+          "Todo 2-2",
+          "Desc",
+          TodoStatus.DONE,
+          "b",
+          false);
+      entityFactory.insertTodo(
+          otherUser2.getId(),
+          otherUser2.getId(),
+          group2.getId(),
+          "Todo 2-3",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "c",
+          false);
 
-    // When
+      em.flush();
 
-    ResultActions result =
-        mvc.perform(
-            get(path)
-                .cookie(cookie)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON));
+      Cookie cookie = userCookie(mainUser.getUsername());
+      String path = "/api/v1/group/my";
 
-    // Then
+      // When
+      ResultActions result = mvc.perform(get(path).cookie(cookie));
 
-    result.andExpect(status().isOk());
-    result.andExpect(jsonPath("$.id", notNullValue()));
-    result.andExpect(jsonPath("$.name", equalTo("group name")));
-    result.andExpect(jsonPath("$.description", equalTo("group description")));
+      // Then
+
+      String group1Key = String.format("$[?(@.id == %d)]", group1.getId());
+      String group2Key = String.format("$[?(@.id == %d)]", group2.getId());
+      result
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.length()").value(2))
+          .andExpect(jsonPath(group1Key + ".name").value("Group 1"))
+          .andExpect(jsonPath(group1Key + ".description").value("Description 1"))
+          .andExpect(jsonPath(group1Key + ".todoCount").value(2))
+          .andExpect(jsonPath(group1Key + ".completedTodoCount").value(1))
+          .andExpect(jsonPath(group1Key + ".memberCount").value(2))
+          .andExpect(jsonPath(group1Key + ".myRole").value("OWNER"))
+          .andExpect(jsonPath(group2Key + ".name").value("Group 2"))
+          .andExpect(jsonPath(group2Key + ".description").value("Description 2"))
+          .andExpect(jsonPath(group2Key + ".todoCount").value(3))
+          .andExpect(jsonPath(group2Key + ".completedTodoCount").value(2))
+          .andExpect(jsonPath(group2Key + ".memberCount").value(3))
+          .andExpect(jsonPath(group2Key + ".myRole").value("MEMBER"));
+    }
+
+    @Test
+    @DisplayName("Happy Path - 1 group")
+    public void HappyPath_2() throws Exception {
+      // Given
+      User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
+      User otherUser1 = entityFactory.insertUser("otherUser1", "password", "otherUser1Nick");
+
+      Group group1 = entityFactory.insertGroup("Group 1", "Description 1");
+
+      entityFactory.insertUserGroup(mainUser.getId(), group1.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(otherUser1.getId(), group1.getId(), GroupRole.MEMBER);
+
+      entityFactory.insertTodo(
+          mainUser.getId(),
+          mainUser.getId(),
+          group1.getId(),
+          "Todo 1-1",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "a",
+          false);
+
+      em.flush();
+
+      Cookie cookie = userCookie(mainUser.getUsername());
+      String path = "/api/v1/group/my";
+
+      // When
+      ResultActions result = mvc.perform(get(path).cookie(cookie));
+
+      // Then
+      result
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.length()").value(1))
+          .andExpect(jsonPath("$[0].name").value("Group 1"))
+          .andExpect(jsonPath("$[0].description").value("Description 1"))
+          .andExpect(jsonPath("$[0].todoCount").value(1))
+          .andExpect(jsonPath("$[0].completedTodoCount").value(0))
+          .andExpect(jsonPath("$[0].memberCount").value(2))
+          .andExpect(jsonPath("$[0].myRole").value("OWNER"));
+    }
+
+    @Test
+    @DisplayName("Happy Path - No groups")
+    public void HappyPath_3() throws Exception {
+      // Given
+      User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
+      entityFactory.insertGroup("Group 1", "Description 1");
+
+      em.flush();
+
+      Cookie cookie = userCookie(mainUser.getUsername());
+      String path = "/api/v1/group/my";
+
+      // When
+      ResultActions result = mvc.perform(get(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("Failure - No such user")
+    public void Failure_NoSuchUser() throws Exception {
+      // Given
+      User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
+      Cookie cookie = userCookie(mainUser.getUsername());
+
+      em.remove(mainUser);
+      em.flush();
+
+      String path = "/api/v1/group/my";
+
+      // When
+      ResultActions result = mvc.perform(get(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isUnauthorized());
+    }
   }
 
-  @Test
-  public void getUserGroup_Failure_NoCookie() throws Exception {
+  @Nested
+  @DisplayName("유저 단일 그룹 조회 테스트")
+  class GetUserGroupTest {
+    @Test
+    public void HappyPath() throws Exception {
 
-    // Given
+      // Given
 
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    Group group = entityFactory.insertGroup("group name", "group description");
+      Group group = entityFactory.insertGroup("group name", "group description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    em.flush();
+      em.flush();
 
-    String path = String.format("/api/v1/group/%d", group.getId());
+      Cookie cookie = userCookie(user.getUsername());
 
-    // When
+      String path = String.format("/api/v1/group/%d", group.getId());
 
-    ResultActions result =
-        mvc.perform(
-            get(path).contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON));
+      // When
 
-    // Then
+      ResultActions result =
+          mvc.perform(
+              get(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
 
-    result.andExpect(status().isForbidden());
+      // Then
+
+      result.andExpect(status().isOk());
+      result.andExpect(jsonPath("$.id", notNullValue()));
+      result.andExpect(jsonPath("$.name", equalTo("group name")));
+      result.andExpect(jsonPath("$.description", equalTo("group description")));
+    }
+
+    @Test
+    public void Failure_NoCookie() throws Exception {
+
+      // Given
+
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      em.flush();
+
+      String path = String.format("/api/v1/group/%d", group.getId());
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              get(path).contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON));
+
+      // Then
+
+      result.andExpect(status().isForbidden());
+    }
+
+    @Test
+    public void Failure_NoUser() throws Exception {
+
+      // Given
+
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      em.flush();
+
+      em.remove(userGroup);
+      em.remove(user);
+
+      em.flush();
+
+      Cookie cookie = userCookie(user.getUsername());
+
+      String path = String.format("/api/v1/group/%d", group.getId());
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              get(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+
+      result.andExpect(status().isUnauthorized());
+      result.andExpect(jsonPath("$.message", equalTo("There is no user with given conditions.")));
+    }
+
+    @Test
+    public void Failure_NoGroup() throws Exception {
+
+      // Given
+
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      em.flush();
+
+      em.remove(userGroup);
+      em.remove(group);
+
+      em.flush();
+
+      Cookie cookie = userCookie(user.getUsername());
+
+      String path = String.format("/api/v1/group/%d", group.getId());
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              get(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    }
+
+    @Test
+    public void Failure_NoUserGroup() throws Exception {
+
+      // Given
+
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      em.flush();
+
+      em.remove(userGroup);
+
+      em.flush();
+
+      Cookie cookie = userCookie(user.getUsername());
+
+      String path = String.format("/api/v1/group/%d", group.getId());
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              get(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    }
   }
 
-  @Test
-  public void getUserGroup_Failure_NoUser() throws Exception {
+  @Nested
+  @DisplayName("그룹 삭제 테스트 테스트")
+  class DeleteGroupTest {
+
+    @Test
+    public void HappyPath() throws Exception {
+
+      // Given
 
-    // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      entityFactory.insertTodo(
+          user.getId(),
+          user.getId(),
+          group.getId(),
+          "todo title",
+          "todo description",
+          TodoStatus.IN_PROGRESS,
+          "todo order",
+          false);
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      em.flush();
 
-    em.flush();
+      Cookie cookie = userCookie(user.getUsername());
 
-    em.remove(userGroup);
-    em.remove(user);
+      String path = String.format("/api/v1/group/%d", group.getId());
 
-    em.flush();
+      // When
 
-    Cookie cookie = userCookie(user.getUsername());
+      ResultActions result =
+          mvc.perform(
+              delete(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
 
-    String path = String.format("/api/v1/group/%d", group.getId());
+      // Then
 
-    // When
+      result.andExpect(status().isNoContent());
 
-    ResultActions result =
-        mvc.perform(
-            get(path)
-                .cookie(cookie)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON));
+      Assertions.assertTrue(
+          em.createQuery(
+                  """
+              SELECT g
+              FROM Group g
+              WHERE g.id = :groupId
+              """,
+                  Group.class)
+              .setParameter("groupId", group.getId())
+              .getResultStream()
+              .findFirst()
+              .isEmpty());
 
-    // Then
+      Assertions.assertTrue(
+          em.createQuery(
+                  """
+              SELECT t
+              FROM Todo t
+              WHERE t.group.id = :groupId
+              """,
+                  Todo.class)
+              .setParameter("groupId", group.getId())
+              .getResultStream()
+              .findFirst()
+              .isEmpty());
 
-    result.andExpect(status().isUnauthorized());
-    result.andExpect(jsonPath("$.message", equalTo("There is no user with given conditions.")));
-  }
+      Assertions.assertTrue(
+          em.createQuery(
+                  """
+              SELECT ug
+              FROM UserGroup ug
+              WHERE ug.group.id = :groupId
+              """,
+                  UserGroup.class)
+              .setParameter("groupId", group.getId())
+              .getResultStream()
+              .findFirst()
+              .isEmpty());
+    }
 
-  @Test
-  public void getUserGroup_Failure_NoGroup() throws Exception {
+    @Test
+    public void Failure_NoUser() throws Exception {
 
-    // Given
+      // Given
 
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    Group group = entityFactory.insertGroup("group name", "group description");
+      Group group = entityFactory.insertGroup("group name", "group description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    em.flush();
+      em.flush();
 
-    em.remove(userGroup);
-    em.remove(group);
+      em.remove(userGroup);
+      em.remove(user);
 
-    em.flush();
+      em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+      Cookie cookie = userCookie(user.getUsername());
 
-    String path = String.format("/api/v1/group/%d", group.getId());
+      String path = String.format("/api/v1/group/%d", group.getId());
 
-    // When
+      // When
 
-    ResultActions result =
-        mvc.perform(
-            get(path)
-                .cookie(cookie)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON));
+      ResultActions result =
+          mvc.perform(
+              delete(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
 
-    // Then
+      // Then
 
-    result.andExpect(status().isForbidden());
-    result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
-  }
+      result.andExpect(status().isUnauthorized());
+      result.andExpect(jsonPath("$.message", equalTo("There is no user with given conditions.")));
+    }
 
-  @Test
-  public void getUserGroup_Failure_NoUserGroup() throws Exception {
+    @Test
+    public void Failure_NoUserGroup() throws Exception {
 
-    // Given
+      // Given
 
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    Group group = entityFactory.insertGroup("group name", "group description");
+      Group group = entityFactory.insertGroup("group name", "group description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    em.flush();
+      em.flush();
 
-    em.remove(userGroup);
-
-    em.flush();
-
-    Cookie cookie = userCookie(user.getUsername());
-
-    String path = String.format("/api/v1/group/%d", group.getId());
-
-    // When
-
-    ResultActions result =
-        mvc.perform(
-            get(path)
-                .cookie(cookie)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON));
-
-    // Then
-
-    result.andExpect(status().isForbidden());
-    result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
-  }
-
-  @Test
-  public void deleteGroup_HappyPath() throws Exception {
-
-    // Given
-
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
-    Todo todo =
-        entityFactory.insertTodo(
-            user.getId(),
-            user.getId(),
-            group.getId(),
-            "todo title",
-            "todo description",
-            TodoStatus.IN_PROGRESS,
-            "todo order",
-            false);
-
-    em.flush();
-
-    Cookie cookie = userCookie(user.getUsername());
-
-    String path = String.format("/api/v1/group/%d", group.getId());
-
-    // When
-
-    ResultActions result =
-        mvc.perform(
-            delete(path)
-                .cookie(cookie)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON));
-
-    // Then
-
-    result.andExpect(status().isNoContent());
-
-    Assertions.assertTrue(
-        em.createQuery(
-                """
-            SELECT
-              g
-            FROM
-              Group g
-            WHERE
-              g.id = :groupId
-            """,
-                Group.class)
-            .setParameter("groupId", group.getId())
-            .getResultStream()
-            .findFirst()
-            .isEmpty());
-
-    Assertions.assertTrue(
-        em.createQuery(
-                """
-            SELECT
-              t
-            FROM
-              Todo t
-            WHERE
-              t.group.id = :groupId
-            """,
-                Todo.class)
-            .setParameter("groupId", group.getId())
-            .getResultStream()
-            .findFirst()
-            .isEmpty());
-
-    Assertions.assertTrue(
-        em.createQuery(
-                """
-            SELECT
-              ug
-            FROM
-              UserGroup ug
-            WHERE
-              ug.group.id = :groupId
-            """,
-                UserGroup.class)
-            .setParameter("groupId", group.getId())
-            .getResultStream()
-            .findFirst()
-            .isEmpty());
-  }
-
-  @Test
-  public void deleteGroup_Failure_NoUser() throws Exception {
-
-    // Given
-
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
-    em.flush();
-
-    em.remove(userGroup);
-    em.remove(user);
-
-    em.flush();
-
-    Cookie cookie = userCookie(user.getUsername());
-
-    String path = String.format("/api/v1/group/%d", group.getId());
-
-    // When
-
-    ResultActions result =
-        mvc.perform(
-            delete(path)
-                .cookie(cookie)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON));
-
-    // Then
-
-    result.andExpect(status().isUnauthorized());
-    result.andExpect(jsonPath("$.message", equalTo("There is no user with given conditions.")));
-  }
-
-  @Test
-  public void deleteGroup_Failure_NoUserGroup() throws Exception {
-
-    // Given
-
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
-    em.flush();
-
-    em.remove(userGroup);
-
-    em.flush();
-
-    Cookie cookie = userCookie(user.getUsername());
-
-    String path = String.format("/api/v1/group/%d", group.getId());
-
-    // When
-
-    ResultActions result =
-        mvc.perform(
-            delete(path)
-                .cookie(cookie)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON));
-
-    // Then
-
-    result.andExpect(status().isForbidden());
-    result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
-  }
-
-  @Test
-  public void deleteGroup_Failure_ImproperGroupRole() throws Exception {
-
-    // Given
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    for (GroupRole role : List.of(GroupRole.MANAGER, GroupRole.MEMBER, GroupRole.VIEWER)) {
-
-      User user = entityFactory.insertUser("username123" + role, "hashedPassword", "nickname");
-
-      UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), role);
+      em.remove(userGroup);
 
       em.flush();
 
@@ -551,43 +700,78 @@ public class GroupControllerWebTest {
       result.andExpect(status().isForbidden());
       result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
     }
-  }
 
-  @Test
-  public void deleteGroup_Failure_NoGroup() throws Exception {
+    @Test
+    public void Failure_ImproperGroupRole() throws Exception {
 
-    // Given
+      // Given
 
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = entityFactory.insertGroup("group name", "group description");
+      for (GroupRole role : List.of(GroupRole.MANAGER, GroupRole.MEMBER, GroupRole.VIEWER)) {
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+        User user = entityFactory.insertUser("username123" + role, "hashedPassword", "nickname");
 
-    em.flush();
+        entityFactory.insertUserGroup(user.getId(), group.getId(), role);
 
-    em.remove(userGroup);
-    em.remove(group);
+        em.flush();
 
-    em.flush();
+        Cookie cookie = userCookie(user.getUsername());
 
-    Cookie cookie = userCookie(user.getUsername());
+        String path = String.format("/api/v1/group/%d", group.getId());
 
-    String path = String.format("/api/v1/group/%d", group.getId());
+        // When
 
-    // When
+        ResultActions result =
+            mvc.perform(
+                delete(path)
+                    .cookie(cookie)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON));
 
-    ResultActions result =
-        mvc.perform(
-            delete(path)
-                .cookie(cookie)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON));
+        // Then
 
-    // Then
+        result.andExpect(status().isForbidden());
+        result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+      }
+    }
 
-    result.andExpect(status().isForbidden());
-    result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    @Test
+    public void Failure_NoGroup() throws Exception {
+
+      // Given
+
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      em.flush();
+
+      em.remove(userGroup);
+      em.remove(group);
+
+      em.flush();
+
+      Cookie cookie = userCookie(user.getUsername());
+
+      String path = String.format("/api/v1/group/%d", group.getId());
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              delete(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    }
   }
 }
