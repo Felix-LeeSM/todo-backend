@@ -1,11 +1,11 @@
 package rest.felix.back.group.controller;
 
 import jakarta.validation.Valid;
-import java.security.Principal;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +20,7 @@ import rest.felix.back.group.dto.GroupDTO;
 import rest.felix.back.group.dto.GroupResponseDTO;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.group.service.GroupService;
+import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.dto.UserDTO;
 import rest.felix.back.user.exception.NoMatchingUserException;
 import rest.felix.back.user.exception.UserAccessDeniedException;
@@ -35,9 +36,11 @@ public class GroupController {
 
   @PostMapping
   public ResponseEntity<GroupResponseDTO> createGroup(
-      Principal principal, @RequestBody @Valid CreateGroupRequestDTO createGroupRequestDTO) {
-    String username = principal.getName();
-    UserDTO userDTO = userService.getByUsername(username).orElseThrow(NoMatchingUserException::new);
+      @AuthenticationPrincipal AuthUserDTO authUser,
+      @RequestBody @Valid CreateGroupRequestDTO createGroupRequestDTO) {
+
+    UserDTO userDTO =
+        userService.getById(authUser.getUserId()).orElseThrow(NoMatchingUserException::new);
 
     CreateGroupDTO createGroupDTO =
         new CreateGroupDTO(
@@ -54,9 +57,11 @@ public class GroupController {
   }
 
   @GetMapping("/my")
-  public ResponseEntity<List<DetailedGroupResponseDTO>> getMyDetailedGroups(Principal principal) {
-    String username = principal.getName();
-    UserDTO userDTO = userService.getByUsername(username).orElseThrow(NoMatchingUserException::new);
+  public ResponseEntity<List<DetailedGroupResponseDTO>> getMyDetailedGroups(
+      @AuthenticationPrincipal AuthUserDTO authUser) {
+
+    UserDTO userDTO =
+        userService.getById(authUser.getUserId()).orElseThrow(NoMatchingUserException::new);
     long userId = userDTO.getId();
 
     List<DetailedGroupResponseDTO> detailedGroupResponseDTOs =
@@ -79,10 +84,10 @@ public class GroupController {
 
   @GetMapping("/{groupId}")
   public ResponseEntity<GroupResponseDTO> getUserGroup(
-      Principal principal, @PathVariable(name = "groupId") long groupId) {
-    String username = principal.getName();
-    UserDTO userDTO = userService.getByUsername(username).orElseThrow(NoMatchingUserException::new);
-    long userId = userDTO.getId();
+      @AuthenticationPrincipal AuthUserDTO authUser, @PathVariable(name = "groupId") long groupId) {
+
+    long userId = authUser.getUserId();
+    userService.getById(userId).orElseThrow(NoMatchingUserException::new);
 
     groupService.getUserRoleInGroup(userId, groupId);
 
@@ -95,10 +100,10 @@ public class GroupController {
 
   @DeleteMapping("/{groupId}")
   public ResponseEntity<Void> deleteGroup(
-      Principal principal, @PathVariable(name = "groupId") long groupId) {
-    String username = principal.getName();
+      @AuthenticationPrincipal AuthUserDTO authUser, @PathVariable(name = "groupId") long groupId) {
 
-    UserDTO userDTO = userService.getByUsername(username).orElseThrow(NoMatchingUserException::new);
+    UserDTO userDTO =
+        userService.getById(authUser.getUserId()).orElseThrow(NoMatchingUserException::new);
     long userId = userDTO.getId();
 
     GroupRole groupRole = groupService.getUserRoleInGroup(userId, groupId);

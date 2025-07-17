@@ -34,13 +34,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .findFirst())
         .map(Cookie::getValue)
         .filter(jwtTokenProvider::validateToken)
-        .map(jwtTokenProvider::getUsernameFromToken)
+        .map(jwtTokenProvider::getAuthUserFromToken)
         .ifPresent(
-            username ->
+            authUser ->
                 SecurityContextHolder.getContext()
                     .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
-                            username, null, new ArrayList<>())));
+                            authUser, null, new ArrayList<>())));
 
     filterChain.doFilter(request, response);
   }

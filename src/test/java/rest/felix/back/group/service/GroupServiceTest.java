@@ -226,7 +226,7 @@ class GroupServiceTest {
 
       Group group1 = entityFactory.insertGroup("Group 1", "Description 1");
       Group group2 = entityFactory.insertGroup("Group 2", "Description 2");
-      entityFactory.insertGroup("Group 3", "Description 3"); // mainUser is not in this group
+      entityFactory.insertGroup("Group 3", "Description 3");
 
       entityFactory.insertUserGroup(mainUser.getId(), group1.getId(), GroupRole.OWNER);
       entityFactory.insertUserGroup(otherUser1.getId(), group1.getId(), GroupRole.MEMBER);

@@ -2,20 +2,21 @@ package rest.felix.back.user.controller;
 
 import jakarta.validation.Valid;
 import java.time.Duration;
-import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import rest.felix.back.common.exception.throwable.unauthorized.UnauthorizedException;
 import rest.felix.back.common.security.JwtTokenProvider;
 import rest.felix.back.common.security.PasswordService;
+import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.dto.SignInRequestDTO;
 import rest.felix.back.user.dto.SignupDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
@@ -66,7 +67,7 @@ public class UserController {
             .filter(DTO -> passwordService.verifyPassword(givenPassword, DTO.getHashedPassword()))
             .orElseThrow(NoMatchingUserException::new);
 
-    String token = jwtTokenProvider.generateToken(userDTO.getUsername());
+    String token = jwtTokenProvider.generateToken(AuthUserDTO.of(userDTO));
 
     ResponseCookie authCookie =
         ResponseCookie.from("accessToken", token)
@@ -83,7 +84,7 @@ public class UserController {
   }
 
   @DeleteMapping("/token")
-  public ResponseEntity logOutUser() {
+  public ResponseEntity<Void> logOutUser() {
     ResponseCookie emptyCookie =
         ResponseCookie.from("accessToken", "")
             .path("/")
@@ -100,17 +101,18 @@ public class UserController {
 
   @GetMapping("/me")
   public ResponseEntity<UserResponseDTO> getCurrentUserInfo(
-      @CookieValue(name = "accessToken", required = false) String accessToken) {
+      @AuthenticationPrincipal AuthUserDTO authUser) {
 
-    return ResponseEntity.ok()
-        .body(
-            Optional.ofNullable(accessToken)
-                .map(jwtTokenProvider::getUsernameFromToken)
-                .flatMap(userService::getByUsername)
-                .map(
-                    userDTO ->
-                        new UserResponseDTO(
-                            userDTO.getId(), userDTO.getUsername(), userDTO.getNickname()))
-                .orElseThrow(NoMatchingUserException::new));
+    if (authUser == null) { // authUser가 null인 경우 처리
+      throw new UnauthorizedException("User not authenticated.");
+    }
+
+    return userService
+        .getByUsername(authUser.getUsername())
+        .map(
+            userDTO ->
+                new UserResponseDTO(userDTO.getId(), userDTO.getUsername(), userDTO.getNickname()))
+        .map(ResponseEntity::ok)
+        .orElseThrow(NoMatchingUserException::new);
   }
 }

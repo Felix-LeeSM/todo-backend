@@ -532,10 +532,6 @@ class TodoServiceTest {
     // Then
 
     Assertions.assertEquals(todo.getId(), todoDTO.getId());
-    System.out.println(todoDTO.getTitle());
-    System.out.println(todoDTO.getTitle());
-    System.out.println(todoDTO.getTitle());
-    System.out.println(todoDTO.getTitle());
     Assertions.assertEquals("todo updated title", todoDTO.getTitle());
     Assertions.assertEquals("todo updated description", todoDTO.getDescription());
     Assertions.assertEquals("todo updated order", todoDTO.getOrder());

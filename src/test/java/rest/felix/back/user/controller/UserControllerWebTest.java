@@ -27,8 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.security.JwtTokenProvider;
 import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
+import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.dto.SignInRequestDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
+import rest.felix.back.user.entity.User;
 
 @SpringBootTest
 @Transactional
@@ -46,6 +48,12 @@ public class UserControllerWebTest {
   @BeforeEach
   void setUp() {
     entityFactory = new EntityFactory(passwordService, em);
+  }
+
+  private Cookie userCookie(User user) {
+    AuthUserDTO authUser = AuthUserDTO.of(user);
+    String token = jwtTokenProvider.generateToken(authUser);
+    return new Cookie("accessToken", token);
   }
 
   @Test
@@ -263,7 +271,8 @@ public class UserControllerWebTest {
         () -> {
           jwtTokenProvider.validateToken(token);
         });
-    Assertions.assertEquals("username123", jwtTokenProvider.getUsernameFromToken(token));
+    Assertions.assertEquals(
+        "username123", jwtTokenProvider.getAuthUserFromToken(token).getUsername());
   }
 
   @Test
@@ -320,9 +329,8 @@ public class UserControllerWebTest {
   void logOutUser_HappyPath() throws Exception {
     // Given
 
-    entityFactory.insertUser("username123", "password123412341234", "nickname");
-
-    Cookie cookie = new Cookie("accessToken", jwtTokenProvider.generateToken("username123"));
+    User user = entityFactory.insertUser("username123", "password123412341234", "nickname");
+    Cookie cookie = userCookie(user);
     String path = "/api/v1/user/token";
 
     // When
@@ -359,9 +367,8 @@ public class UserControllerWebTest {
   void currentUserInfo_HappyPath() throws Exception {
     // Given
 
-    entityFactory.insertUser("username123", "password123412341234", "nickname");
-
-    Cookie cookie = new Cookie("accessToken", jwtTokenProvider.generateToken("username123"));
+    User user = entityFactory.insertUser("username123", "password123412341234", "nickname");
+    Cookie cookie = userCookie(user);
 
     String path = "/api/v1/user/me";
 

@@ -1,10 +1,14 @@
 package rest.felix.back.common.security;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import java.io.IOException;
 import java.util.Date;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import rest.felix.back.user.dto.AuthUserDTO;
 
 @Component
 public class JwtTokenProvider {
@@ -15,16 +19,29 @@ public class JwtTokenProvider {
   @Value("${jwt.access_token.ttl}")
   private long expirationTime;
 
-  public String generateToken(String username) {
-    return Jwts.builder()
-        .setSubject(username)
-        .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
-        .signWith(SignatureAlgorithm.HS512, secretKey)
-        .compact();
+  private final ObjectMapper objectMapper = new ObjectMapper();
+
+  public String generateToken(AuthUserDTO authUser) {
+    try {
+      String subject = objectMapper.writeValueAsString(authUser);
+      return Jwts.builder()
+          .setSubject(subject)
+          .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
+          .signWith(SignatureAlgorithm.HS512, secretKey)
+          .compact();
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
   }
 
-  public String getUsernameFromToken(String token) {
-    return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getSubject();
+  public AuthUserDTO getAuthUserFromToken(String token) {
+    try {
+      String subject =
+          Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getSubject();
+      return objectMapper.readValue(subject, AuthUserDTO.class);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public boolean validateToken(String token) {

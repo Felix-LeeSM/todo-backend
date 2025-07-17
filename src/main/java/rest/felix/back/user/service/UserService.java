@@ -9,7 +9,6 @@ import rest.felix.back.user.dto.SignupRequestDTO;
 import rest.felix.back.user.dto.UserDTO;
 import rest.felix.back.user.entity.User;
 import rest.felix.back.user.exception.ConfirmPasswordMismatchException;
-import rest.felix.back.user.exception.NoMatchingUserException;
 import rest.felix.back.user.exception.UsernameTakenException;
 import rest.felix.back.user.repository.UserRepository;
 
@@ -41,16 +40,14 @@ public class UserService {
   }
 
   @Transactional(readOnly = true)
-  public Optional<UserDTO> getByUsername(String username) throws NoMatchingUserException {
+  public Optional<UserDTO> getByUsername(String username) {
 
-    return userRepository
-        .getByUsername(username)
-        .map(
-            user ->
-                new UserDTO(
-                    user.getId(),
-                    user.getNickname(),
-                    user.getUsername(),
-                    user.getHashedPassword()));
+    return userRepository.getByUsername(username).map(UserDTO::of);
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<UserDTO> getById(Long id) {
+
+    return userRepository.getById(id).map(UserDTO::of);
   }
 }

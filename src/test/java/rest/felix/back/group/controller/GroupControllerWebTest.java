@@ -34,6 +34,7 @@ import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
+import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.entity.User;
 
 @SpringBootTest
@@ -54,8 +55,10 @@ public class GroupControllerWebTest {
     entityFactory = new EntityFactory(passwordService, em);
   }
 
-  private Cookie userCookie(String username) {
-    return new Cookie("accessToken", jwtTokenProvider.generateToken(username));
+  private Cookie userCookie(User user) {
+    return new Cookie(
+        "accessToken",
+        jwtTokenProvider.generateToken(AuthUserDTO.of(user)));
   }
 
   @Nested
@@ -69,7 +72,7 @@ public class GroupControllerWebTest {
 
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
       em.flush();
-      Cookie cookie = userCookie(user.getUsername());
+      Cookie cookie = userCookie(user);
 
       String path = "/api/v1/group";
 
@@ -104,7 +107,7 @@ public class GroupControllerWebTest {
       em.flush();
       em.remove(user);
       em.flush();
-      Cookie cookie = userCookie(user.getUsername());
+      Cookie cookie = userCookie(user);
 
       String path = "/api/v1/group";
 
@@ -159,7 +162,7 @@ public class GroupControllerWebTest {
 
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
       em.flush();
-      Cookie cookie = userCookie(user.getUsername());
+      Cookie cookie = userCookie(user);
 
       String path = "/api/v1/group";
 
@@ -257,7 +260,7 @@ public class GroupControllerWebTest {
 
       em.flush();
 
-      Cookie cookie = userCookie(mainUser.getUsername());
+      Cookie cookie = userCookie(mainUser);
       String path = "/api/v1/group/my";
 
       // When
@@ -308,7 +311,7 @@ public class GroupControllerWebTest {
 
       em.flush();
 
-      Cookie cookie = userCookie(mainUser.getUsername());
+      Cookie cookie = userCookie(mainUser);
       String path = "/api/v1/group/my";
 
       // When
@@ -335,7 +338,7 @@ public class GroupControllerWebTest {
 
       em.flush();
 
-      Cookie cookie = userCookie(mainUser.getUsername());
+      Cookie cookie = userCookie(mainUser);
       String path = "/api/v1/group/my";
 
       // When
@@ -350,7 +353,7 @@ public class GroupControllerWebTest {
     public void Failure_NoSuchUser() throws Exception {
       // Given
       User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
-      Cookie cookie = userCookie(mainUser.getUsername());
+      Cookie cookie = userCookie(mainUser);
 
       em.remove(mainUser);
       em.flush();
@@ -381,7 +384,7 @@ public class GroupControllerWebTest {
 
       em.flush();
 
-      Cookie cookie = userCookie(user.getUsername());
+      Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d", group.getId());
 
@@ -447,7 +450,7 @@ public class GroupControllerWebTest {
 
       em.flush();
 
-      Cookie cookie = userCookie(user.getUsername());
+      Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d", group.getId());
 
@@ -485,7 +488,7 @@ public class GroupControllerWebTest {
 
       em.flush();
 
-      Cookie cookie = userCookie(user.getUsername());
+      Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d", group.getId());
 
@@ -522,7 +525,7 @@ public class GroupControllerWebTest {
 
       em.flush();
 
-      Cookie cookie = userCookie(user.getUsername());
+      Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d", group.getId());
 
@@ -569,7 +572,7 @@ public class GroupControllerWebTest {
 
       em.flush();
 
-      Cookie cookie = userCookie(user.getUsername());
+      Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d", group.getId());
 
@@ -645,7 +648,7 @@ public class GroupControllerWebTest {
 
       em.flush();
 
-      Cookie cookie = userCookie(user.getUsername());
+      Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d", group.getId());
 
@@ -682,7 +685,7 @@ public class GroupControllerWebTest {
 
       em.flush();
 
-      Cookie cookie = userCookie(user.getUsername());
+      Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d", group.getId());
 
@@ -716,7 +719,7 @@ public class GroupControllerWebTest {
 
         em.flush();
 
-        Cookie cookie = userCookie(user.getUsername());
+        Cookie cookie = userCookie(user);
 
         String path = String.format("/api/v1/group/%d", group.getId());
 
@@ -755,7 +758,7 @@ public class GroupControllerWebTest {
 
       em.flush();
 
-      Cookie cookie = userCookie(user.getUsername());
+      Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d", group.getId());
 

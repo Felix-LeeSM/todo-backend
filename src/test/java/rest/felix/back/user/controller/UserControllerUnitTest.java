@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.security.JwtTokenProvider;
 import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
+import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.dto.SignInRequestDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
 import rest.felix.back.user.dto.UserResponseDTO;
@@ -173,7 +174,7 @@ class UserControllerUnitTest {
 
     // When
 
-    ResponseEntity response = userController.logOutUser();
+    ResponseEntity<Void> response = userController.logOutUser();
 
     // Then
 
@@ -187,11 +188,10 @@ class UserControllerUnitTest {
     User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
     em.flush();
 
-    String token = jwtTokenProvider.generateToken("username");
-
     // When
 
-    ResponseEntity<UserResponseDTO> response = userController.getCurrentUserInfo(token);
+    ResponseEntity<UserResponseDTO> response =
+        userController.getCurrentUserInfo(AuthUserDTO.of(user));
 
     // Then
 
@@ -209,16 +209,22 @@ class UserControllerUnitTest {
   void currentUserInfo_Failure_NoToken() {
     // Given
 
-    String token = null;
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+    em.flush();
+
+    em.remove(user);
+    em.flush();
 
     // When
+
+    AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
     // Then
 
     Assertions.assertThrows(
         NoMatchingUserException.class,
         () -> {
-          userController.getCurrentUserInfo(token);
+          userController.getCurrentUserInfo(authUserDTO);
         });
   }
 }

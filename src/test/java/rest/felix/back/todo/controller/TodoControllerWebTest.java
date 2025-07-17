@@ -37,6 +37,7 @@ import rest.felix.back.todo.dto.CreateTodoRequestDTO;
 import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
+import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.entity.User;
 
 @SpringBootTest
@@ -57,8 +58,10 @@ public class TodoControllerWebTest {
     entityFactory = new EntityFactory(passwordService, em);
   }
 
-  private Cookie userCookie(String username) {
-    return new Cookie("accessToken", jwtTokenProvider.generateToken(username));
+  private Cookie userCookie(User user) {
+    return new Cookie(
+        "accessToken",
+        jwtTokenProvider.generateToken(AuthUserDTO.of(user)));
   }
 
   @Test
@@ -99,7 +102,7 @@ public class TodoControllerWebTest {
 
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo", group.getId());
 
@@ -148,7 +151,7 @@ public class TodoControllerWebTest {
 
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo", group.getId());
 
@@ -185,7 +188,7 @@ public class TodoControllerWebTest {
     em.remove(user);
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo", group.getId());
 
@@ -222,7 +225,7 @@ public class TodoControllerWebTest {
     em.remove(group);
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo", group.getId());
 
@@ -258,7 +261,7 @@ public class TodoControllerWebTest {
     em.remove(userGroup);
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo", group.getId());
 
@@ -291,7 +294,7 @@ public class TodoControllerWebTest {
 
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
         new CreateTodoRequestDTO("todo title", "todo description", "todo order");
@@ -375,7 +378,7 @@ public class TodoControllerWebTest {
     em.remove(user);
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
         new CreateTodoRequestDTO("todo title", "todo description", "todo order");
@@ -418,7 +421,7 @@ public class TodoControllerWebTest {
     em.remove(group);
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
         new CreateTodoRequestDTO("todo title", "todo description", "todo order");
@@ -460,7 +463,7 @@ public class TodoControllerWebTest {
     em.remove(userGroup);
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
         new CreateTodoRequestDTO("todo title", "todo description", "todo order");
@@ -503,7 +506,7 @@ public class TodoControllerWebTest {
     em.remove(group);
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
         new CreateTodoRequestDTO("todo title", "todo description", "todo order");
@@ -553,7 +556,7 @@ public class TodoControllerWebTest {
 
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
         new CreateTodoRequestDTO("todo title", "todo description", "todo order");
@@ -602,7 +605,7 @@ public class TodoControllerWebTest {
 
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -666,7 +669,7 @@ public class TodoControllerWebTest {
 
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -713,7 +716,7 @@ public class TodoControllerWebTest {
 
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -760,7 +763,7 @@ public class TodoControllerWebTest {
 
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -809,7 +812,7 @@ public class TodoControllerWebTest {
 
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -858,7 +861,7 @@ public class TodoControllerWebTest {
 
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -917,7 +920,7 @@ public class TodoControllerWebTest {
 
     em.flush();
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -976,7 +979,7 @@ public class TodoControllerWebTest {
         new UpdateTodoRequestDTO(
             "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -1071,7 +1074,7 @@ public class TodoControllerWebTest {
         new UpdateTodoRequestDTO(
             "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -1137,7 +1140,7 @@ public class TodoControllerWebTest {
         new UpdateTodoRequestDTO(
             "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -1199,7 +1202,7 @@ public class TodoControllerWebTest {
         new UpdateTodoRequestDTO(
             "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -1275,7 +1278,7 @@ public class TodoControllerWebTest {
         new UpdateTodoRequestDTO(
             "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -1343,7 +1346,7 @@ public class TodoControllerWebTest {
         new UpdateTodoRequestDTO(
             "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -1409,7 +1412,7 @@ public class TodoControllerWebTest {
         new UpdateTodoRequestDTO(
             "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
 
@@ -1483,7 +1486,7 @@ public class TodoControllerWebTest {
             TodoStatus.IN_PROGRESS,
             "todo1 order");
 
-    Cookie cookie = userCookie(user.getUsername());
+    Cookie cookie = userCookie(user);
 
     String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo2.getId());
 

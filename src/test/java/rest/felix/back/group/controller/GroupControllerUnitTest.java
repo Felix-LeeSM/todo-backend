@@ -1,7 +1,6 @@
 package rest.felix.back.group.controller;
 
 import jakarta.persistence.EntityManager;
-import java.security.Principal;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
@@ -26,6 +25,7 @@ import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
+import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.entity.User;
 import rest.felix.back.user.exception.NoMatchingUserException;
 import rest.felix.back.user.exception.UserAccessDeniedException;
@@ -57,7 +57,7 @@ public class GroupControllerUnitTest {
 
       User user = entityFactory.insertUser("username", "some_password", "nickname");
 
-      Principal principal = user::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       CreateGroupRequestDTO createGroupRequestDTO =
           new CreateGroupRequestDTO("groupName", "group description");
@@ -65,7 +65,7 @@ public class GroupControllerUnitTest {
       // When
 
       ResponseEntity<GroupResponseDTO> responseEntity =
-          groupController.createGroup(principal, createGroupRequestDTO);
+          groupController.createGroup(authUserDTO, createGroupRequestDTO);
 
       // Then
 
@@ -120,14 +120,14 @@ public class GroupControllerUnitTest {
       em.remove(user);
       em.flush();
 
-      Principal principal = user::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       CreateGroupRequestDTO createGroupRequestDTO =
           new CreateGroupRequestDTO("groupName", "group description");
 
       // When
 
-      Runnable lambda = () -> groupController.createGroup(principal, createGroupRequestDTO);
+      Runnable lambda = () -> groupController.createGroup(authUserDTO, createGroupRequestDTO);
 
       // Then
 
@@ -209,11 +209,11 @@ public class GroupControllerUnitTest {
 
       em.flush();
 
-      Principal principal = mainUser::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(mainUser);
 
       // When
       ResponseEntity<List<DetailedGroupResponseDTO>> responseEntity =
-          groupController.getMyDetailedGroups(principal);
+          groupController.getMyDetailedGroups(authUserDTO);
 
       // Then
       Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
@@ -283,11 +283,11 @@ public class GroupControllerUnitTest {
 
       em.flush();
 
-      Principal principal = mainUser::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(mainUser);
 
       // When
       ResponseEntity<List<DetailedGroupResponseDTO>> responseEntity =
-          groupController.getMyDetailedGroups(principal);
+          groupController.getMyDetailedGroups(authUserDTO);
 
       // Then
       Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
@@ -323,11 +323,11 @@ public class GroupControllerUnitTest {
 
       em.flush();
 
-      Principal principal = mainUser::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(mainUser);
 
       // When
       ResponseEntity<List<DetailedGroupResponseDTO>> responseEntity =
-          groupController.getMyDetailedGroups(principal);
+          groupController.getMyDetailedGroups(authUserDTO);
 
       // Then
       Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
@@ -342,13 +342,13 @@ public class GroupControllerUnitTest {
     public void Failure_NoSuchUser() {
       // Given
       User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
-      Principal principal = mainUser::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(mainUser);
 
       em.remove(mainUser);
       em.flush();
 
       // When
-      Runnable lambda = () -> groupController.getMyDetailedGroups(principal);
+      Runnable lambda = () -> groupController.getMyDetailedGroups(authUserDTO);
 
       // Then
       Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
@@ -373,12 +373,12 @@ public class GroupControllerUnitTest {
 
       em.flush();
 
-      Principal principal = user::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       // When
 
       ResponseEntity<GroupResponseDTO> responseEntity =
-          groupController.getUserGroup(principal, group.getId());
+          groupController.getUserGroup(authUserDTO, group.getId());
 
       // Then
 
@@ -407,11 +407,11 @@ public class GroupControllerUnitTest {
 
       em.flush();
 
-      Principal principal = user::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       // When
 
-      Runnable lambda = () -> groupController.getUserGroup(principal, group.getId());
+      Runnable lambda = () -> groupController.getUserGroup(authUserDTO, group.getId());
 
       // Then
 
@@ -435,11 +435,11 @@ public class GroupControllerUnitTest {
 
       em.flush();
 
-      Principal principal = user::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       // When
 
-      Runnable lambda = () -> groupController.getUserGroup(principal, group.getId());
+      Runnable lambda = () -> groupController.getUserGroup(authUserDTO, group.getId());
 
       // Then
 
@@ -462,11 +462,11 @@ public class GroupControllerUnitTest {
 
       em.flush();
 
-      Principal principal = user::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       // When
 
-      Runnable lambda = () -> groupController.getUserGroup(principal, group.getId());
+      Runnable lambda = () -> groupController.getUserGroup(authUserDTO, group.getId());
 
       // Then
 
@@ -501,11 +501,11 @@ public class GroupControllerUnitTest {
 
       em.flush();
 
-      Principal principal = user::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       // When
 
-      groupController.deleteGroup(principal, group.getId());
+      groupController.deleteGroup(authUserDTO, group.getId());
 
       // Then
 
@@ -585,11 +585,11 @@ public class GroupControllerUnitTest {
 
                 em.flush();
 
-                Principal principal = user::getUsername;
+                AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
                 // When
 
-                Runnable lambda = () -> groupController.deleteGroup(principal, group.getId());
+                Runnable lambda = () -> groupController.deleteGroup(authUserDTO, group.getId());
 
                 // Then
 
@@ -653,11 +653,11 @@ public class GroupControllerUnitTest {
 
       em.flush();
 
-      Principal principal = user::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       // When
 
-      Runnable lambda = () -> groupController.deleteGroup(principal, group.getId());
+      Runnable lambda = () -> groupController.deleteGroup(authUserDTO, group.getId());
 
       // Then
 
@@ -693,11 +693,11 @@ public class GroupControllerUnitTest {
 
       em.flush();
 
-      Principal principal = user::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       // When
 
-      Runnable lambda = () -> groupController.deleteGroup(principal, group.getId());
+      Runnable lambda = () -> groupController.deleteGroup(authUserDTO, group.getId());
 
       // Then
 
@@ -734,11 +734,11 @@ public class GroupControllerUnitTest {
 
       em.flush();
 
-      Principal principal = user::getUsername;
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       // When
 
-      Runnable lambda = () -> groupController.getUserGroup(principal, group.getId());
+      Runnable lambda = () -> groupController.getUserGroup(authUserDTO, group.getId());
 
       // Then
 

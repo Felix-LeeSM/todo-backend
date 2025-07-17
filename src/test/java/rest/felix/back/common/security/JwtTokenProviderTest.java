@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import rest.felix.back.user.dto.AuthUserDTO;
 
 @SpringBootTest
 class JwtTokenProviderTest {
@@ -14,8 +15,8 @@ class JwtTokenProviderTest {
   void generateParseValidate() {
     // Given
 
-    String username = "randomUsernameForTest";
-    String token = jwtTokenProvider.generateToken(username);
+    AuthUserDTO authUser = new AuthUserDTO(1L, "username");
+    String token = jwtTokenProvider.generateToken(authUser);
 
     // When
 
@@ -26,7 +27,8 @@ class JwtTokenProviderTest {
 
     // Then
 
-    Assertions.assertNotEquals(username, token);
-    Assertions.assertEquals(username, jwtTokenProvider.getUsernameFromToken(token));
+    Assertions.assertNotEquals(authUser.getUsername(), token);
+    Assertions.assertEquals(
+        authUser.getUsername(), jwtTokenProvider.getAuthUserFromToken(token).getUsername());
   }
 }
