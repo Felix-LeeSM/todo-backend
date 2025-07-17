@@ -2,12 +2,15 @@ package rest.felix.back.todo.repository;
 
 import jakarta.persistence.EntityManager;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.todo.dto.CreateTodoDTO;
+import rest.felix.back.todo.dto.TodoCountDTO;
 import rest.felix.back.todo.dto.TodoDTO;
 import rest.felix.back.todo.dto.UpdateTodoDTO;
 import rest.felix.back.todo.entity.Todo;
@@ -23,25 +26,50 @@ public class TodoRepository {
     return em
         .createQuery(
             """
-                                SELECT
-                                    t
-                                FROM
-                                    Group g
-                                JOIN
-                                    g.todos t
-                                JOIN FETCH
-                                    t.author
-                                WHERE
-                                    g.id = :groupId
-                                ORDER BY
-                                    t.order ASC
-                                """,
+            SELECT
+                t
+            FROM
+                Group g
+            JOIN
+                g.todos t
+            JOIN FETCH
+                t.author
+            WHERE
+                g.id = :groupId
+            ORDER BY
+                t.order ASC
+                """,
             Todo.class)
         .setParameter("groupId", groupId)
         .getResultList()
         .stream()
         .map(TodoDTO::of)
         .toList();
+  }
+
+  public Map<Long, TodoCountDTO> findTodoCountsByGroupIds(List<Long> groupIds) {
+    return em
+        .createQuery(
+            """
+            SELECT new rest.felix.back.todo.dto.TodoCountDTO(
+                g.id,
+                COUNT(t),
+                SUM(CASE WHEN t.todoStatus = TodoStatus.DONE THEN 1 ELSE 0 END)
+            )
+            FROM
+                Group g
+            LEFT JOIN
+                g.todos t
+            WHERE
+                g.id IN :groupIds
+            GROUP BY
+                g.id
+            """,
+            TodoCountDTO.class)
+        .setParameter("groupIds", groupIds)
+        .getResultList()
+        .stream()
+        .collect(Collectors.toMap(TodoCountDTO::getGroupId, dto -> dto));
   }
 
   public Optional<TodoDTO> getTodoInGroup(long groupId, long todoId) {

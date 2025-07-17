@@ -7,12 +7,17 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+
+import rest.felix.back.common.security.PasswordService;
+import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.Pair;
 import rest.felix.back.group.dto.CreateGroupRequestDTO;
 import rest.felix.back.group.dto.GroupResponseDTO;
@@ -31,18 +36,20 @@ import rest.felix.back.user.exception.UserAccessDeniedException;
 public class GroupControllerUnitTest {
 
   @Autowired private GroupController groupController;
+  @Autowired private PasswordService passwordService;
   @Autowired private EntityManager em;
+  private EntityFactory entityFactory;
+
+  @BeforeEach
+  void setUp() {
+    entityFactory = new EntityFactory(passwordService, em);
+  }
 
   @Test
   public void createGroup_HappyPath() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
-    em.flush();
+    User user = entityFactory.insertUser("username", "some_password", "nickname");
 
     Principal principal = user::getUsername;
 
@@ -101,11 +108,8 @@ public class GroupControllerUnitTest {
   public void createGroup_Failure_NoSuchUser() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
+    User user = entityFactory.insertUser("username", "some_password", "nickname");
+
     em.flush();
     em.remove(user);
     em.flush();
@@ -124,132 +128,20 @@ public class GroupControllerUnitTest {
     Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
   }
 
-  @Test
-  public void getUserGroups_HappyPath() {
-    // Given
-
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
-    em.flush();
-
-    Principal principal = user::getUsername;
-
-    Arrays.stream(new int[] {1, 2, 3})
-        .forEach(
-            idx -> {
-              String groupName = String.format("group %d", idx);
-              String groupDescription = String.format("group description %d", idx);
-              groupController.createGroup(
-                  user::getUsername, new CreateGroupRequestDTO(groupName, groupDescription));
-            });
-
-    // When
-
-    ResponseEntity<List<GroupResponseDTO>> responseEntity =
-        groupController.getUserGroups(principal);
-
-    // Then
-
-    Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
-
-    List<GroupResponseDTO> groupResponseDTOS = responseEntity.getBody();
-
-    Assertions.assertEquals(3, groupResponseDTOS.size());
-
-    Assertions.assertTrue(
-        groupResponseDTOS.stream()
-            .map(GroupResponseDTO::name)
-            .toList()
-            .containsAll(List.of("group 1", "group 2", "group 3")));
-
-    Assertions.assertTrue(
-        groupResponseDTOS.stream()
-            .map(GroupResponseDTO::name)
-            .toList()
-            .containsAll(List.of("group 1", "group 2", "group 3")));
-
-    Assertions.assertTrue(
-        groupResponseDTOS.stream()
-            .map(GroupResponseDTO::description)
-            .toList()
-            .containsAll(
-                List.of("group description 1", "group description 2", "group description 3")));
-  }
-
-  @Test
-  public void getUserGroups_HappyPath_NoGroup() {
-    // Given
-
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
-    em.flush();
-
-    Principal principal = user::getUsername;
-
-    // When
-
-    ResponseEntity<List<GroupResponseDTO>> responseEntity =
-        groupController.getUserGroups(principal);
-
-    // Then
-
-    Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
-
-    List<GroupResponseDTO> groupResponseDTOS = responseEntity.getBody();
-
-    Assertions.assertEquals(0, groupResponseDTOS.size());
-  }
-
-  @Test
-  public void getUserGroups_Failure_NoSuchUser() {
-    // Given
-
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
-    em.flush();
-    em.remove(user);
-    em.flush();
-
-    Principal principal = user::getUsername;
-
-    // When
-
-    Runnable lambda = () -> groupController.getUserGroups(principal);
-
-    // Then
-
-    Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
-  }
-
+ 
   @Test
   public void getUserGroup_HappyPath() {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
+    User user = entityFactory.insertUser("username", "some_password", "nickname");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-    em.persist(group);
+    
 
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
+    Group group = entityFactory.insertGroup("group name", "group description");
+
+    UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
     em.persist(userGroup);
 
     em.flush();

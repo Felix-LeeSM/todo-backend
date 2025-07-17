@@ -1,13 +1,12 @@
 package rest.felix.back.common.exception.handler;
 
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import jakarta.validation.ConstraintViolationException;
 import rest.felix.back.common.exception.ErrorResponseDTO;
 import rest.felix.back.common.exception.throwable.badrequest.BadRequestException;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
@@ -53,9 +52,9 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(ConstraintViolationException.class)
   public ResponseEntity<ErrorResponseDTO> handleConstraintViolationException(
-    ConstraintViolationException exception
-  ) {
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponseDTO("Something went wrong, please try again later."));
+      ConstraintViolationException exception) {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        .body(new ErrorResponseDTO("Something went wrong, please try again later."));
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)

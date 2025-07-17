@@ -2,7 +2,10 @@ package rest.felix.back.group.repository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
 import rest.felix.back.group.dto.UserGroupDTO;
@@ -34,7 +37,7 @@ public class UserGroupRepository {
                   .setParameter("userId", userId)
                   .setParameter("groupId", groupId)
                   .getSingleResult())
-          .map(userGroup -> new UserGroupDTO(userGroup.getGroupRole(), userId, groupId));
+          .map(UserGroupDTO::of);
 
     } catch (NoResultException e) {
       return Optional.empty();
@@ -64,5 +67,27 @@ public class UserGroupRepository {
         """)
         .setParameter("groupId", groupId)
         .executeUpdate();
+  }
+
+  public Map<Long, GroupRole> findUserRolesByGroupIds(Long userId, List<Long> groupIds) {
+    return em
+        .createQuery(
+            """
+      SELECT
+        ug
+      FROM
+        UserGroup ug
+      WHERE
+        ug.group.id in :groupIds
+        AND
+        ug.user.id = :userId
+  """,
+            UserGroup.class)
+        .setParameter("groupIds", groupIds)
+        .setParameter("userId", userId)
+        .getResultList()
+        .stream()
+        .map(UserGroupDTO::of)
+        .collect(Collectors.toMap(UserGroupDTO::getGroupId, dto -> dto.getGroupRole()));
   }
 }

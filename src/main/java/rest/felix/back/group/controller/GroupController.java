@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.CreateGroupRequestDTO;
+import rest.felix.back.group.dto.DetailedGroupResponseDTO;
 import rest.felix.back.group.dto.GroupDTO;
 import rest.felix.back.group.dto.GroupResponseDTO;
 import rest.felix.back.group.entity.enumerated.GroupRole;
@@ -52,21 +53,28 @@ public class GroupController {
     return ResponseEntity.status(HttpStatus.CREATED).body(groupResponseDTO);
   }
 
-  @GetMapping
-  public ResponseEntity<List<GroupResponseDTO>> getUserGroups(Principal principal) {
+  @GetMapping("/my")
+  public ResponseEntity<List<DetailedGroupResponseDTO>> getMyDetailedGroups(Principal principal) {
     String username = principal.getName();
     UserDTO userDTO = userService.getByUsername(username).orElseThrow(NoMatchingUserException::new);
     long userId = userDTO.getId();
 
-    List<GroupResponseDTO> groupResponseDTOS =
-        groupService.getGroupsByUserId(userId).stream()
+    List<DetailedGroupResponseDTO> detailedGroupResponseDTOs =
+        groupService.findDetailedGroupsByUserId(userId).stream()
             .map(
-                groupDTO ->
-                    new GroupResponseDTO(
-                        groupDTO.getId(), groupDTO.getName(), groupDTO.getDescription()))
+                dto ->
+                    new DetailedGroupResponseDTO(
+                        dto.getId(),
+                        dto.getName(),
+                        dto.getDescription(),
+                        dto.getTodoCount(),
+                        dto.getCompletedTodoCount(),
+                        dto.getMembers(),
+                        dto.getMemberCount(),
+                        dto.getMyRole()))
             .toList();
 
-    return ResponseEntity.status(HttpStatus.OK).body(groupResponseDTOS);
+    return ResponseEntity.status(HttpStatus.OK).body(detailedGroupResponseDTOs);
   }
 
   @GetMapping("/{groupId}")
