@@ -28,6 +28,7 @@ public class GroupService {
   private final TodoRepository todoRepository;
   private final UserRepository userRepository;
 
+  @Transactional
   public GroupDTO createGroup(CreateGroupDTO createGroupDTO) {
 
     GroupDTO groupDTO = groupRepository.createGroup(createGroupDTO);
@@ -77,11 +78,13 @@ public class GroupService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public GroupDTO getGroupById(long groupId) {
 
     return groupRepository.getById(groupId).orElseThrow(ResourceNotFoundException::new);
   }
 
+  @Transactional(readOnly = true)
   public GroupRole getUserRoleInGroup(long userId, long groupId) {
     return userGroupRepository
         .getByUserIdAndGroupId(userId, groupId)
@@ -89,6 +92,7 @@ public class GroupService {
         .orElseThrow(UserAccessDeniedException::new);
   }
 
+  @Transactional
   public void deleteGroupById(long groupId) {
     userGroupRepository.deleteByGroupId(groupId);
     todoRepository.deleteByGroupId(groupId);

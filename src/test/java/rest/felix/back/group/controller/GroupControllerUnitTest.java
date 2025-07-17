@@ -237,6 +237,10 @@ public class GroupControllerUnitTest {
           List.of("mainUser", "otherUser1"),
           group1DTO.members().stream().map(MemberDTO::getUsername).sorted().toList());
 
+      Assertions.assertEquals(
+          List.of("mainUserNick", "otherUser1Nick"),
+          group1DTO.members().stream().map(MemberDTO::getNickname).sorted().toList());
+
       DetailedGroupResponseDTO group2DTO = body.get(1);
       Assertions.assertEquals(group2.getId(), group2DTO.id());
       Assertions.assertEquals("Group 2", group2DTO.name());
@@ -249,6 +253,10 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(
           List.of("mainUser", "otherUser1", "otherUser2"),
           group2DTO.members().stream().map(MemberDTO::getUsername).sorted().toList());
+
+      Assertions.assertEquals(
+          List.of("mainUserNick", "otherUser1Nick", "otherUser2Nick"),
+          group2DTO.members().stream().map(MemberDTO::getNickname).sorted().toList());
     }
 
     @Test
@@ -300,6 +308,10 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(
           List.of("mainUser", "otherUser1"),
           group1DTO.members().stream().map(MemberDTO::getUsername).sorted().toList());
+
+      Assertions.assertEquals(
+          List.of("mainUserNick", "otherUser1Nick"),
+          group1DTO.members().stream().map(MemberDTO::getNickname).sorted().toList());
     }
 
     @Test

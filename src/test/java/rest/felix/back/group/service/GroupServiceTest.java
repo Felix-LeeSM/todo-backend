@@ -303,9 +303,12 @@ class GroupServiceTest {
       Assertions.assertEquals(2, group1DTO.getMemberCount());
       Assertions.assertEquals(GroupRole.OWNER, group1DTO.getMyRole());
 
-      List<String> group1MemberNames =
-          group1DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList();
-      Assertions.assertEquals(List.of("mainUser", "otherUser1"), group1MemberNames);
+      Assertions.assertEquals(
+          List.of("mainUser", "otherUser1"),
+          group1DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList());
+      Assertions.assertEquals(
+          List.of("mainUserNick", "otherUser1Nick"),
+          group1DTO.getMembers().stream().map(MemberDTO::getNickname).sorted().toList());
 
       DetailedGroupDTO group2DTO = detailedGroups.get(1);
       Assertions.assertEquals(group2.getId(), group2DTO.getId());
@@ -316,9 +319,12 @@ class GroupServiceTest {
       Assertions.assertEquals(3, group2DTO.getMemberCount());
       Assertions.assertEquals(GroupRole.MEMBER, group2DTO.getMyRole());
 
-      List<String> group2MemberNames =
-          group2DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList();
-      Assertions.assertEquals(List.of("mainUser", "otherUser1", "otherUser2"), group2MemberNames);
+      Assertions.assertEquals(
+          List.of("mainUser", "otherUser1", "otherUser2"),
+          group2DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList());
+      Assertions.assertEquals(
+          List.of("mainUserNick", "otherUser1Nick", "otherUser2Nick"),
+          group2DTO.getMembers().stream().map(MemberDTO::getNickname).sorted().toList());
     }
 
     @Test
@@ -361,9 +367,12 @@ class GroupServiceTest {
       Assertions.assertEquals(2, group1DTO.getMemberCount());
       Assertions.assertEquals(GroupRole.OWNER, group1DTO.getMyRole());
 
-      List<String> group1MemberNames =
-          group1DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList();
-      Assertions.assertEquals(List.of("mainUser", "otherUser1"), group1MemberNames);
+      Assertions.assertEquals(
+          List.of("mainUser", "otherUser1"),
+          group1DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList());
+      Assertions.assertEquals(
+          List.of("mainUserNick", "otherUser1Nick"),
+          group1DTO.getMembers().stream().map(MemberDTO::getNickname).sorted().toList());
     }
 
     @Test

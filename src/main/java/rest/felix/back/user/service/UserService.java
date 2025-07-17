@@ -14,12 +14,12 @@ import rest.felix.back.user.exception.UsernameTakenException;
 import rest.felix.back.user.repository.UserRepository;
 
 @Service
-@Transactional
 @AllArgsConstructor
 public class UserService {
 
   private final UserRepository userRepository;
 
+  @Transactional
   public UserDTO signup(SignupDTO signupDTO) {
     User user = userRepository.createUser(signupDTO);
 
@@ -27,6 +27,7 @@ public class UserService {
         user.getId(), user.getNickname(), user.getUsername(), user.getHashedPassword());
   }
 
+  @Transactional(readOnly = true)
   public void validateSignupRequestDTO(SignupRequestDTO signupRequestDTO)
       throws ConfirmPasswordMismatchException, UsernameTakenException {
 
@@ -39,6 +40,7 @@ public class UserService {
     }
   }
 
+  @Transactional(readOnly = true)
   public Optional<UserDTO> getByUsername(String username) throws NoMatchingUserException {
 
     return userRepository

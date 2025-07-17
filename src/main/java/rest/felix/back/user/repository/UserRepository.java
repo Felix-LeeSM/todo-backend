@@ -59,6 +59,7 @@ public class UserRepository {
             SELECT new rest.felix.back.group.dto.MemberDTO(
                 u.id,
                 u.username,
+                u.nickname,
                 g.id,
                 ug.groupRole
             )
