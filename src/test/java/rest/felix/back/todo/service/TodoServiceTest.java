@@ -6,12 +6,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
+import rest.felix.back.common.security.PasswordService;
+import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.Pair;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.todo.dto.CreateTodoDTO;
@@ -28,35 +31,34 @@ class TodoServiceTest {
 
   @Autowired private EntityManager em;
   @Autowired private TodoService todoService;
+  @Autowired private PasswordService passwordService;
+  private EntityFactory entityFactory;
+
+  @BeforeEach
+  void setUp() {
+    entityFactory = new EntityFactory(passwordService, em);
+  }
 
   @Test
   void getTodosInGroup_HappyPath() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
     Arrays.stream(new int[] {1, 2, 3})
         .forEach(
             idx -> {
-              Todo todo = new Todo();
-              todo.setGroup(group);
-              todo.setAuthor(user);
-              todo.setTitle(String.format("todo %d", idx));
-              todo.setDescription(String.format("todo %d description", idx));
-              todo.setOrder(String.format("todo order %d", idx));
-
-              em.persist(todo);
+              entityFactory.insertTodo(
+                  user.getId(),
+                  user.getId(),
+                  group.getId(),
+                  String.format("todo %d", idx),
+                  String.format("todo %d description", idx),
+                  TodoStatus.TO_DO,
+                  String.format("todo order %d", idx),
+                  false);
             });
 
     em.flush();
@@ -111,18 +113,9 @@ class TodoServiceTest {
   void getTodosInGroup_HappyPath_NoTodo() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
     em.flush();
 
@@ -139,18 +132,9 @@ class TodoServiceTest {
   void getTodosInGroup_HappyPath_NoGroup() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
     em.remove(group);
 
@@ -169,18 +153,9 @@ class TodoServiceTest {
   void createTodo_HappyPath() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
     em.flush();
 
@@ -206,18 +181,9 @@ class TodoServiceTest {
   void createTodo_Failure_NoUser() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
     em.flush();
 
@@ -242,18 +208,9 @@ class TodoServiceTest {
   void createTodo_Failure_NoGroup() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
     em.flush();
 
@@ -278,28 +235,20 @@ class TodoServiceTest {
   void createTodo_Failure_Duplicated_Order_Status_In_Group() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    Todo todo = new Todo();
-    todo.setAuthor(user);
-    todo.setGroup(group);
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setOrder("todo order");
-    todo.setTodoStatus(TodoStatus.TO_DO);
-
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.TO_DO,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -320,18 +269,9 @@ class TodoServiceTest {
   void getTodoInGroup_HappyPath() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
     List<Todo> todos =
         Stream.of(
@@ -344,14 +284,16 @@ class TodoServiceTest {
                   TodoStatus todoStatus = pair.first();
                   int idx = pair.second();
 
-                  Todo todo = new Todo();
-                  todo.setTitle(String.format("todo %d", idx));
-                  todo.setDescription(String.format("todo %d description", idx));
-                  todo.setOrder(String.format("todo %d order", idx));
-                  todo.setTodoStatus(todoStatus);
-                  todo.setAuthor(user);
-                  todo.setGroup(group);
-                  em.persist(todo);
+                  Todo todo =
+                      entityFactory.insertTodo(
+                          user.getId(),
+                          user.getId(),
+                          group.getId(),
+                          String.format("todo %d", idx),
+                          String.format("todo %d description", idx),
+                          todoStatus,
+                          String.format("todo %d order", idx),
+                          false);
                   return todo;
                 })
             .toList();
@@ -380,27 +322,20 @@ class TodoServiceTest {
   void getTodoInGroup_Failure_NoTodo() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -420,27 +355,20 @@ class TodoServiceTest {
   void getTodoInGroup_Failure_NoGroup() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -461,32 +389,22 @@ class TodoServiceTest {
   void getTodoInGroup_Failure_WrongGroup() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group1 = entityFactory.insertGroup("group1 name", "group1 description");
 
-    Group group1 = new Group();
-    group1.setName("group1 name");
-    group1.setDescription("group1 description");
+    Group group2 = entityFactory.insertGroup("group2 name", "group2 description");
 
-    Group group2 = new Group();
-    group2.setName("group2 name");
-    group2.setDescription("group2 description");
-
-    em.persist(group1);
-    em.persist(group2);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group1);
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group1.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -503,27 +421,20 @@ class TodoServiceTest {
   void deleteTodo_HappyPath() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -556,28 +467,20 @@ class TodoServiceTest {
   void deleteTodo_HappyPath_NoTodo() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -597,28 +500,20 @@ class TodoServiceTest {
   void updateTodo_HappyPath() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -670,28 +565,20 @@ class TodoServiceTest {
   void updateTodo_Failure_NoTodo() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -720,37 +607,31 @@ class TodoServiceTest {
   void updateTodo_Failure_Duplicated_Order_Status_In_Group() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
+    Todo todo1 =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo1 title",
+            "todo1 description",
+            TodoStatus.IN_PROGRESS,
+            "todo1 order",
+            false);
 
-    em.persist(group);
-
-    Todo todo1 = new Todo();
-    todo1.setTitle("todo1 title");
-    todo1.setDescription("todo1 description");
-    todo1.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo1.setOrder("todo1 order");
-    todo1.setAuthor(user);
-    todo1.setGroup(group);
-
-    Todo todo2 = new Todo();
-    todo2.setTitle("todo2 title");
-    todo2.setDescription("todo2 description");
-    todo2.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo2.setOrder("todo2 order");
-    todo2.setAuthor(user);
-    todo2.setGroup(group);
-
-    em.persist(todo1);
-    em.persist(todo2);
+    Todo todo2 =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo2 title",
+            "todo2 description",
+            TodoStatus.IN_PROGRESS,
+            "todo2 order",
+            false);
 
     em.flush();
 

@@ -17,6 +17,7 @@ import jakarta.transaction.Transactional;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -26,6 +27,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import rest.felix.back.common.security.JwtTokenProvider;
+import rest.felix.back.common.security.PasswordService;
+import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.Trio;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
@@ -46,6 +49,13 @@ public class TodoControllerWebTest {
   @Autowired private MockMvc mvc;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private JwtTokenProvider jwtTokenProvider;
+  @Autowired private PasswordService passwordService;
+  private EntityFactory entityFactory;
+
+  @BeforeEach
+  void setUp() {
+    entityFactory = new EntityFactory(passwordService, em);
+  }
 
   private Cookie userCookie(String username) {
     return new Cookie("accessToken", jwtTokenProvider.generateToken(username));
@@ -56,25 +66,12 @@ public class TodoControllerWebTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     List<Trio<TodoStatus, String, Integer>> list =
         Arrays.asList(
@@ -89,14 +86,15 @@ public class TodoControllerWebTest {
           String order = trio.second();
           int idx = trio.third();
 
-          Todo todo = new Todo();
-          todo.setTitle(String.format("todo %d", idx));
-          todo.setDescription(String.format("todo %d description", idx));
-          todo.setTodoStatus(todoStatus);
-          todo.setAuthor(user);
-          todo.setGroup(group);
-          todo.setOrder(order);
-          em.persist(todo);
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              String.format("todo %d", idx),
+              String.format("todo %d description", idx),
+              todoStatus,
+              order,
+              false);
         });
 
     em.flush();
@@ -141,25 +139,12 @@ public class TodoControllerWebTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -187,25 +172,12 @@ public class TodoControllerWebTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -237,25 +209,12 @@ public class TodoControllerWebTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -287,25 +246,12 @@ public class TodoControllerWebTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -336,25 +282,12 @@ public class TodoControllerWebTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -394,25 +327,12 @@ public class TodoControllerWebTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -442,25 +362,12 @@ public class TodoControllerWebTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -498,25 +405,12 @@ public class TodoControllerWebTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -554,25 +448,12 @@ public class TodoControllerWebTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -609,25 +490,12 @@ public class TodoControllerWebTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.VIEWER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
 
     em.flush();
 
@@ -665,35 +533,23 @@ public class TodoControllerWebTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
-
-    Todo todo = new Todo();
-    todo.setAuthor(user);
-    todo.setGroup(group);
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.TO_DO);
-    todo.setOrder("todo order");
-
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.TO_DO,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -726,35 +582,23 @@ public class TodoControllerWebTest {
   void deleteTodo_HappyPath() throws Exception {
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MANAGER);
 
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.MANAGER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -796,35 +640,23 @@ public class TodoControllerWebTest {
   void deleteTodo_Failure_NoUser() throws Exception {
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MANAGER);
 
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.MANAGER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -857,35 +689,23 @@ public class TodoControllerWebTest {
   void deleteTodo_Failure_NoGroupUser() throws Exception {
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MANAGER);
 
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.MANAGER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -916,35 +736,23 @@ public class TodoControllerWebTest {
   void deleteTodo_Failure_ImproperGroupRole1() throws Exception {
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
 
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.VIEWER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -975,49 +783,29 @@ public class TodoControllerWebTest {
   void deleteTodo_Failure_ImproperGroupRole2() throws Exception {
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    User author =
+        entityFactory.insertUser("username123_author", "hashedPassword", "nickname_author");
 
-    User author = new User();
-    author.setUsername("username_author");
-    author.setNickname("nickname_author");
-    author.setHashedPassword("hashedPassword");
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    em.persist(author);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
+    UserGroup authorUserGroup =
+        entityFactory.insertUserGroup(author.getId(), group.getId(), GroupRole.MEMBER);
 
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.MEMBER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
-
-    UserGroup authorUserGroup = new UserGroup();
-    authorUserGroup.setGroupRole(GroupRole.MEMBER);
-    authorUserGroup.setUser(author);
-    authorUserGroup.setGroup(group);
-
-    em.persist(authorUserGroup);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(author);
-    todo.setGroup(group);
-
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            author.getId(),
+            author.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -1044,35 +832,23 @@ public class TodoControllerWebTest {
   void deleteTodo_Failure_NoGroup() throws Exception {
     // Given
 
-    User user = new User();
-    user.setUsername("username123");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-    em.persist(user);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
 
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.VIEWER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-
-    em.persist(userGroup);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 

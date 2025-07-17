@@ -3,11 +3,8 @@ package rest.felix.back.group.controller;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import java.security.Principal;
-import java.util.Arrays;
-import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +12,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-
 import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.Pair;
@@ -128,7 +124,6 @@ public class GroupControllerUnitTest {
     Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
   }
 
- 
   @Test
   public void getUserGroup_HappyPath() {
 
@@ -136,13 +131,10 @@ public class GroupControllerUnitTest {
 
     User user = entityFactory.insertUser("username", "some_password", "nickname");
 
-    
-
     Group group = entityFactory.insertGroup("group name", "group description");
 
-    UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
-    em.persist(userGroup);
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -168,22 +160,10 @@ public class GroupControllerUnitTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-    em.persist(userGroup);
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+    Group group = entityFactory.insertGroup("group name", "group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -208,22 +188,10 @@ public class GroupControllerUnitTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-    em.persist(userGroup);
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+    Group group = entityFactory.insertGroup("group name", "group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -248,22 +216,10 @@ public class GroupControllerUnitTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-    em.persist(userGroup);
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+    Group group = entityFactory.insertGroup("group name", "group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -287,32 +243,21 @@ public class GroupControllerUnitTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+    Group group = entityFactory.insertGroup("group name", "group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-    em.persist(userGroup);
-
-    Todo todo = new Todo();
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-
-    em.persist(todo);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            user.getId(),
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            "todo order",
+            false);
 
     em.flush();
 
@@ -378,10 +323,7 @@ public class GroupControllerUnitTest {
 
     // Given
 
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-    em.persist(group);
+    Group group = entityFactory.insertGroup("group name", "group description");
 
     em.flush();
 
@@ -395,27 +337,21 @@ public class GroupControllerUnitTest {
               GroupRole role = pair.first();
               Integer idx = pair.second();
 
-              User user = new User();
-              user.setUsername("username" + role);
-              user.setNickname("nickname");
-              user.setHashedPassword("hashedPassword");
-              em.persist(user);
+              User user = entityFactory.insertUser("username" + role, "hashedPassword", "nickname");
 
-              UserGroup userGroup = new UserGroup();
-              userGroup.setGroupRole(role);
-              userGroup.setUser(user);
-              userGroup.setGroup(group);
-              em.persist(userGroup);
+              UserGroup userGroup =
+                  entityFactory.insertUserGroup(user.getId(), group.getId(), role);
 
-              Todo todo = new Todo();
-              todo.setTitle("todo title");
-              todo.setDescription("todo description");
-              todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-              todo.setOrder(String.format("todo order %d", idx));
-              todo.setAuthor(user);
-              todo.setGroup(group);
-
-              em.persist(todo);
+              Todo todo =
+                  entityFactory.insertTodo(
+                      user.getId(),
+                      user.getId(),
+                      group.getId(),
+                      "todo title",
+                      "todo description",
+                      TodoStatus.IN_PROGRESS,
+                      String.format("todo order %d", idx),
+                      false);
 
               em.flush();
 
@@ -484,22 +420,10 @@ public class GroupControllerUnitTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-    em.persist(userGroup);
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+    Group group = entityFactory.insertGroup("group name", "group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -540,22 +464,10 @@ public class GroupControllerUnitTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-    em.persist(userGroup);
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+    Group group = entityFactory.insertGroup("group name", "group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
@@ -595,22 +507,10 @@ public class GroupControllerUnitTest {
 
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group name");
-    group.setDescription("group description");
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setGroupRole(GroupRole.OWNER);
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-    em.persist(userGroup);
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+    Group group = entityFactory.insertGroup("group name", "group description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 

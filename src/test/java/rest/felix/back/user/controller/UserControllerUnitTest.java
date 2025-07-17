@@ -3,6 +3,7 @@ package rest.felix.back.user.controller;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -10,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import rest.felix.back.common.security.JwtTokenProvider;
+import rest.felix.back.common.security.PasswordService;
+import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.user.dto.SignInRequestDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
 import rest.felix.back.user.dto.UserResponseDTO;
@@ -28,6 +31,13 @@ class UserControllerUnitTest {
   @Autowired private UserRepository userRepository;
   @Autowired private EntityManager em;
   @Autowired private JwtTokenProvider jwtTokenProvider;
+  @Autowired private PasswordService passwordService;
+  private EntityFactory entityFactory;
+
+  @BeforeEach
+  void setUp() {
+    entityFactory = new EntityFactory(passwordService, em);
+  }
 
   @Test
   void signUp_HappyPath() {
@@ -58,12 +68,7 @@ class UserControllerUnitTest {
 
     // Given
 
-    User existingUser = new User();
-    existingUser.setHashedPassword("hashed_password");
-    existingUser.setNickname("nickname1");
-    existingUser.setUsername("duplicateUsername");
-
-    userRepository.save(existingUser);
+    entityFactory.insertUser("duplicateUsername", "hashed_password", "nickname1");
 
     SignupRequestDTO signupRequestDTO =
         new SignupRequestDTO("duplicateUsername", "nickname2", "password", "password");
@@ -179,11 +184,7 @@ class UserControllerUnitTest {
   void currentUserInfo_HappyPath() {
     // Given
 
-    User user = new User();
-    user.setHashedPassword("hashedPassword");
-    user.setUsername("username");
-    user.setNickname("nickname");
-    userRepository.save(user);
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
     em.flush();
 
     String token = jwtTokenProvider.generateToken("username");

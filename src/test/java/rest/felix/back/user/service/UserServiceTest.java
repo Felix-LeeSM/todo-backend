@@ -5,10 +5,13 @@ import jakarta.transaction.Transactional;
 import java.util.Optional;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import rest.felix.back.common.security.PasswordService;
+import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.user.dto.SignupDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
 import rest.felix.back.user.dto.UserDTO;
@@ -25,6 +28,13 @@ class UserServiceTest {
   @Autowired private UserService userService;
   @Autowired private UserRepository userRepository;
   @Autowired private EntityManager em;
+  @Autowired private PasswordService passwordService;
+  private EntityFactory entityFactory;
+
+  @BeforeEach
+  void setUp() {
+    entityFactory = new EntityFactory(passwordService, em);
+  }
 
   @Test
   void signup_HappyPath() {
@@ -89,22 +99,7 @@ class UserServiceTest {
   void validateSignupRequestDTO_UsernameTaken() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setHashedPassword("hashedPassword");
-    user.setNickname("nickname");
-    try {
-      em.persist(user);
-
-    } catch (RuntimeException e) {
-      System.out.println("여기다 이 친구야!");
-      System.out.println("여기다 이 친구야!");
-      System.out.println("여기다 이 친구야!");
-      System.out.println("여기다 이 친구야!");
-      System.out.println("여기다 이 친구야!");
-      System.out.println(e.toString());
-      System.out.println(e.getMessage());
-    }
+    entityFactory.insertUser("username", "hashedPassword", "nickname");
 
     // When
 
@@ -142,11 +137,7 @@ class UserServiceTest {
   void getByUsername_HappyPath() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("password");
-    userRepository.save(user);
+    User user = entityFactory.insertUser("username", "password", "nickname");
     em.flush();
 
     // When

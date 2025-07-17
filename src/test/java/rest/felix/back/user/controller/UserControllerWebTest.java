@@ -8,11 +8,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.Cookie;
 import jakarta.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -23,9 +25,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import rest.felix.back.common.security.JwtTokenProvider;
+import rest.felix.back.common.security.PasswordService;
+import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.user.dto.SignInRequestDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
-import rest.felix.back.user.repository.UserRepository;
 
 @SpringBootTest
 @Transactional
@@ -34,9 +37,16 @@ import rest.felix.back.user.repository.UserRepository;
 public class UserControllerWebTest {
 
   @Autowired private MockMvc mvc;
-  @Autowired private UserRepository userRepository;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private JwtTokenProvider jwtTokenProvider;
+  @Autowired private PasswordService passwordService;
+  @Autowired private EntityManager em;
+  private EntityFactory entityFactory;
+
+  @BeforeEach
+  void setUp() {
+    entityFactory = new EntityFactory(passwordService, em);
+  }
 
   @Test
   void signUp_HappyPath() throws Exception {
@@ -223,15 +233,7 @@ public class UserControllerWebTest {
   void createAccessToken_HappyPath() throws Exception {
     // Given
 
-    SignupRequestDTO signupRequestDTO =
-        new SignupRequestDTO(
-            "username123", "nickname", "password123412341234", "password123412341234");
-
-    mvc.perform(
-        post("/api/v1/user")
-            .content(objectMapper.writeValueAsString(signupRequestDTO))
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON));
+    entityFactory.insertUser("username123", "password123412341234", "nickname");
 
     String path = "/api/v1/user/token/access-token";
 
@@ -292,15 +294,7 @@ public class UserControllerWebTest {
   void createAccessToken_Failure_WrongPassword() throws Exception {
     // Given
 
-    SignupRequestDTO signupRequestDTO =
-        new SignupRequestDTO(
-            "username123", "nickname", "password123412341234", "password123412341234");
-
-    mvc.perform(
-        post("/api/v1/user")
-            .content(objectMapper.writeValueAsString(signupRequestDTO))
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON));
+    entityFactory.insertUser("username123", "password123412341234", "nickname");
 
     String path = "/api/v1/user/token/access-token";
 
@@ -326,15 +320,7 @@ public class UserControllerWebTest {
   void logOutUser_HappyPath() throws Exception {
     // Given
 
-    SignupRequestDTO signupRequestDTO =
-        new SignupRequestDTO(
-            "username123", "nickname", "password123412341234", "password123412341234");
-
-    mvc.perform(
-        post("/api/v1/user")
-            .content(objectMapper.writeValueAsString(signupRequestDTO))
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON));
+    entityFactory.insertUser("username123", "password123412341234", "nickname");
 
     Cookie cookie = new Cookie("accessToken", jwtTokenProvider.generateToken("username123"));
     String path = "/api/v1/user/token";
@@ -373,15 +359,7 @@ public class UserControllerWebTest {
   void currentUserInfo_HappyPath() throws Exception {
     // Given
 
-    SignupRequestDTO signupRequestDTO =
-        new SignupRequestDTO(
-            "username123", "nickname", "password123412341234", "password123412341234");
-
-    mvc.perform(
-        post("/api/v1/user")
-            .content(objectMapper.writeValueAsString(signupRequestDTO))
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON));
+    entityFactory.insertUser("username123", "password123412341234", "nickname");
 
     Cookie cookie = new Cookie("accessToken", jwtTokenProvider.generateToken("username123"));
 
