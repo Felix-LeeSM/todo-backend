@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -33,9 +34,14 @@ public class Todo {
   @Setter(AccessLevel.NONE)
   private Long id;
 
-  @ManyToOne private User author;
+  @ManyToOne(optional = true, fetch = FetchType.LAZY)
+  private User author;
 
-  @ManyToOne private Group group;
+  @ManyToOne(optional = true, fetch = FetchType.LAZY)
+  private User assignee;
+
+  @ManyToOne(optional = false, fetch = FetchType.LAZY)
+  private Group group;
 
   @Column(nullable = false)
   private String title;
@@ -47,10 +53,15 @@ public class Todo {
   @Enumerated(EnumType.STRING)
   private TodoStatus todoStatus = TodoStatus.TO_DO;
 
-  @CreationTimestamp private ZonedDateTime createdAt;
-
-  @UpdateTimestamp private ZonedDateTime updatedAt;
-
   @Column(nullable = false)
   private String order;
+
+  @Column(nullable = false)
+  private boolean isImportant = false;
+
+  @CreationTimestamp
+  @Column(nullable = false, updatable = false)
+  private ZonedDateTime createdAt;
+
+  @UpdateTimestamp private ZonedDateTime updatedAt;
 }

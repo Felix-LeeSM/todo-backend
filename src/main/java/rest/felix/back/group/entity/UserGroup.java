@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -33,15 +34,21 @@ public class UserGroup {
   @Setter(AccessLevel.NONE)
   private Long id;
 
-  @ManyToOne @JoinColumn private User user;
+  @ManyToOne(optional = false, fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
-  @ManyToOne @JoinColumn private Group group;
+  @ManyToOne(optional = false, fetch = FetchType.LAZY)
+  @JoinColumn(name = "group_id", nullable = false)
+  private Group group;
 
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
   private GroupRole groupRole;
 
-  @CreationTimestamp private ZonedDateTime createdAt;
+  @CreationTimestamp
+  @Column(nullable = false, updatable = false)
+  private ZonedDateTime createdAt;
 
   @UpdateTimestamp private ZonedDateTime updatedAt;
 }

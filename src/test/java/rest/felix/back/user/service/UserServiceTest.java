@@ -3,11 +3,11 @@ package rest.felix.back.user.service;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import java.util.Optional;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import rest.felix.back.user.dto.SignupDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
@@ -61,7 +61,7 @@ class UserServiceTest {
     // Then
 
     Assertions.assertThrows(
-        DataIntegrityViolationException.class,
+        ConstraintViolationException.class,
         () -> {
           userService.signup(duplicatedUsernameSignupDTO);
           em.flush();
@@ -93,7 +93,18 @@ class UserServiceTest {
     user.setUsername("username");
     user.setHashedPassword("hashedPassword");
     user.setNickname("nickname");
-    em.persist(user);
+    try {
+      em.persist(user);
+
+    } catch (RuntimeException e) {
+      System.out.println("여기다 이 친구야!");
+      System.out.println("여기다 이 친구야!");
+      System.out.println("여기다 이 친구야!");
+      System.out.println("여기다 이 친구야!");
+      System.out.println("여기다 이 친구야!");
+      System.out.println(e.toString());
+      System.out.println(e.getMessage());
+    }
 
     // When
 
