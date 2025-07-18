@@ -1,5 +1,6 @@
 package rest.felix.back.group.controller;
 
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -370,24 +371,64 @@ public class GroupControllerWebTest {
   @DisplayName("유저 단일 그룹 조회 테스트")
   class GetUserGroupTest {
     @Test
+    @DisplayName("Happy Path - User is OWNER with multiple members and todos")
     public void HappyPath() throws Exception {
 
       // Given
+      User ownerUser = entityFactory.insertUser("ownerUser", "hashedPassword", "ownerNick");
+      User memberUser1 = entityFactory.insertUser("memberUser1", "hashedPassword", "memberNick1");
+      User memberUser2 = entityFactory.insertUser("memberUser2", "hashedPassword", "memberNick2");
 
-      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("Complex Group 1", "Description for complex group 1");
 
-      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(ownerUser.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(memberUser1.getId(), group.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(memberUser2.getId(), group.getId(), GroupRole.VIEWER);
 
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertTodo(
+          ownerUser.getId(),
+          ownerUser.getId(),
+          group.getId(),
+          "Owner Todo 1",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "a",
+          false);
+      entityFactory.insertTodo(
+          memberUser1.getId(),
+          memberUser1.getId(),
+          group.getId(),
+          "Member1 Todo 1",
+          "Desc",
+          TodoStatus.DONE,
+          "b",
+          false);
+      entityFactory.insertTodo(
+          memberUser2.getId(),
+          memberUser2.getId(),
+          group.getId(),
+          "Member2 Todo 1",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "c",
+          false);
+      entityFactory.insertTodo(
+          ownerUser.getId(),
+          ownerUser.getId(),
+          group.getId(),
+          "Owner Todo 2",
+          "Desc",
+          TodoStatus.DONE,
+          "d",
+          false);
 
       em.flush();
 
-      Cookie cookie = userCookie(user);
+      Cookie cookie = userCookie(ownerUser);
 
       String path = String.format("/api/v1/group/%d", group.getId());
 
       // When
-
       ResultActions result =
           mvc.perform(
               get(path)
@@ -396,11 +437,59 @@ public class GroupControllerWebTest {
                   .accept(MediaType.APPLICATION_JSON));
 
       // Then
-
       result.andExpect(status().isOk());
       result.andExpect(jsonPath("$.id", notNullValue()));
-      result.andExpect(jsonPath("$.name", equalTo("group name")));
-      result.andExpect(jsonPath("$.description", equalTo("group description")));
+      result.andExpect(jsonPath("$.name", equalTo("Complex Group 1")));
+      result.andExpect(jsonPath("$.description", equalTo("Description for complex group 1")));
+      result.andExpect(jsonPath("$.myRole", equalTo("OWNER")));
+      result.andExpect(jsonPath("$.memberCount", equalTo(3)));
+
+      result.andExpect(
+          jsonPath(
+              "$.members[0].nickname",
+              anyOf(equalTo("ownerNick"), equalTo("memberNick1"), equalTo("memberNick2"))));
+      result.andExpect(
+          jsonPath(
+              "$.members[1].nickname",
+              anyOf(equalTo("ownerNick"), equalTo("memberNick1"), equalTo("memberNick2"))));
+      result.andExpect(
+          jsonPath(
+              "$.members[2].nickname",
+              anyOf(equalTo("ownerNick"), equalTo("memberNick1"), equalTo("memberNick2"))));
+
+      result.andExpect(jsonPath("$.todos.length()", equalTo(4)));
+      result.andExpect(
+          jsonPath(
+              "$.todos[0].title",
+              anyOf(
+                  equalTo("Owner Todo 1"),
+                  equalTo("Member1 Todo 1"),
+                  equalTo("Member2 Todo 1"),
+                  equalTo("Owner Todo 2"))));
+      result.andExpect(
+          jsonPath(
+              "$.todos[1].title",
+              anyOf(
+                  equalTo("Owner Todo 1"),
+                  equalTo("Member1 Todo 1"),
+                  equalTo("Member2 Todo 1"),
+                  equalTo("Owner Todo 2"))));
+      result.andExpect(
+          jsonPath(
+              "$.todos[2].title",
+              anyOf(
+                  equalTo("Owner Todo 1"),
+                  equalTo("Member1 Todo 1"),
+                  equalTo("Member2 Todo 1"),
+                  equalTo("Owner Todo 2"))));
+      result.andExpect(
+          jsonPath(
+              "$.todos[3].title",
+              anyOf(
+                  equalTo("Owner Todo 1"),
+                  equalTo("Member1 Todo 1"),
+                  equalTo("Member2 Todo 1"),
+                  equalTo("Owner Todo 2"))));
     }
 
     @Test
@@ -507,7 +596,41 @@ public class GroupControllerWebTest {
     }
 
     @Test
+    @DisplayName("Failure - User not in group")
     public void Failure_NoUserGroup() throws Exception {
+
+      // Given
+
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      // User is not associated with the group
+
+      em.flush();
+
+      Cookie cookie = userCookie(user);
+
+      String path = String.format("/api/v1/group/%d", group.getId());
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              get(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    }
+
+    @Test
+    @DisplayName("Failure - Group not found")
+    public void Failure_GroupNotFound() throws Exception {
 
       // Given
 
@@ -520,13 +643,17 @@ public class GroupControllerWebTest {
 
       em.flush();
 
+      long groupId = group.getId();
+
       em.remove(userGroup);
+      em.flush();
+      em.remove(group);
 
       em.flush();
 
       Cookie cookie = userCookie(user);
 
-      String path = String.format("/api/v1/group/%d", group.getId());
+      String path = String.format("/api/v1/group/%d", groupId);
 
       // When
 

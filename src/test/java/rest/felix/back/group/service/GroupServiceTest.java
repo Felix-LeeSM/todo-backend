@@ -304,9 +304,6 @@ class GroupServiceTest {
       Assertions.assertEquals(GroupRole.OWNER, group1DTO.getMyRole());
 
       Assertions.assertEquals(
-          List.of("mainUser", "otherUser1"),
-          group1DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList());
-      Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick"),
           group1DTO.getMembers().stream().map(MemberDTO::getNickname).sorted().toList());
 
@@ -319,9 +316,6 @@ class GroupServiceTest {
       Assertions.assertEquals(3, group2DTO.getMemberCount());
       Assertions.assertEquals(GroupRole.MEMBER, group2DTO.getMyRole());
 
-      Assertions.assertEquals(
-          List.of("mainUser", "otherUser1", "otherUser2"),
-          group2DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList());
       Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick", "otherUser2Nick"),
           group2DTO.getMembers().stream().map(MemberDTO::getNickname).sorted().toList());
@@ -368,9 +362,6 @@ class GroupServiceTest {
       Assertions.assertEquals(GroupRole.OWNER, group1DTO.getMyRole());
 
       Assertions.assertEquals(
-          List.of("mainUser", "otherUser1"),
-          group1DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList());
-      Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick"),
           group1DTO.getMembers().stream().map(MemberDTO::getNickname).sorted().toList());
     }
@@ -401,9 +392,9 @@ class GroupServiceTest {
       Assertions.assertEquals(1, group1DTO.getMemberCount());
       Assertions.assertEquals(GroupRole.OWNER, group1DTO.getMyRole());
 
-      List<String> group1MemberNames =
-          group1DTO.getMembers().stream().map(MemberDTO::getUsername).sorted().toList();
-      Assertions.assertEquals(List.of("mainUser"), group1MemberNames);
+      List<String> group1MemberNicknames =
+          group1DTO.getMembers().stream().map(MemberDTO::getNickname).sorted().toList();
+      Assertions.assertEquals(List.of("mainUserNick"), group1MemberNicknames);
     }
 
     @Test

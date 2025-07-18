@@ -17,6 +17,7 @@ import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.CreateGroupRequestDTO;
 import rest.felix.back.group.dto.DetailedGroupResponseDTO;
 import rest.felix.back.group.dto.FullGroupDetailsDTO;
+import rest.felix.back.group.dto.FullGroupDetailsResponseDTO;
 import rest.felix.back.group.dto.GroupDTO;
 import rest.felix.back.group.dto.GroupResponseDTO;
 import rest.felix.back.group.service.GroupService;
@@ -65,17 +66,14 @@ public class GroupController {
   }
 
   @GetMapping("/{groupId}")
-  public ResponseEntity<GroupResponseDTO> getUserGroup(
+  public ResponseEntity<FullGroupDetailsResponseDTO> getUserGroup(
       @AuthenticationPrincipal AuthUserDTO authUser, @PathVariable(name = "groupId") long groupId) {
 
     long userId = authUser.getUserId();
 
     FullGroupDetailsDTO groupDTO = groupService.findFullDetailedGroupById(userId, groupId);
 
-    GroupResponseDTO groupResponseDTO =
-        new GroupResponseDTO(groupDTO.getId(), groupDTO.getName(), groupDTO.getDescription());
-
-    return ResponseEntity.status(HttpStatus.OK).body(groupResponseDTO);
+    return ResponseEntity.status(HttpStatus.OK).body(FullGroupDetailsResponseDTO.of(groupDTO));
   }
 
   @DeleteMapping("/{groupId}")

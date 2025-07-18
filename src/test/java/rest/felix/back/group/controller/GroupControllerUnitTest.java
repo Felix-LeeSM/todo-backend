@@ -18,6 +18,7 @@ import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.Pair;
 import rest.felix.back.group.dto.CreateGroupRequestDTO;
 import rest.felix.back.group.dto.DetailedGroupResponseDTO;
+import rest.felix.back.group.dto.FullGroupDetailsResponseDTO;
 import rest.felix.back.group.dto.GroupResponseDTO;
 import rest.felix.back.group.dto.MemberDTO;
 import rest.felix.back.group.entity.Group;
@@ -234,10 +235,6 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(GroupRole.OWNER, group1DTO.myRole());
 
       Assertions.assertEquals(
-          List.of("mainUser", "otherUser1"),
-          group1DTO.members().stream().map(MemberDTO::getUsername).sorted().toList());
-
-      Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick"),
           group1DTO.members().stream().map(MemberDTO::getNickname).sorted().toList());
 
@@ -249,10 +246,6 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(2, group2DTO.completedTodoCount());
       Assertions.assertEquals(3, group2DTO.memberCount());
       Assertions.assertEquals(GroupRole.MEMBER, group2DTO.myRole());
-
-      Assertions.assertEquals(
-          List.of("mainUser", "otherUser1", "otherUser2"),
-          group2DTO.members().stream().map(MemberDTO::getUsername).sorted().toList());
 
       Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick", "otherUser2Nick"),
@@ -306,10 +299,6 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(GroupRole.OWNER, group1DTO.myRole());
 
       Assertions.assertEquals(
-          List.of("mainUser", "otherUser1"),
-          group1DTO.members().stream().map(MemberDTO::getUsername).sorted().toList());
-
-      Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick"),
           group1DTO.members().stream().map(MemberDTO::getNickname).sorted().toList());
     }
@@ -361,115 +350,283 @@ public class GroupControllerUnitTest {
   class GetUserGroupTest {
 
     @Test
-    public void HappyPath() {
-
+    @DisplayName("Happy Path - User is OWNER with multiple members and todos")
+    public void HappyPath_1() {
       // Given
+      User ownerUser = entityFactory.insertUser("ownerUser", "password", "ownerNick");
+      User memberUser1 = entityFactory.insertUser("memberUser1", "password", "memberNick1");
+      User memberUser2 = entityFactory.insertUser("memberUser2", "password", "memberNick2");
 
-      User user = entityFactory.insertUser("username", "some_password", "nickname");
+      Group group = entityFactory.insertGroup("Complex Group 1", "Description for complex group 1");
 
-      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(ownerUser.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(memberUser1.getId(), group.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(memberUser2.getId(), group.getId(), GroupRole.VIEWER);
 
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertTodo(
+          ownerUser.getId(),
+          ownerUser.getId(),
+          group.getId(),
+          "Owner Todo 1",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "a",
+          false);
+      entityFactory.insertTodo(
+          memberUser1.getId(),
+          memberUser1.getId(),
+          group.getId(),
+          "Member1 Todo 1",
+          "Desc",
+          TodoStatus.DONE,
+          "b",
+          false);
+      entityFactory.insertTodo(
+          memberUser2.getId(),
+          memberUser2.getId(),
+          group.getId(),
+          "Member2 Todo 1",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "c",
+          false);
+      entityFactory.insertTodo(
+          ownerUser.getId(),
+          ownerUser.getId(),
+          group.getId(),
+          "Owner Todo 2",
+          "Desc",
+          TodoStatus.DONE,
+          "d",
+          false);
 
       em.flush();
 
-      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+      AuthUserDTO authUserDTO = AuthUserDTO.of(ownerUser);
 
       // When
-
-      ResponseEntity<GroupResponseDTO> responseEntity =
+      ResponseEntity<FullGroupDetailsResponseDTO> responseEntity =
           groupController.getUserGroup(authUserDTO, group.getId());
 
       // Then
-
       Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
-
-      GroupResponseDTO groupResponseDTO = responseEntity.getBody();
-      Assertions.assertNotNull(groupResponseDTO.id());
-      Assertions.assertEquals("group name", groupResponseDTO.name());
-      Assertions.assertEquals("group description", groupResponseDTO.description());
+      FullGroupDetailsResponseDTO body = responseEntity.getBody();
+      Assertions.assertNotNull(body);
+      Assertions.assertEquals(group.getId(), body.id());
+      Assertions.assertEquals("Complex Group 1", body.name());
+      Assertions.assertEquals("Description for complex group 1", body.description());
+      Assertions.assertEquals(GroupRole.OWNER, body.myRole());
+      Assertions.assertEquals(3, body.memberCount());
+      Assertions.assertEquals(
+          List.of("memberNick1", "memberNick2", "ownerNick"),
+          body.members().stream().map(MemberDTO::getNickname).sorted().toList());
+      Assertions.assertEquals(4, body.todos().size());
+      Assertions.assertTrue(
+          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Owner Todo 1")));
+      Assertions.assertTrue(
+          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Member1 Todo 1")));
+      Assertions.assertTrue(
+          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Member2 Todo 1")));
+      Assertions.assertTrue(
+          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Owner Todo 2")));
     }
 
     @Test
+    @DisplayName("Happy Path - User is MEMBER with multiple members and todos")
+    public void HappyPath_2() {
+      // Given
+      User ownerUser = entityFactory.insertUser("ownerUser2", "password", "ownerNick2");
+      User memberUser1 = entityFactory.insertUser("memberUser3", "password", "memberNick3");
+      User memberUser2 = entityFactory.insertUser("memberUser4", "password", "memberNick4");
+
+      Group group = entityFactory.insertGroup("Complex Group 2", "Description for complex group 2");
+
+      entityFactory.insertUserGroup(ownerUser.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(memberUser1.getId(), group.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(memberUser2.getId(), group.getId(), GroupRole.MANAGER);
+
+      entityFactory.insertTodo(
+          ownerUser.getId(),
+          ownerUser.getId(),
+          group.getId(),
+          "Owner Todo 3",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "a",
+          false);
+      entityFactory.insertTodo(
+          memberUser1.getId(),
+          memberUser1.getId(),
+          group.getId(),
+          "Member3 Todo 1",
+          "Desc",
+          TodoStatus.DONE,
+          "b",
+          false);
+      entityFactory.insertTodo(
+          memberUser2.getId(),
+          memberUser2.getId(),
+          group.getId(),
+          "Member4 Todo 1",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "c",
+          false);
+
+      em.flush();
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(memberUser1);
+
+      // When
+      ResponseEntity<FullGroupDetailsResponseDTO> responseEntity =
+          groupController.getUserGroup(authUserDTO, group.getId());
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+      FullGroupDetailsResponseDTO body = responseEntity.getBody();
+      Assertions.assertNotNull(body);
+      Assertions.assertEquals(group.getId(), body.id());
+      Assertions.assertEquals("Complex Group 2", body.name());
+      Assertions.assertEquals("Description for complex group 2", body.description());
+      Assertions.assertEquals(GroupRole.MEMBER, body.myRole());
+      Assertions.assertEquals(3, body.memberCount());
+      Assertions.assertEquals(
+          List.of("memberNick3", "memberNick4", "ownerNick2"),
+          body.members().stream().map(MemberDTO::getNickname).sorted().toList());
+      Assertions.assertEquals(3, body.todos().size());
+      Assertions.assertTrue(
+          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Owner Todo 3")));
+      Assertions.assertTrue(
+          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Member3 Todo 1")));
+      Assertions.assertTrue(
+          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Member4 Todo 1")));
+    }
+
+    @Test
+    @DisplayName("Happy Path - User is MANAGER with multiple members and todos")
+    public void HappyPath_3() {
+      // Given
+      User ownerUser = entityFactory.insertUser("ownerUser3", "password", "ownerNick3");
+      User memberUser1 = entityFactory.insertUser("memberUser5", "password", "memberNick5");
+      User managerUser = entityFactory.insertUser("managerUser", "password", "managerNick");
+
+      Group group = entityFactory.insertGroup("Complex Group 3", "Description for complex group 3");
+
+      entityFactory.insertUserGroup(ownerUser.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(memberUser1.getId(), group.getId(), GroupRole.VIEWER);
+      entityFactory.insertUserGroup(managerUser.getId(), group.getId(), GroupRole.MANAGER);
+
+      entityFactory.insertTodo(
+          ownerUser.getId(),
+          ownerUser.getId(),
+          group.getId(),
+          "Owner Todo 4",
+          "Desc",
+          TodoStatus.DONE,
+          "a",
+          false);
+      entityFactory.insertTodo(
+          memberUser1.getId(),
+          memberUser1.getId(),
+          group.getId(),
+          "Member5 Todo 1",
+          "Desc",
+          TodoStatus.DONE,
+          "b",
+          false);
+      entityFactory.insertTodo(
+          managerUser.getId(),
+          managerUser.getId(),
+          group.getId(),
+          "Manager Todo 1",
+          "Desc",
+          TodoStatus.IN_PROGRESS,
+          "c",
+          false);
+
+      em.flush();
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(managerUser);
+
+      // When
+      ResponseEntity<FullGroupDetailsResponseDTO> responseEntity =
+          groupController.getUserGroup(authUserDTO, group.getId());
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+      FullGroupDetailsResponseDTO body = responseEntity.getBody();
+      Assertions.assertNotNull(body);
+      Assertions.assertEquals(group.getId(), body.id());
+      Assertions.assertEquals("Complex Group 3", body.name());
+      Assertions.assertEquals("Description for complex group 3", body.description());
+      Assertions.assertEquals(GroupRole.MANAGER, body.myRole());
+      Assertions.assertEquals(3, body.memberCount());
+      Assertions.assertEquals(
+          List.of("managerNick", "memberNick5", "ownerNick3"),
+          body.members().stream().map(MemberDTO::getNickname).sorted().toList());
+      Assertions.assertEquals(3, body.todos().size());
+      Assertions.assertTrue(
+          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Owner Todo 4")));
+      Assertions.assertTrue(
+          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Member5 Todo 1")));
+      Assertions.assertTrue(
+          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Manager Todo 1")));
+    }
+
+    @Test
+    @DisplayName("Failure - No such group")
     public void Failure_NoGroup() {
-
       // Given
-
-      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group name", "group description");
-      UserGroup userGroup =
-          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
-      em.flush();
-
-      em.remove(userGroup);
-      em.remove(group);
-
+      User user = entityFactory.insertUser("testUser4", "password", "nick4");
       em.flush();
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+      Long nonExistentGroupId = 999L; // A group ID that does not exist
 
       // When
-
-      Runnable lambda = () -> groupController.getUserGroup(authUserDTO, group.getId());
+      Runnable lambda = () -> groupController.getUserGroup(authUserDTO, nonExistentGroupId);
 
       // Then
-
-      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+      Assertions.assertThrows(
+          rest.felix.back.group.exception.GroupNotFoundException.class, lambda::run);
     }
 
     @Test
+    @DisplayName("Failure - No such user")
     public void Failure_NoUser() {
-
       // Given
-
-      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group name", "group description");
-      UserGroup userGroup =
-          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
+      User user = entityFactory.insertUser("testUser5", "password", "nick5");
+      Group group = entityFactory.insertGroup("Test Group 5", "Description 5");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
       em.flush();
 
-      em.remove(userGroup);
-      em.remove(user);
-
+      em.remove(user); // Remove the user to simulate no such user
       em.flush();
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       // When
-
       Runnable lambda = () -> groupController.getUserGroup(authUserDTO, group.getId());
 
       // Then
-
       Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
     }
 
     @Test
+    @DisplayName("Failure - User not in group")
     public void Failure_NoUserGroup() {
-
       // Given
-
-      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group name", "group description");
-      UserGroup userGroup =
-          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
-      em.flush();
-
-      em.remove(userGroup);
-
+      User user = entityFactory.insertUser("testUser6", "password", "nick6");
+      Group group = entityFactory.insertGroup("Test Group 6", "Description 6");
+      // User is not associated with the group
       em.flush();
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       // When
-
       Runnable lambda = () -> groupController.getUserGroup(authUserDTO, group.getId());
 
       // Then
-
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
     }
   }
