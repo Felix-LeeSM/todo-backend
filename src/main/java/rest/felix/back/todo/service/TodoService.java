@@ -10,6 +10,7 @@ import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.dto.CreateTodoDTO;
 import rest.felix.back.todo.dto.TodoDTO;
 import rest.felix.back.todo.dto.UpdateTodoDTO;
+import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.todo.exception.TodoNotFoundException;
 import rest.felix.back.todo.repository.TodoRepository;
 import rest.felix.back.user.exception.UserAccessDeniedException;
@@ -73,5 +74,21 @@ public class TodoService {
     if (userId != todo.getAuthorId()) {
       throw new UserAccessDeniedException();
     }
+  }
+
+  @Transactional
+  public void moveTodo(long targetId, Long destinationId, TodoStatus todoStatus) {
+
+    todoRepository.moveTodo(targetId, destinationId, todoStatus);
+  }
+
+  @Transactional
+  public void starTodo(long userId, long groupId, long todoId) {
+    todoRepository.starTodo(userId, todoId);
+  }
+
+  @Transactional
+  public void unstarTodo(long userId, long groupId, long todoId) {
+    todoRepository.unstarTodo(userId, todoId);
   }
 }

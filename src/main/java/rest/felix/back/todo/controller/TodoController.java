@@ -17,6 +17,7 @@ import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.group.service.GroupService;
 import rest.felix.back.todo.dto.CreateTodoDTO;
 import rest.felix.back.todo.dto.CreateTodoRequestDTO;
+import rest.felix.back.todo.dto.MoveTodoRequestDTO;
 import rest.felix.back.todo.dto.TodoDTO;
 import rest.felix.back.todo.dto.TodoResponseDTO;
 import rest.felix.back.todo.dto.UpdateTodoDTO;
@@ -24,7 +25,6 @@ import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
 import rest.felix.back.todo.service.TodoService;
 import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.exception.UserAccessDeniedException;
-import rest.felix.back.user.service.UserService;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -33,7 +33,6 @@ public class TodoController {
 
   private final GroupService groupService;
   private final TodoService todoService;
-  private final UserService userService;
 
   @GetMapping("/group/{groupId}/todo")
   public ResponseEntity<List<TodoResponseDTO>> getTodos(
@@ -105,14 +104,49 @@ public class TodoController {
 
     UpdateTodoDTO updateTodoDTO =
         new UpdateTodoDTO(
-            todoId,
-            updateTodoRequestDTO.getTitle(),
-            updateTodoRequestDTO.getDescription(),
-            updateTodoRequestDTO.getOrder(),
-            updateTodoRequestDTO.getStatus());
+            todoId, updateTodoRequestDTO.getTitle(), updateTodoRequestDTO.getDescription());
 
     TodoDTO updatedTodoDTO = todoService.updateTodo(updateTodoDTO);
 
     return ResponseEntity.ok().body(updatedTodoDTO);
+  }
+
+  @PostMapping("/group/{groupId}/todo/{todoId}/move")
+  public ResponseEntity<Void> moveTodo(
+      @AuthenticationPrincipal AuthUserDTO authUser,
+      @PathVariable(name = "groupId") long groupId,
+      @PathVariable(name = "todoId") long todoId,
+      @RequestBody MoveTodoRequestDTO moveTodoRequestDTO) {
+    long userId = authUser.getUserId();
+
+    todoService.assertCanModifyTodo(userId, groupId, todoId);
+
+    todoService.moveTodo(
+        todoId, moveTodoRequestDTO.getDestinationId(), moveTodoRequestDTO.getTodoStatus());
+
+    return ResponseEntity.ok().build();
+  }
+
+  @PostMapping("/group/{groupId}/todo/{todoId}/star")
+  public ResponseEntity<Void> starTodo(
+      @AuthenticationPrincipal AuthUserDTO authUser,
+      @PathVariable(name = "groupId") long groupId,
+      @PathVariable(name = "todoId") long todoId) {
+    long userId = authUser.getUserId();
+    groupService.findUserRole(userId, groupId).orElseThrow(UserAccessDeniedException::new);
+
+    todoService.starTodo(userId, groupId, todoId);
+    return ResponseEntity.status(HttpStatus.CREATED).build();
+  }
+
+  @DeleteMapping("/group/{groupId}/todo/{todoId}/star")
+  public ResponseEntity<Void> unstarTodo(
+      @AuthenticationPrincipal AuthUserDTO authUser,
+      @PathVariable(name = "groupId") long groupId,
+      @PathVariable(name = "todoId") long todoId) {
+    long userId = authUser.getUserId();
+    groupService.findUserRole(userId, groupId).orElseThrow(UserAccessDeniedException::new);
+    todoService.unstarTodo(userId, groupId, todoId);
+    return ResponseEntity.noContent().build();
   }
 }

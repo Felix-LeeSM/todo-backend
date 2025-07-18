@@ -974,8 +974,7 @@ public class TodoControllerWebTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     Cookie cookie = userCookie(user);
 
@@ -999,20 +998,15 @@ public class TodoControllerWebTest {
     result.andExpect(jsonPath("$.id", equalTo(todo.getId().intValue())));
     result.andExpect(jsonPath("$.title", equalTo("updated todo title")));
     result.andExpect(jsonPath("$.description", equalTo("updated todo description")));
-    result.andExpect(jsonPath("$.status", equalTo("ON_HOLD")));
-    result.andExpect(jsonPath("$.order", equalTo("someOrder")));
     result.andExpect(jsonPath("$.authorId", equalTo(user.getId().intValue())));
     result.andExpect(jsonPath("$.groupId", equalTo(group.getId().intValue())));
 
     Todo updatedTodo =
         em.createQuery(
                 """
-            SELECT
-              t
-            FROM
-              Todo t
-            WHERE
-              t.id = :todoId
+            SELECT t
+            FROM Todo t
+            WHERE t.id = :todoId
             """,
                 Todo.class)
             .setParameter("todoId", todo.getId())
@@ -1021,7 +1015,6 @@ public class TodoControllerWebTest {
     Assertions.assertEquals(todo.getId(), updatedTodo.getId());
     Assertions.assertEquals("updated todo title", updatedTodo.getTitle());
     Assertions.assertEquals("updated todo description", updatedTodo.getDescription());
-    Assertions.assertEquals(TodoStatus.ON_HOLD, updatedTodo.getTodoStatus());
     Assertions.assertEquals(user.getId(), updatedTodo.getAuthor().getId());
     Assertions.assertEquals(group.getId(), updatedTodo.getGroup().getId());
   }
@@ -1069,8 +1062,7 @@ public class TodoControllerWebTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     Cookie cookie = userCookie(user);
 
@@ -1135,8 +1127,7 @@ public class TodoControllerWebTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     Cookie cookie = userCookie(user);
 
@@ -1197,8 +1188,7 @@ public class TodoControllerWebTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     Cookie cookie = userCookie(user);
 
@@ -1273,8 +1263,7 @@ public class TodoControllerWebTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     Cookie cookie = userCookie(user);
 
@@ -1341,8 +1330,7 @@ public class TodoControllerWebTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     Cookie cookie = userCookie(user);
 
@@ -1407,8 +1395,7 @@ public class TodoControllerWebTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title", "updated todo description", TodoStatus.ON_HOLD, "someOrder");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     Cookie cookie = userCookie(user);
 
@@ -1430,79 +1417,5 @@ public class TodoControllerWebTest {
 
     result.andExpect(status().isNotFound());
     result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
-  }
-
-  @Test
-  void updateTodo_Failure_Duplicated_Order_Status_In_Group() throws Exception {
-    // Given
-
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group");
-    group.setDescription("description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-    userGroup.setGroupRole(GroupRole.OWNER);
-
-    em.persist(userGroup);
-
-    Todo todo1 = new Todo();
-    todo1.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo1.setTitle("todo title");
-    todo1.setDescription("todo description");
-    todo1.setOrder("todo1 order");
-    todo1.setAuthor(user);
-    todo1.setGroup(group);
-
-    Todo todo2 = new Todo();
-    todo2.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo2.setTitle("todo title");
-    todo2.setDescription("todo description");
-    todo2.setOrder("todo2 order");
-    todo2.setAuthor(user);
-    todo2.setGroup(group);
-
-    em.persist(todo1);
-    em.persist(todo2);
-
-    em.flush();
-
-    UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title",
-            "updated todo description",
-            TodoStatus.IN_PROGRESS,
-            "todo1 order");
-
-    Cookie cookie = userCookie(user);
-
-    String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo2.getId());
-
-    String body = objectMapper.writeValueAsString(updateTodoRequestDTO);
-
-    // When
-
-    ResultActions result =
-        mvc.perform(
-            put(path)
-                .cookie(cookie)
-                .accept(MediaType.APPLICATION_JSON)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(body));
-
-    // Then
-
-    result.andExpect(status().isBadRequest());
-    result.andExpect(jsonPath("$.message", equalTo("Bad Request, please try again later.")));
   }
 }

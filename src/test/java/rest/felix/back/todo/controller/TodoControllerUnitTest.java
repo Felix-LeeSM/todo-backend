@@ -735,11 +735,7 @@ public class TodoControllerUnitTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title",
-            "updated todo description",
-            TodoStatus.DONE,
-            "updated todo order");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -758,18 +754,13 @@ public class TodoControllerUnitTest {
     Assertions.assertEquals(group.getId(), todoDTO.getGroupId());
     Assertions.assertEquals("updated todo title", todoDTO.getTitle());
     Assertions.assertEquals("updated todo description", todoDTO.getDescription());
-    Assertions.assertEquals(TodoStatus.DONE, todoDTO.getStatus());
-    Assertions.assertEquals("updated todo order", todoDTO.getOrder());
 
     Todo updatedTodo =
         em.createQuery(
                 """
-            SELECT
-              t
-            FROM
-              Todo t
-            WHERE
-              t.id = :todoId
+            SELECT t
+            FROM Todo t
+            WHERE t.id = :todoId
             """,
                 Todo.class)
             .setParameter("todoId", todo.getId())
@@ -780,8 +771,6 @@ public class TodoControllerUnitTest {
     Assertions.assertEquals(group.getId(), updatedTodo.getGroup().getId());
     Assertions.assertEquals("updated todo title", updatedTodo.getTitle());
     Assertions.assertEquals("updated todo description", updatedTodo.getDescription());
-    Assertions.assertEquals(TodoStatus.DONE, updatedTodo.getTodoStatus());
-    Assertions.assertEquals("updated todo order", updatedTodo.getOrder());
   }
 
   @Test
@@ -815,11 +804,7 @@ public class TodoControllerUnitTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title",
-            "updated todo description",
-            TodoStatus.DONE,
-            "updated todo order");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -863,11 +848,7 @@ public class TodoControllerUnitTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title",
-            "updated todo description",
-            TodoStatus.DONE,
-            "updated todo order");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -906,11 +887,7 @@ public class TodoControllerUnitTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title",
-            "updated todo description",
-            TodoStatus.DONE,
-            "updated todo order");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -950,11 +927,7 @@ public class TodoControllerUnitTest {
 
     em.flush();
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title",
-            "updated todo description",
-            TodoStatus.DONE,
-            "updated todo order");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     AuthUserDTO authUser = AuthUserDTO.of(author);
 
@@ -1012,11 +985,7 @@ public class TodoControllerUnitTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title",
-            "updated todo description",
-            TodoStatus.DONE,
-            "updated todo order");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -1072,11 +1041,7 @@ public class TodoControllerUnitTest {
     em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title",
-            "updated todo description",
-            TodoStatus.DONE,
-            "updated todo order");
+        new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -1089,70 +1054,5 @@ public class TodoControllerUnitTest {
     // Then
 
     Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
-  }
-
-  @Test
-  void updateTodo_Failure_Duplicated_Order_Status_In_Group() {
-    // Given
-
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
-
-    em.persist(user);
-
-    Group group = new Group();
-    group.setName("group");
-    group.setDescription("description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-    userGroup.setGroupRole(GroupRole.OWNER);
-
-    em.persist(userGroup);
-
-    Todo todo1 = new Todo();
-    todo1.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo1.setTitle("todo title");
-    todo1.setDescription("todo description");
-    todo1.setOrder("todo1 order");
-    todo1.setAuthor(user);
-    todo1.setGroup(group);
-
-    Todo todo2 = new Todo();
-    todo2.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo2.setTitle("todo title");
-    todo2.setDescription("todo description");
-    todo2.setOrder("todo2 order");
-    todo2.setAuthor(user);
-    todo2.setGroup(group);
-
-    em.persist(todo1);
-    em.persist(todo2);
-
-    em.flush();
-
-    UpdateTodoRequestDTO updateTodoRequestDTO =
-        new UpdateTodoRequestDTO(
-            "updated todo title",
-            "updated todo description",
-            TodoStatus.IN_PROGRESS,
-            "todo1 order");
-
-    AuthUserDTO authUser = AuthUserDTO.of(user);
-
-    // When
-
-    Runnable lambda =
-        () ->
-            todoController.updateTodo(authUser, group.getId(), todo2.getId(), updateTodoRequestDTO);
-
-    // Then
-
-    Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
   }
 }

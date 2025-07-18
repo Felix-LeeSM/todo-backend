@@ -518,12 +518,7 @@ class TodoServiceTest {
     em.flush();
 
     UpdateTodoDTO updateTodoDTO =
-        new UpdateTodoDTO(
-            todo.getId(),
-            "todo updated title",
-            "todo updated description",
-            "todo updated order",
-            TodoStatus.DONE);
+        new UpdateTodoDTO(todo.getId(), "todo updated title", "todo updated description");
 
     // When
 
@@ -534,18 +529,13 @@ class TodoServiceTest {
     Assertions.assertEquals(todo.getId(), todoDTO.getId());
     Assertions.assertEquals("todo updated title", todoDTO.getTitle());
     Assertions.assertEquals("todo updated description", todoDTO.getDescription());
-    Assertions.assertEquals("todo updated order", todoDTO.getOrder());
-    Assertions.assertEquals(TodoStatus.DONE, todoDTO.getStatus());
 
     Todo updatedTodo =
         em.createQuery(
                 """
-            SELECT
-              t
-            FROM
-              Todo t
-            WHERE
-              t.id = :todoId
+            SELECT t
+            FROM Todo t
+            WHERE t.id = :todoId
             """,
                 Todo.class)
             .setParameter("todoId", todo.getId())
@@ -553,8 +543,6 @@ class TodoServiceTest {
 
     Assertions.assertEquals("todo updated title", updatedTodo.getTitle());
     Assertions.assertEquals("todo updated description", updatedTodo.getDescription());
-    Assertions.assertEquals("todo updated order", updatedTodo.getOrder());
-    Assertions.assertEquals(TodoStatus.DONE, updatedTodo.getTodoStatus());
   }
 
   @Test
@@ -583,12 +571,7 @@ class TodoServiceTest {
     em.flush();
 
     UpdateTodoDTO updateTodoDTO =
-        new UpdateTodoDTO(
-            todo.getId(),
-            "updated todo title",
-            "updated todo description",
-            "someOrder",
-            TodoStatus.DONE);
+        new UpdateTodoDTO(todo.getId(), "updated todo title", "updated todo description");
 
     // When
 
@@ -597,54 +580,5 @@ class TodoServiceTest {
     // Then
 
     Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
-  }
-
-  @Test
-  void updateTodo_Failure_Duplicated_Order_Status_In_Group() {
-    // Given
-
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    Todo todo1 =
-        entityFactory.insertTodo(
-            user.getId(),
-            user.getId(),
-            group.getId(),
-            "todo1 title",
-            "todo1 description",
-            TodoStatus.IN_PROGRESS,
-            "todo1 order",
-            false);
-
-    Todo todo2 =
-        entityFactory.insertTodo(
-            user.getId(),
-            user.getId(),
-            group.getId(),
-            "todo2 title",
-            "todo2 description",
-            TodoStatus.IN_PROGRESS,
-            "todo2 order",
-            false);
-
-    em.flush();
-
-    UpdateTodoDTO updateTodoDTO =
-        new UpdateTodoDTO(
-            todo2.getId(),
-            "updated todo title",
-            "updated todo description",
-            "todo1 order",
-            TodoStatus.IN_PROGRESS);
-
-    // When
-
-    Runnable lambda = () -> todoService.updateTodo(updateTodoDTO);
-
-    // Then
-
-    Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
   }
 }
