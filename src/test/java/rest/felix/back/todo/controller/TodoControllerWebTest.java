@@ -59,9 +59,7 @@ public class TodoControllerWebTest {
   }
 
   private Cookie userCookie(User user) {
-    return new Cookie(
-        "accessToken",
-        jwtTokenProvider.generateToken(AuthUserDTO.of(user)));
+    return new Cookie("accessToken", jwtTokenProvider.generateToken(AuthUserDTO.of(user)));
   }
 
   @Test
@@ -203,8 +201,8 @@ public class TodoControllerWebTest {
 
     // Then
 
-    result.andExpect(status().isUnauthorized());
-    result.andExpect(jsonPath("$.message", equalTo("There is no user with given conditions.")));
+    result.andExpect(status().isForbidden());
+    result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
   }
 
   @Test
@@ -399,8 +397,8 @@ public class TodoControllerWebTest {
 
     // Then
 
-    result.andExpect(status().isUnauthorized());
-    result.andExpect(jsonPath("$.message", equalTo("There is no user with given conditions.")));
+    result.andExpect(status().isForbidden());
+    result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
   }
 
   @Test
@@ -684,8 +682,8 @@ public class TodoControllerWebTest {
 
     // Then
 
-    result.andExpect(status().isUnauthorized());
-    result.andExpect(jsonPath("$.message", equalTo("There is no user with given conditions.")));
+    result.andExpect(status().isForbidden());
+    result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
   }
 
   @Test
@@ -935,8 +933,8 @@ public class TodoControllerWebTest {
 
     // Then
 
-    result.andExpect(status().isForbidden());
-    result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    result.andExpect(status().isNotFound());
+    result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
   }
 
   @Test
@@ -1092,8 +1090,8 @@ public class TodoControllerWebTest {
 
     // Then
 
-    result.andExpect(status().isUnauthorized());
-    result.andExpect(jsonPath("$.message", equalTo("There is no user with given conditions.")));
+    result.andExpect(status().isForbidden());
+    result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
   }
 
   @Test
@@ -1430,8 +1428,8 @@ public class TodoControllerWebTest {
 
     // Then
 
-    result.andExpect(status().isForbidden());
-    result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    result.andExpect(status().isNotFound());
+    result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
   }
 
   @Test

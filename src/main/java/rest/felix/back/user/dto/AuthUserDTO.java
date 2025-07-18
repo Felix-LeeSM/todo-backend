@@ -20,7 +20,6 @@ public class AuthUserDTO implements UserDetails {
   private Long userId;
   private String username;
 
-
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
     return new ArrayList<>();

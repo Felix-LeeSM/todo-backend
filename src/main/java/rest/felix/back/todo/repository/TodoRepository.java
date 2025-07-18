@@ -1,6 +1,7 @@
 package rest.felix.back.todo.repository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,18 +27,12 @@ public class TodoRepository {
     return em
         .createQuery(
             """
-            SELECT
-                t
-            FROM
-                Group g
-            JOIN
-                g.todos t
-            JOIN FETCH
-                t.author
-            WHERE
-                g.id = :groupId
-            ORDER BY
-                t.order ASC
+            SELECT t
+            FROM Group g
+            JOIN g.todos t
+            JOIN FETCH t.author
+            WHERE g.id = :groupId
+            ORDER BY t.order ASC
                 """,
             Todo.class)
         .setParameter("groupId", groupId)
@@ -56,14 +51,10 @@ public class TodoRepository {
                 COUNT(t),
                 SUM(CASE WHEN t.todoStatus = TodoStatus.DONE THEN 1 ELSE 0 END)
             )
-            FROM
-                Group g
-            LEFT JOIN
-                g.todos t
-            WHERE
-                g.id IN :groupIds
-            GROUP BY
-                g.id
+            FROM Group g
+            LEFT JOIN g.todos t
+            WHERE g.id IN :groupIds
+            GROUP BY g.id
             """,
             TodoCountDTO.class)
         .setParameter("groupIds", groupIds)
@@ -76,17 +67,11 @@ public class TodoRepository {
     return em
         .createQuery(
             """
-                                SELECT
-                                    t
-                                FROM
-                                    Group g
-                                JOIN
-                                    g.todos t
-                                WHERE
-                                    g.id = :groupId AND
-                                    t.id = :todoId
-                                ORDER BY
-                                    t.order ASC
+                                SELECT t
+                                FROM Group g
+                                JOIN g.todos t
+                                WHERE g.id = :groupId AND t.id = :todoId
+                                ORDER BY t.order ASC
                                 """,
             Todo.class)
         .setParameter("groupId", groupId)
@@ -129,12 +114,9 @@ public class TodoRepository {
     return em
         .createQuery(
             """
-                                SELECT
-                                    t
-                                FROM
-                                    Todo t
-                                WHERE
-                                    t.id = :todoId
+                                SELECT t
+                                FROM Todo t
+                                WHERE t.id = :todoId
                                 """,
             Todo.class)
         .setParameter("todoId", updateTodoDTO.getId())
@@ -157,13 +139,23 @@ public class TodoRepository {
   public void deleteByGroupId(long groupId) {
     em.createQuery(
             """
-                        DELETE
-                        FROM
-                          Todo t
-                        WHERE
-                          t.group.id =:groupId
+                        DELETE FROM Todo t WHERE t.group.id = :groupId
                         """)
         .setParameter("groupId", groupId)
         .executeUpdate();
+  }
+
+  public Optional<TodoDTO> findById(long todoId) {
+    try {
+      Todo todo =
+          em.createQuery("SELECT t FROM Todo t WHERE t.id = :todoId", Todo.class)
+              .setParameter("todoId", todoId)
+              .getSingleResult();
+
+      return Optional.of(TodoDTO.of(todo));
+
+    } catch (NoResultException e) {
+      return Optional.empty();
+    }
   }
 }

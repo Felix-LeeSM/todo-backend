@@ -14,12 +14,14 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import rest.felix.back.user.service.UserService;
 
 @Component
 @AllArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtTokenProvider jwtTokenProvider;
+  private final UserService userService;
 
   @Override
   protected void doFilterInternal(
@@ -35,6 +37,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         .map(Cookie::getValue)
         .filter(jwtTokenProvider::validateToken)
         .map(jwtTokenProvider::getAuthUserFromToken)
+        .filter(authUser -> userService.existsById(authUser.getUserId()))
         .ifPresent(
             authUser ->
                 SecurityContextHolder.getContext()

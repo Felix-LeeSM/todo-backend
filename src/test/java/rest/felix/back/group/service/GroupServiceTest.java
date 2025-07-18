@@ -3,6 +3,7 @@ package rest.felix.back.group.service;
 import jakarta.persistence.EntityManager;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,7 +26,6 @@ import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.user.entity.User;
-import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @SpringBootTest
 @Transactional
@@ -133,8 +133,8 @@ class GroupServiceTest {
 
       // When
 
-      List<GroupDTO> user1GroupDTOs = groupService.getGroupsByUserId(user1.getId());
-      List<GroupDTO> user2GroupDTOs = groupService.getGroupsByUserId(user2.getId());
+      List<GroupDTO> user1GroupDTOs = groupService.findGroupsByUserId(user1.getId());
+      List<GroupDTO> user2GroupDTOs = groupService.findGroupsByUserId(user2.getId());
 
       // Then
 
@@ -186,7 +186,7 @@ class GroupServiceTest {
 
       // When
 
-      List<GroupDTO> userGroupDTOs = groupService.getGroupsByUserId(user.getId());
+      List<GroupDTO> userGroupDTOs = groupService.findGroupsByUserId(user.getId());
 
       // Then
 
@@ -204,7 +204,7 @@ class GroupServiceTest {
 
       // When
 
-      List<GroupDTO> userGroupDTOs = groupService.getGroupsByUserId(user.getId());
+      List<GroupDTO> userGroupDTOs = groupService.findGroupsByUserId(user.getId());
 
       // Then
 
@@ -464,19 +464,25 @@ class GroupServiceTest {
 
         // When
 
-        GroupRole foundGroupRole = groupService.getUserRoleInGroup(user.getId(), group.getId());
+        Assertions.assertDoesNotThrow(
+            () -> {
+              GroupRole foundGroupRole =
+                  groupService
+                      .findUserRole(user.getId(), group.getId())
+                      .orElseThrow(ResourceNotFoundException::new);
 
-        // Then
+              // Then
 
-        Assertions.assertEquals(groupRole, foundGroupRole);
+              Assertions.assertEquals(groupRole, foundGroupRole);
 
-        em.remove(userGroup);
-        em.flush();
+              em.remove(userGroup);
+              em.flush();
+            });
       }
     }
 
     @Test
-    void Failure_NotInGroup() {
+    void Empty_NotInGroup() {
 
       // Given
 
@@ -487,15 +493,15 @@ class GroupServiceTest {
 
       // When
 
-      Runnable lambda = () -> groupService.getUserRoleInGroup(user.getId(), group.getId());
+      Optional<GroupRole> userGroup = groupService.findUserRole(user.getId(), group.getId());
 
       // Then
 
-      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+      Assertions.assertTrue(userGroup.isEmpty());
     }
 
     @Test
-    void Failure_NoUser() {
+    void Empty_NoUser() {
       // Given
 
       User user = entityFactory.insertUser("username1", "some password", "nickname1");
@@ -508,15 +514,15 @@ class GroupServiceTest {
 
       // When
 
-      Runnable lambda = () -> groupService.getUserRoleInGroup(user.getId(), group.getId());
+      Optional<GroupRole> userGroup = groupService.findUserRole(user.getId(), group.getId());
 
       // Then
 
-      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+      Assertions.assertTrue(userGroup.isEmpty());
     }
 
     @Test
-    void Failure_NoGroup() {
+    void Empty_NoGroup() {
       // Given
 
       User user = entityFactory.insertUser("username1", "some password", "nickname1");
@@ -529,11 +535,11 @@ class GroupServiceTest {
 
       // When
 
-      Runnable lambda = () -> groupService.getUserRoleInGroup(user.getId(), group.getId());
+      Optional<GroupRole> userGroup = groupService.findUserRole(user.getId(), group.getId());
 
       // Then
 
-      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+      Assertions.assertTrue(userGroup.isEmpty());
     }
   }
 
@@ -550,17 +556,21 @@ class GroupServiceTest {
 
       // When
 
-      GroupDTO groupDTO = groupService.getGroupById(group.getId());
+      Assertions.assertDoesNotThrow(
+          () -> {
+            GroupDTO groupDTO =
+                groupService.findById(group.getId()).orElseThrow(ResourceNotFoundException::new);
 
-      // Then
+            // Then
 
-      Assertions.assertNotNull(groupDTO.getId());
-      Assertions.assertEquals("group name", groupDTO.getName());
-      Assertions.assertEquals("group description", groupDTO.getDescription());
+            Assertions.assertNotNull(groupDTO.getId());
+            Assertions.assertEquals("group name", groupDTO.getName());
+            Assertions.assertEquals("group description", groupDTO.getDescription());
+          });
     }
 
     @Test
-    void Failure_NoGroup() {
+    void Empty_NoGroup() {
       // Given
 
       Group group = entityFactory.insertGroup("group name", "group description");
@@ -572,11 +582,11 @@ class GroupServiceTest {
 
       // When
 
-      Runnable lambda = () -> groupService.getGroupById(group.getId());
+      Optional<GroupDTO> groupDto = groupService.findById(group.getId());
 
       // Then
 
-      Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
+      Assertions.assertTrue(groupDto.isEmpty());
     }
   }
 

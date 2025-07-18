@@ -1,10 +1,10 @@
 package rest.felix.back.todo.controller;
 
-import java.security.Principal;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,8 +22,7 @@ import rest.felix.back.todo.dto.TodoResponseDTO;
 import rest.felix.back.todo.dto.UpdateTodoDTO;
 import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
 import rest.felix.back.todo.service.TodoService;
-import rest.felix.back.user.dto.UserDTO;
-import rest.felix.back.user.exception.NoMatchingUserException;
+import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.exception.UserAccessDeniedException;
 import rest.felix.back.user.service.UserService;
 
@@ -38,12 +37,11 @@ public class TodoController {
 
   @GetMapping("/group/{groupId}/todo")
   public ResponseEntity<List<TodoResponseDTO>> getTodos(
-      Principal principal, @PathVariable(name = "groupId") long groupId) {
-    String username = principal.getName();
-    UserDTO userDTO = userService.getByUsername(username).orElseThrow(NoMatchingUserException::new);
-    long userId = userDTO.getId();
+      @AuthenticationPrincipal AuthUserDTO authUser, @PathVariable(name = "groupId") long groupId) {
 
-    groupService.getUserRoleInGroup(userId, groupId);
+    long userId = authUser.getUserId();
+
+    groupService.findUserRole(userId, groupId).orElseThrow(UserAccessDeniedException::new);
 
     List<TodoResponseDTO> todoResponseDTOs =
         todoService.getTodosInGroup(groupId).stream().map(TodoResponseDTO::of).toList();
@@ -53,17 +51,16 @@ public class TodoController {
 
   @PostMapping("/group/{groupId}/todo")
   public ResponseEntity<TodoResponseDTO> createTodo(
-      Principal principal,
+      @AuthenticationPrincipal AuthUserDTO authUser,
       @PathVariable(name = "groupId") long groupId,
       @RequestBody CreateTodoRequestDTO createTodoRequestDTO) {
-    String username = principal.getName();
-    UserDTO userDTO = userService.getByUsername(username).orElseThrow(NoMatchingUserException::new);
-    long userId = userDTO.getId();
 
-    GroupRole groupRole = groupService.getUserRoleInGroup(userId, groupId);
-    if (groupRole == GroupRole.VIEWER) {
-      throw new UserAccessDeniedException();
-    }
+    long userId = authUser.getUserId();
+
+    groupService
+        .findUserRole(userId, groupId)
+        .filter(role -> role.gte(GroupRole.MEMBER))
+        .orElseThrow(UserAccessDeniedException::new);
 
     CreateTodoDTO createTodoDTO =
         new CreateTodoDTO(
@@ -82,51 +79,29 @@ public class TodoController {
 
   @DeleteMapping("/group/{groupId}/todo/{todoId}")
   public ResponseEntity<Void> deleteTodo(
-      Principal principal,
+      @AuthenticationPrincipal AuthUserDTO authUser,
       @PathVariable(name = "groupId") long groupId,
       @PathVariable(name = "todoId") long todoId) {
-    String username = principal.getName();
-    UserDTO userDTO = userService.getByUsername(username).orElseThrow(NoMatchingUserException::new);
-    long userId = userDTO.getId();
 
-    GroupRole groupRole = groupService.getUserRoleInGroup(userId, groupId);
+    long userId = authUser.getUserId();
 
-    if (groupRole == GroupRole.VIEWER) {
-      throw new UserAccessDeniedException();
-    }
+    todoService.assertCanModifyTodo(userId, groupId, todoId);
 
-    TodoDTO todoDTO = todoService.getTodoInGroup(groupId, todoId);
-
-    if (groupRole == GroupRole.MEMBER && userId != todoDTO.getAuthorId()) {
-      throw new UserAccessDeniedException();
-    }
-
-    todoService.deleteTodo(todoDTO.getId());
+    todoService.deleteTodo(todoId);
 
     return ResponseEntity.noContent().build();
   }
 
   @PutMapping("/group/{groupId}/todo/{todoId}")
   public ResponseEntity<TodoDTO> updateTodo(
-      Principal principal,
+      @AuthenticationPrincipal AuthUserDTO authUser,
       @PathVariable(name = "groupId") long groupId,
       @PathVariable(name = "todoId") long todoId,
       @RequestBody UpdateTodoRequestDTO updateTodoRequestDTO) {
-    String username = principal.getName();
-    UserDTO userDTO = userService.getByUsername(username).orElseThrow(NoMatchingUserException::new);
-    long userId = userDTO.getId();
 
-    GroupRole groupRole = groupService.getUserRoleInGroup(userId, groupId);
+    long userId = authUser.getUserId();
 
-    if (groupRole == GroupRole.VIEWER) {
-      throw new UserAccessDeniedException();
-    }
-
-    TodoDTO todoDTO = todoService.getTodoInGroup(groupId, todoId);
-
-    if (groupRole == GroupRole.MEMBER && userId != todoDTO.getAuthorId()) {
-      throw new UserAccessDeniedException();
-    }
+    todoService.assertCanModifyTodo(userId, groupId, todoId);
 
     UpdateTodoDTO updateTodoDTO =
         new UpdateTodoDTO(

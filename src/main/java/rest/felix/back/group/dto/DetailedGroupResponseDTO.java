@@ -11,4 +11,17 @@ public record DetailedGroupResponseDTO(
     long completedTodoCount,
     List<MemberDTO> members,
     long memberCount,
-    GroupRole myRole) {}
+    GroupRole myRole) {
+
+  public static DetailedGroupResponseDTO of(DetailedGroupDTO dto) {
+    return new DetailedGroupResponseDTO(
+        dto.getId(),
+        dto.getName(),
+        dto.getDescription(),
+        dto.getTodoCount(),
+        dto.getCompletedTodoCount(),
+        dto.getMembers(),
+        dto.getMemberCount(),
+        dto.getMyRole());
+  }
+}

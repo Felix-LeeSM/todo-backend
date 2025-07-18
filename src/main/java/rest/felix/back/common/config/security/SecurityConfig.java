@@ -1,4 +1,4 @@
-package rest.felix.back.common.config;
+package rest.felix.back.common.config.security;
 
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -18,10 +18,13 @@ import rest.felix.back.common.security.JwtAuthenticationFilter;
 public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
+  private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     return http.csrf(AbstractHttpConfigurer::disable)
+        .exceptionHandling(
+            exceptions -> exceptions.authenticationEntryPoint(customAuthenticationEntryPoint))
         .authorizeHttpRequests(
             auth ->
                 auth.requestMatchers("/api/v1/user")

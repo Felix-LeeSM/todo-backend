@@ -56,9 +56,7 @@ public class GroupControllerWebTest {
   }
 
   private Cookie userCookie(User user) {
-    return new Cookie(
-        "accessToken",
-        jwtTokenProvider.generateToken(AuthUserDTO.of(user)));
+    return new Cookie("accessToken", jwtTokenProvider.generateToken(AuthUserDTO.of(user)));
   }
 
   @Nested
@@ -127,7 +125,7 @@ public class GroupControllerWebTest {
 
       // Then
 
-      result.andExpect(status().isUnauthorized());
+      result.andExpect(status().isForbidden());
     }
 
     @Test
@@ -364,7 +362,7 @@ public class GroupControllerWebTest {
       ResultActions result = mvc.perform(get(path).cookie(cookie));
 
       // Then
-      result.andExpect(status().isUnauthorized());
+      result.andExpect(status().isForbidden());
     }
   }
 
@@ -465,8 +463,9 @@ public class GroupControllerWebTest {
 
       // Then
 
-      result.andExpect(status().isUnauthorized());
-      result.andExpect(jsonPath("$.message", equalTo("There is no user with given conditions.")));
+      result.andExpect(status().isForbidden());
+      result.andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
     }
 
     @Test
@@ -663,8 +662,8 @@ public class GroupControllerWebTest {
 
       // Then
 
-      result.andExpect(status().isUnauthorized());
-      result.andExpect(jsonPath("$.message", equalTo("There is no user with given conditions.")));
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
     }
 
     @Test

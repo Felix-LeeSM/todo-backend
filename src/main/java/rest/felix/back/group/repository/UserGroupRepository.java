@@ -20,7 +20,7 @@ public class UserGroupRepository {
 
   private final EntityManager em;
 
-  public Optional<UserGroupDTO> getByUserIdAndGroupId(long userId, long groupId) {
+  public Optional<UserGroupDTO> findByUserIdAndGroupId(long userId, long groupId) {
     try {
       return Optional.of(
               em.createQuery(

@@ -28,7 +28,7 @@ public class GroupRepository {
     return new GroupDTO(group.getId(), group.getName(), group.getDescription());
   }
 
-  public List<GroupDTO> getGroupsByUserId(long userId) {
+  public List<GroupDTO> findGroupsByUserId(long userId) {
     String query =
         """
         SELECT g
@@ -47,7 +47,7 @@ public class GroupRepository {
         .toList();
   }
 
-  public Optional<GroupDTO> getById(long groupId) {
+  public Optional<GroupDTO> findById(long groupId) {
     try {
       String query =
           """

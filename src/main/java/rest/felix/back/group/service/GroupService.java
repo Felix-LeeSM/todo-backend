@@ -2,12 +2,14 @@ package rest.felix.back.group.service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
 import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.DetailedGroupDTO;
+import rest.felix.back.group.dto.FullGroupDetailsDTO;
 import rest.felix.back.group.dto.GroupDTO;
 import rest.felix.back.group.dto.MemberDTO;
 import rest.felix.back.group.dto.UserGroupDTO;
@@ -15,6 +17,7 @@ import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.group.repository.GroupRepository;
 import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.dto.TodoCountDTO;
+import rest.felix.back.todo.dto.TodoDTO;
 import rest.felix.back.todo.repository.TodoRepository;
 import rest.felix.back.user.exception.UserAccessDeniedException;
 import rest.felix.back.user.repository.UserRepository;
@@ -40,14 +43,14 @@ public class GroupService {
   }
 
   @Transactional(readOnly = true)
-  public List<GroupDTO> getGroupsByUserId(long userId) {
+  public List<GroupDTO> findGroupsByUserId(long userId) {
 
-    return groupRepository.getGroupsByUserId(userId);
+    return groupRepository.findGroupsByUserId(userId);
   }
 
   @Transactional(readOnly = true)
   public List<DetailedGroupDTO> findDetailedGroupsByUserId(long userId) {
-    List<GroupDTO> myGroups = groupRepository.getGroupsByUserId(userId);
+    List<GroupDTO> myGroups = groupRepository.findGroupsByUserId(userId);
     if (myGroups.isEmpty()) return List.of();
 
     List<Long> groupIds = myGroups.stream().map(GroupDTO::getId).toList();
@@ -79,17 +82,16 @@ public class GroupService {
   }
 
   @Transactional(readOnly = true)
-  public GroupDTO getGroupById(long groupId) {
+  public Optional<GroupDTO> findById(long groupId) {
 
-    return groupRepository.getById(groupId).orElseThrow(ResourceNotFoundException::new);
+    return groupRepository.findById(groupId);
   }
 
   @Transactional(readOnly = true)
-  public GroupRole getUserRoleInGroup(long userId, long groupId) {
+  public Optional<GroupRole> findUserRole(long userId, long groupId) {
     return userGroupRepository
-        .getByUserIdAndGroupId(userId, groupId)
-        .map(UserGroupDTO::getGroupRole)
-        .orElseThrow(UserAccessDeniedException::new);
+        .findByUserIdAndGroupId(userId, groupId)
+        .map(UserGroupDTO::getGroupRole);
   }
 
   @Transactional
@@ -98,5 +100,49 @@ public class GroupService {
     todoRepository.deleteByGroupId(groupId);
 
     groupRepository.deleteGroupById(groupId);
+  }
+
+  @Transactional(readOnly = true)
+  public FullGroupDetailsDTO findFullDetailedGroupById(long userId, long groupId)
+      throws RuntimeException {
+
+    GroupRole myRole =
+        userGroupRepository
+            .findByUserIdAndGroupId(userId, groupId)
+            .map(UserGroupDTO::getGroupRole)
+            .orElseThrow(UserAccessDeniedException::new);
+    GroupDTO groupDTO =
+        groupRepository.findById(groupId).orElseThrow(ResourceNotFoundException::new);
+
+    List<MemberDTO> memberDTOs = userRepository.findMembersByGroupId(groupId);
+
+    List<TodoDTO> todoDTOs = todoRepository.getTodosInGroup(groupId);
+
+    return new FullGroupDetailsDTO(
+        groupId,
+        groupDTO.getName(),
+        groupDTO.getDescription(),
+        memberDTOs,
+        memberDTOs.size(),
+        myRole,
+        todoDTOs);
+  }
+
+  @Transactional
+  public void assertCanUpdateGroup(long userId, long groupId) {
+    userGroupRepository
+        .findByUserIdAndGroupId(userId, groupId)
+        .map(dto -> dto.getGroupRole())
+        .filter(role -> role.gte(GroupRole.MANAGER))
+        .orElseThrow(UserAccessDeniedException::new);
+  }
+
+  @Transactional
+  public void assertCanDeleteGroup(long userId, long groupId) {
+    userGroupRepository
+        .findByUserIdAndGroupId(userId, groupId)
+        .map(dto -> dto.getGroupRole())
+        .filter(role -> role.gte(GroupRole.OWNER))
+        .orElseThrow(UserAccessDeniedException::new);
   }
 }

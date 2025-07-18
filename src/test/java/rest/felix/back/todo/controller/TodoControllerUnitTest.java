@@ -1,7 +1,6 @@
 package rest.felix.back.todo.controller;
 
 import jakarta.persistence.EntityManager;
-import java.security.Principal;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
@@ -13,7 +12,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
-import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
 import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.Trio;
@@ -26,8 +24,9 @@ import rest.felix.back.todo.dto.TodoResponseDTO;
 import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
+import rest.felix.back.todo.exception.TodoNotFoundException;
+import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.entity.User;
-import rest.felix.back.user.exception.NoMatchingUserException;
 import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @SpringBootTest
@@ -52,8 +51,7 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group", "description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     List<Trio<TodoStatus, String, Integer>> list =
         Arrays.asList(
@@ -81,12 +79,12 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
     ResponseEntity<List<TodoResponseDTO>> responseEntity =
-        todoController.getTodos(principal, group.getId());
+        todoController.getTodos(authUser, group.getId());
 
     // Then
 
@@ -138,17 +136,16 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group", "description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
     ResponseEntity<List<TodoResponseDTO>> responseEntity =
-        todoController.getTodos(principal, group.getId());
+        todoController.getTodos(authUser, group.getId());
 
     // Then
 
@@ -172,15 +169,15 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
-    Runnable lambda = () -> todoController.getTodos(principal, group.getId());
+    Runnable lambda = () -> todoController.getTodos(authUser, group.getId());
 
     // Then
 
-    Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
+    Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
   }
 
   @Test
@@ -200,11 +197,11 @@ public class TodoControllerUnitTest {
     em.remove(group);
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
-    Runnable lambda = () -> todoController.getTodos(principal, group.getId());
+    Runnable lambda = () -> todoController.getTodos(authUser, group.getId());
 
     // Then
 
@@ -227,11 +224,11 @@ public class TodoControllerUnitTest {
     em.remove(userGroup);
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
-    Runnable lambda = () -> todoController.getTodos(principal, group.getId());
+    Runnable lambda = () -> todoController.getTodos(authUser, group.getId());
 
     // Then
 
@@ -246,12 +243,11 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group", "description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
         new CreateTodoRequestDTO("todo title", "todo description", "todo order");
@@ -259,7 +255,7 @@ public class TodoControllerUnitTest {
     // When
 
     ResponseEntity<TodoResponseDTO> responseEntity =
-        todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
+        todoController.createTodo(authUser, group.getId(), createTodoRequestDTO);
 
     // Then
 
@@ -283,12 +279,11 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group", "description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
 
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
         new CreateTodoRequestDTO("todo title", "todo description", "todo order");
@@ -296,7 +291,7 @@ public class TodoControllerUnitTest {
     // When
 
     Runnable lambda =
-        () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
+        () -> todoController.createTodo(authUser, group.getId(), createTodoRequestDTO);
 
     // Then
 
@@ -320,7 +315,7 @@ public class TodoControllerUnitTest {
     em.remove(user);
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
         new CreateTodoRequestDTO("todo title", "todo description", "todo order");
@@ -328,11 +323,11 @@ public class TodoControllerUnitTest {
     // When
 
     Runnable lambda =
-        () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
+        () -> todoController.createTodo(authUser, group.getId(), createTodoRequestDTO);
 
     // Then
 
-    Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
+    Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
   }
 
   @Test
@@ -352,7 +347,7 @@ public class TodoControllerUnitTest {
     em.remove(group);
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
         new CreateTodoRequestDTO("todo title", "todo description", "todo order");
@@ -360,7 +355,7 @@ public class TodoControllerUnitTest {
     // When
 
     Runnable lambda =
-        () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
+        () -> todoController.createTodo(authUser, group.getId(), createTodoRequestDTO);
 
     // Then
 
@@ -383,7 +378,7 @@ public class TodoControllerUnitTest {
     em.remove(userGroup);
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
         new CreateTodoRequestDTO("todo title", "todo description", "todo order");
@@ -391,7 +386,7 @@ public class TodoControllerUnitTest {
     // When
 
     Runnable lambda =
-        () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
+        () -> todoController.createTodo(authUser, group.getId(), createTodoRequestDTO);
 
     // Then
 
@@ -407,23 +402,21 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group name", "group description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    Todo todo =
-        entityFactory.insertTodo(
-            user.getId(),
-            user.getId(),
-            group.getId(),
-            "todo title",
-            "todo description",
-            TodoStatus.TO_DO,
-            "todo order",
-            false);
+    entityFactory.insertTodo(
+        user.getId(),
+        user.getId(),
+        group.getId(),
+        "todo title",
+        "todo description",
+        TodoStatus.TO_DO,
+        "todo order",
+        false);
 
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
         new CreateTodoRequestDTO("todo title", "todo description", "todo order");
@@ -431,7 +424,7 @@ public class TodoControllerUnitTest {
     // When
 
     Runnable lambda =
-        () -> todoController.createTodo(principal, group.getId(), createTodoRequestDTO);
+        () -> todoController.createTodo(authUser, group.getId(), createTodoRequestDTO);
 
     // Then
 
@@ -446,8 +439,7 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group", "description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     Todo todo =
         entityFactory.insertTodo(
@@ -462,12 +454,12 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
     ResponseEntity<Void> responseEntity =
-        todoController.deleteTodo(principal, group.getId(), todo.getId());
+        todoController.deleteTodo(authUser, group.getId(), todo.getId());
 
     // Then
 
@@ -520,15 +512,15 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
-    Runnable lambda = () -> todoController.deleteTodo(principal, group.getId(), todo.getId());
+    Runnable lambda = () -> todoController.deleteTodo(authUser, group.getId(), todo.getId());
 
     // Then
 
-    Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
+    Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
   }
 
   @Test
@@ -559,11 +551,11 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
-    Runnable lambda = () -> todoController.deleteTodo(principal, group.getId(), todo.getId());
+    Runnable lambda = () -> todoController.deleteTodo(authUser, group.getId(), todo.getId());
 
     // Then
 
@@ -578,8 +570,7 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group", "description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
 
     Todo todo =
         entityFactory.insertTodo(
@@ -594,11 +585,11 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
-    Runnable lambda = () -> todoController.deleteTodo(principal, group.getId(), todo.getId());
+    Runnable lambda = () -> todoController.deleteTodo(authUser, group.getId(), todo.getId());
 
     // Then
 
@@ -615,8 +606,7 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group", "description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
     Todo todo =
         entityFactory.insertTodo(
@@ -631,11 +621,11 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    Principal principal = author::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(author);
 
     // When
 
-    Runnable lambda = () -> todoController.deleteTodo(principal, group.getId(), todo.getId());
+    Runnable lambda = () -> todoController.deleteTodo(authUser, group.getId(), todo.getId());
 
     // Then
 
@@ -672,11 +662,11 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
-    Runnable lambda = () -> todoController.deleteTodo(principal, group.getId(), todo.getId());
+    Runnable lambda = () -> todoController.deleteTodo(authUser, group.getId(), todo.getId());
 
     // Then
 
@@ -691,8 +681,7 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group", "description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     Todo todo =
         entityFactory.insertTodo(
@@ -711,15 +700,15 @@ public class TodoControllerUnitTest {
 
     em.flush();
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
-    Runnable lambda = () -> todoController.deleteTodo(principal, group.getId(), todo.getId());
+    Runnable lambda = () -> todoController.deleteTodo(authUser, group.getId(), todo.getId());
 
     // Then
 
-    Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
+    Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
   }
 
   @Test
@@ -730,8 +719,7 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group", "description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
     Todo todo =
         entityFactory.insertTodo(
@@ -753,12 +741,12 @@ public class TodoControllerUnitTest {
             TodoStatus.DONE,
             "updated todo order");
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
     ResponseEntity<TodoDTO> responseEntity =
-        todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+        todoController.updateTodo(authUser, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
@@ -833,17 +821,17 @@ public class TodoControllerUnitTest {
             TodoStatus.DONE,
             "updated todo order");
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
     Runnable lambda =
         () ->
-            todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+            todoController.updateTodo(authUser, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
-    Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
+    Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
   }
 
   @Test
@@ -881,13 +869,13 @@ public class TodoControllerUnitTest {
             TodoStatus.DONE,
             "updated todo order");
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
     Runnable lambda =
         () ->
-            todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+            todoController.updateTodo(authUser, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
@@ -902,8 +890,7 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group", "description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
 
     Todo todo =
         entityFactory.insertTodo(
@@ -925,13 +912,13 @@ public class TodoControllerUnitTest {
             TodoStatus.DONE,
             "updated todo order");
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
     Runnable lambda =
         () ->
-            todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+            todoController.updateTodo(authUser, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
@@ -948,8 +935,7 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group", "description");
 
-    UserGroup userGroup =
-        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
     Todo todo =
         entityFactory.insertTodo(
@@ -970,13 +956,13 @@ public class TodoControllerUnitTest {
             TodoStatus.DONE,
             "updated todo order");
 
-    Principal principal = author::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(author);
 
     // When
 
     Runnable lambda =
         () ->
-            todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+            todoController.updateTodo(authUser, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
@@ -1032,13 +1018,13 @@ public class TodoControllerUnitTest {
             TodoStatus.DONE,
             "updated todo order");
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
     Runnable lambda =
         () ->
-            todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+            todoController.updateTodo(authUser, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
@@ -1092,17 +1078,17 @@ public class TodoControllerUnitTest {
             TodoStatus.DONE,
             "updated todo order");
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
     Runnable lambda =
         () ->
-            todoController.updateTodo(principal, group.getId(), todo.getId(), updateTodoRequestDTO);
+            todoController.updateTodo(authUser, group.getId(), todo.getId(), updateTodoRequestDTO);
 
     // Then
 
-    Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
+    Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
   }
 
   @Test
@@ -1157,14 +1143,13 @@ public class TodoControllerUnitTest {
             TodoStatus.IN_PROGRESS,
             "todo1 order");
 
-    Principal principal = user::getUsername;
+    AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
 
     Runnable lambda =
         () ->
-            todoController.updateTodo(
-                principal, group.getId(), todo2.getId(), updateTodoRequestDTO);
+            todoController.updateTodo(authUser, group.getId(), todo2.getId(), updateTodoRequestDTO);
 
     // Then
 

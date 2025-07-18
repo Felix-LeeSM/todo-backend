@@ -50,4 +50,8 @@ public class UserService {
 
     return userRepository.getById(id).map(UserDTO::of);
   }
+
+  public boolean existsById(Long userId) {
+    return userRepository.getById(userId).isPresent();
+  }
 }

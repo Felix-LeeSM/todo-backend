@@ -75,6 +75,26 @@ public class UserRepository {
         .collect(Collectors.groupingBy(MemberDTO::getGroupId));
   }
 
+  public List<MemberDTO> findMembersByGroupId(Long groupId) {
+    return em.createQuery(
+            """
+            SELECT new rest.felix.back.group.dto.MemberDTO(
+                u.id,
+                u.username,
+                u.nickname,
+                g.id,
+                ug.groupRole
+            )
+            FROM User u
+            JOIN UserGroup ug ON u.id = ug.user.id
+            JOIN Group g ON g.id = ug.group.id
+            WHERE g.id = :groupId
+            """,
+            MemberDTO.class)
+        .setParameter("groupId", groupId)
+        .getResultList();
+  }
+
   public void save(User user) {
     em.persist(user);
   }
