@@ -2,10 +2,16 @@ package rest.felix.back.todo.controller;
 
 import jakarta.persistence.EntityManager;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -18,6 +24,7 @@ import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.todo.dto.CreateTodoRequestDTO;
+import rest.felix.back.todo.dto.MoveTodoRequestDTO;
 import rest.felix.back.todo.dto.TodoDTO;
 import rest.felix.back.todo.dto.TodoResponseDTO;
 import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
@@ -928,5 +935,684 @@ public class TodoControllerUnitTest {
     // Then
 
     Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
+  }
+
+  @Nested
+  @DisplayName("투두 순서 및 상태 변경 테스트")
+  class MoveTodo {
+    @Test
+    @DisplayName("성공 - 상태만 변경 (맨 뒤로 이동)")
+    void HappyPath_1() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo1 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo1",
+              "desc1",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      entityFactory.insertTodo(
+          user.getId(),
+          user.getId(),
+          group.getId(),
+          "todo2",
+          "desc2",
+          TodoStatus.TO_DO,
+          "b",
+          false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+
+      // When
+      ResponseEntity<TodoResponseDTO> responseEntity =
+          todoController.moveTodo(authUser, group.getId(), todo1.getId(), moveTodoRequestDTO);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+      TodoResponseDTO todoResponseDTO = responseEntity.getBody();
+      Assertions.assertEquals(todo1.getId(), todoResponseDTO.id());
+      Assertions.assertEquals(TodoStatus.IN_PROGRESS, todoResponseDTO.status());
+      Assertions.assertNotNull(todoResponseDTO.order());
+    }
+
+    @Test
+    @DisplayName("성공 - 상태 및 순서 변경")
+    void HappyPath_2() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo1 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo1",
+              "desc1",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      Todo todo2 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo2",
+              "desc2",
+              TodoStatus.IN_PROGRESS,
+              "b",
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      MoveTodoRequestDTO moveTodoRequestDTO =
+          new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, todo2.getId());
+
+      // When
+      ResponseEntity<TodoResponseDTO> responseEntity =
+          todoController.moveTodo(authUser, group.getId(), todo1.getId(), moveTodoRequestDTO);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+      TodoResponseDTO todoResponseDTO = responseEntity.getBody();
+      Assertions.assertEquals(todo1.getId(), todoResponseDTO.id());
+      Assertions.assertEquals(TodoStatus.IN_PROGRESS, todoResponseDTO.status());
+      Assertions.assertTrue(todoResponseDTO.order().compareTo(todo2.getOrder()) < 0);
+    }
+
+    @Test
+    @DisplayName("성공 - 순서를 여러회 변경 후 정렬 순서")
+    void HappyPath_3() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo1 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo1",
+              "desc1",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      Todo todo2 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo2",
+              "desc2",
+              TodoStatus.TO_DO,
+              "b",
+              false);
+      Todo todo3 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo3",
+              "desc3",
+              TodoStatus.TO_DO,
+              "c",
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // todo2를 todo1 앞으로 -> todo2 todo1 todo3 순
+      todoController.moveTodo(
+          authUser,
+          group.getId(),
+          todo2.getId(),
+          new MoveTodoRequestDTO(TodoStatus.TO_DO, todo1.getId()));
+      // todo3을 todo1 앞으로 -> todo2 todo3 todo1순
+      todoController.moveTodo(
+          authUser,
+          group.getId(),
+          todo3.getId(),
+          new MoveTodoRequestDTO(TodoStatus.TO_DO, todo1.getId()));
+
+      // When
+      ResponseEntity<List<TodoResponseDTO>> responseEntity =
+          todoController.getTodos(authUser, group.getId());
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+      List<Long> actualIds =
+          responseEntity.getBody().stream()
+              .sorted(Comparator.comparing(TodoResponseDTO::order))
+              .map(TodoResponseDTO::id)
+              .collect(Collectors.toList());
+
+      Assertions.assertIterableEquals(
+          List.of(todo2.getId(), todo3.getId(), todo1.getId()), actualIds);
+    }
+
+    @Test
+    @DisplayName("실패 - 권한 부족 - VIEWER")
+    void Failure_NoAuthority() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+
+      // When
+      Runnable lambda =
+          () -> todoController.moveTodo(authUser, group.getId(), todo.getId(), moveTodoRequestDTO);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 그룹")
+    void Failure_NoGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      th.delete(userGroup);
+      th.delete(todo);
+      th.delete(group);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+
+      // When
+      Runnable lambda =
+          () ->
+              todoController.moveTodo(
+                  authUser, group.getId(), todo.getId(), moveTodoRequestDTO);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 가입하지 않은 그룹")
+    void Failure_NoUserGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+
+      // When
+      Runnable lambda =
+          () -> todoController.moveTodo(authUser, group.getId(), todo.getId(), moveTodoRequestDTO);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 Todo를 이동하기")
+    void Failure_NoTodo() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      th.delete(todo);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+
+      // When
+      Runnable lambda =
+          () ->
+              todoController.moveTodo(
+                  authUser, group.getId(), todo.getId(), moveTodoRequestDTO);
+
+      // Then
+      Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 다른 그룹의 Todo를 옮기기")
+    void Failure_TodoInAnotherGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group1 = entityFactory.insertGroup("group1", "desc1");
+      Group group2 = entityFactory.insertGroup("group2", "desc2");
+      entityFactory.insertUserGroup(user.getId(), group1.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(user.getId(), group2.getId(), GroupRole.MEMBER);
+      Todo todoInGroup2 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group2.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+
+      // When
+      Runnable lambda =
+          () ->
+              todoController.moveTodo(
+                  authUser, group1.getId(), todoInGroup2.getId(), moveTodoRequestDTO);
+
+      // Then
+      Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
+    }
+  }
+
+  @Nested
+  @DisplayName("투두 Star 추가 테스트")
+  class StarTodo {
+    @ParameterizedTest
+    @EnumSource(GroupRole.class)
+    @DisplayName("성공 - 서로 다른 role에 대해 성공")
+    void HappyPath_1(GroupRole role) throws Exception {
+      // Given
+      User user =
+          entityFactory.insertUser("username" + role.toString(), "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), role);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // When
+      ResponseEntity<Void> responseEntity =
+          todoController.starTodo(authUser, group.getId(), todo.getId());
+
+      // Then
+      Assertions.assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("성공 - 이미 star 표기된 케이스")
+    void HappyPath_2() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      entityFactory.insertUserTodoStar(user.getId(), todo.getId());
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // When
+      ResponseEntity<Void> responseEntity =
+          todoController.starTodo(authUser, group.getId(), todo.getId());
+
+      // Then
+      Assertions.assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("실패 - 그룹이 없는 경우")
+    void Failure_NoGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      th.delete(userGroup);
+      th.delete(todo);
+      th.delete(group);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> todoController.starTodo(authUser, group.getId(), todo.getId());
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 가입하지 않은 그룹")
+    void Failure_NoUserGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> todoController.starTodo(authUser, group.getId(), todo.getId());
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 Todo")
+    void Failure_NoTodo() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      
+      th.delete(todo);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> todoController.starTodo(authUser, group.getId(), todo.getId());
+
+      // Then
+      Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 다른 그룹의 Todo")
+    void Failure_TodoInAnotherGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group1 = entityFactory.insertGroup("group1", "desc1");
+      Group group2 = entityFactory.insertGroup("group2", "desc2");
+      entityFactory.insertUserGroup(user.getId(), group1.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(user.getId(), group2.getId(), GroupRole.MEMBER);
+      Todo todoInGroup2 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group2.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> todoController.starTodo(authUser, group1.getId(), todoInGroup2.getId());
+
+      // Then
+      Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
+    }
+  }
+
+  @Nested
+  @DisplayName("투두 Star 제거 테스트")
+  class UnStarTodo {
+    @ParameterizedTest
+    @EnumSource(GroupRole.class)
+    @DisplayName("성공 - 서로 다른 role에 대해 성공")
+    void HappyPath_1(GroupRole role) throws Exception {
+      // Given
+      User user =
+          entityFactory.insertUser("username" + role.toString(), "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), role);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      entityFactory.insertUserTodoStar(user.getId(), todo.getId());
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // When
+      ResponseEntity<Void> responseEntity =
+          todoController.unstarTodo(authUser, group.getId(), todo.getId());
+
+      // Then
+      Assertions.assertEquals(HttpStatus.NO_CONTENT, responseEntity.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("성공 - star가 없는 케이스")
+    void HappyPath_2() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // When
+      ResponseEntity<Void> responseEntity =
+          todoController.unstarTodo(authUser, group.getId(), todo.getId());
+
+      // Then
+      Assertions.assertEquals(HttpStatus.NO_CONTENT, responseEntity.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("실패 - 그룹이 없는 경우")
+    void Failure_NoGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      long wrongGroupId = group.getId() + 1;
+      th.delete(userGroup);
+      th.delete(todo);
+      th.delete(group);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> todoController.unstarTodo(authUser, wrongGroupId, todo.getId());
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 가입하지 않은 그룹")
+    void Failure_NoUserGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> todoController.unstarTodo(authUser, group.getId(), todo.getId());
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 Todo")
+    void Failure_NoTodo() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      th.delete(todo);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> todoController.unstarTodo(authUser, group.getId(), todo.getId());
+
+      // Then
+      Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 다른 그룹의 Todo")
+    void Failure_TodoInAnotherGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group1 = entityFactory.insertGroup("group1", "desc1");
+      Group group2 = entityFactory.insertGroup("group2", "desc2");
+      entityFactory.insertUserGroup(user.getId(), group1.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(user.getId(), group2.getId(), GroupRole.MEMBER);
+      Todo todoInGroup2 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group2.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+              
+      entityFactory.insertUserTodoStar(user.getId(), todoInGroup2.getId());
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> todoController.unstarTodo(authUser, group1.getId(), todoInGroup2.getId());
+
+      // Then
+      Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
+    }
   }
 }

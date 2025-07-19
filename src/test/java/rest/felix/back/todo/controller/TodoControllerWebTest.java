@@ -2,6 +2,7 @@ package rest.felix.back.todo.controller;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -10,16 +11,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.Cookie;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,6 +41,8 @@ import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.todo.dto.CreateTodoRequestDTO;
+import rest.felix.back.todo.dto.MoveTodoRequestDTO;
+import rest.felix.back.todo.dto.TodoDTO;
 import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
@@ -1321,327 +1329,1098 @@ public class TodoControllerWebTest {
     @DisplayName("성공 - 상태만 변경 (맨 뒤로 이동)")
     void HappyPath_1() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo1 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo1",
+              "desc1",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      entityFactory.insertTodo(
+          user.getId(),
+          user.getId(),
+          group.getId(),
+          "todo2",
+          "desc2",
+          TodoStatus.TO_DO,
+          "b",
+          false);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo1.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
 
       // Then
-
+      result.andExpect(status().isOk());
+      result.andExpect(jsonPath("$.id", equalTo(todo1.getId().intValue())));
+      result.andExpect(jsonPath("$.status", equalTo("IN_PROGRESS")));
+      result.andExpect(jsonPath("$.order", notNullValue()));
     }
 
     @Test
     @DisplayName("성공 - 상태 및 순서 변경")
     void HappyPath_2() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo1 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo1",
+              "desc1",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      Todo todo2 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo2",
+              "desc2",
+              TodoStatus.IN_PROGRESS,
+              "b",
+              false);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo1.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO =
+          new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, todo2.getId());
+      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
 
       // Then
-
+      result.andExpect(status().isOk());
+      result.andExpect(jsonPath("$.id", equalTo(todo1.getId().intValue())));
+      result.andExpect(jsonPath("$.status", equalTo("IN_PROGRESS")));
+      result.andExpect(jsonPath("$.order", lessThan(todo2.getOrder())));
     }
 
     @Test
     @DisplayName("성공 - 순서를 여러회 변경 후 정렬 순서")
     void HappyPath_3() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
+      Todo todo1 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo1",
+              "desc1",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      Todo todo2 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo2",
+              "desc2",
+              TodoStatus.TO_DO,
+              "b",
+              false);
+      Todo todo3 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo3",
+              "desc3",
+              TodoStatus.TO_DO,
+              "c",
+              false);
+
+      // todo1 todo2 todo3 순
+      Cookie cookie = userCookie(user);
+
+      // todo2를 todo1 앞으로 -> todo2 todo1 todo3 순
+      mvc.perform(
+          put(String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo2.getId()))
+              .cookie(cookie)
+              .accept(MediaType.APPLICATION_JSON)
+              .contentType(MediaType.APPLICATION_JSON)
+              .content(
+                  objectMapper.writeValueAsString(
+                      new MoveTodoRequestDTO(TodoStatus.TO_DO, todo1.getId()))));
+      // todo3을 todo1 앞으로 -> todo2 todo3 todo1순
+      mvc.perform(
+          put(String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo3.getId()))
+              .cookie(cookie)
+              .accept(MediaType.APPLICATION_JSON)
+              .contentType(MediaType.APPLICATION_JSON)
+              .content(
+                  objectMapper.writeValueAsString(
+                      new MoveTodoRequestDTO(TodoStatus.TO_DO, todo1.getId()))));
       // When
+      ResultActions result =
+          mvc.perform(
+              get(String.format("/api/v1/group/%d/todo", group.getId()))
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON));
 
       // Then
+      result.andExpect(status().isOk());
 
+      List<Long> actualIds =
+          objectMapper
+              .readValue(
+                  result.andReturn().getResponse().getContentAsString(),
+                  new TypeReference<List<TodoDTO>>() {})
+              .stream()
+              .sorted(Comparator.comparing(TodoDTO::getOrder))
+              .map(TodoDTO::getId)
+              .collect(Collectors.toList());
+
+      Assertions.assertIterableEquals(
+          List.of(todo2.getId(), todo3.getId(), todo1.getId()), actualIds);
     }
 
     @Test
     @DisplayName("실패 - 로그인 하지 않은 상태")
     void Failure_Token() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo1 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo1",
+              "desc1",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      entityFactory.insertTodo(
+          user.getId(),
+          user.getId(),
+          group.getId(),
+          "todo2",
+          "desc2",
+          TodoStatus.TO_DO,
+          "b",
+          false);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo1.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
 
       // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
     }
 
     @Test
     @DisplayName("실패 - 없는 유저")
     void Failure_NoUser() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      Cookie cookie = userCookie(user);
+      th.delete(userGroup);
+      th.delete(todo);
+      th.delete(user);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
 
       // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
     }
 
     @Test
     @DisplayName("실패 - 권한 부족 - VIEWER")
     void Failure_NoAuthority() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
     }
 
     @Test
     @DisplayName("실패 - 없는 그룹")
     void Failure_NoGroup() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group1 = entityFactory.insertGroup("group name", "group description");
+      Group group2 = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group1.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group1.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      th.delete(group2);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/move", group2.getId(), todo.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
     }
 
     @Test
     @DisplayName("실패 - 가입하지 않은 그룹")
     void Failure_NoUserGroup() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
     }
 
     @Test
     @DisplayName("실패 - 없는 Todo를 이동하기")
     void Failure_NoTodo() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.ON_HOLD,
+              false);
+      th.delete(todo);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
 
       // Then
-
+      result.andExpect(status().isNotFound());
+      result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
     }
 
     @Test
     @DisplayName("실패 - 다른 그룹의 Todo를 옮기기")
     void Failure_TodoInAnotherGroup() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group1 = entityFactory.insertGroup("group1", "desc1");
+      Group group2 = entityFactory.insertGroup("group2", "desc2");
+      entityFactory.insertUserGroup(user.getId(), group1.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(user.getId(), group2.getId(), GroupRole.MEMBER);
+      Todo todoInGroup2 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group2.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      String path =
+          String.format("/api/v1/group/%d/todo/%d/move", group1.getId(), todoInGroup2.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
 
       // Then
-
+      result.andExpect(status().isNotFound());
+      result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
     }
 
     @Test
     @DisplayName("실패 - 대상과 destination이 일치하는 경우")
     void Failure_InvalidDestination_1() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO =
+          new MoveTodoRequestDTO(TodoStatus.TO_DO, todo.getId());
+      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
 
       // Then
-
+      result.andExpect(status().isBadRequest());
+      result.andExpect(
+          jsonPath(
+              "$.message",
+              equalTo(
+                  "Destination must be another todo in the same group with the same todo status.")));
     }
 
     @Test
     @DisplayName("실패 - destination이 다른 그룹에 속한 경우")
     void Failure_InvalidDestination_2() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group1 = entityFactory.insertGroup("group1", "desc1");
+      Group group2 = entityFactory.insertGroup("group2", "desc2");
+      entityFactory.insertUserGroup(user.getId(), group1.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(user.getId(), group2.getId(), GroupRole.MEMBER);
+      Todo todoInGroup1 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group1.getId(),
+              "todo1",
+              "desc1",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      Todo todoInGroup2 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group2.getId(),
+              "todo2",
+              "desc2",
+              TodoStatus.TO_DO,
+              "b",
+              false);
+
+      String path =
+          String.format("/api/v1/group/%d/todo/%d/move", group1.getId(), todoInGroup1.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO =
+          new MoveTodoRequestDTO(TodoStatus.TO_DO, todoInGroup2.getId());
+      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
 
       // Then
-
+      result.andExpect(status().isBadRequest());
+      result.andExpect(
+          jsonPath(
+              "$.message",
+              equalTo(
+                  "Destination must be another todo in the same group with the same todo status.")));
     }
 
     @Test
     @DisplayName("실패 - destination이 다른 todoStatus에 속한 경우")
     void Failure_InvalidDestination_3() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo1 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo1",
+              "desc1",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      Todo todo2 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo2",
+              "desc2",
+              TodoStatus.IN_PROGRESS,
+              "b",
+              false);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo1.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO =
+          new MoveTodoRequestDTO(TodoStatus.TO_DO, todo2.getId());
+      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
 
       // Then
-
+      result.andExpect(status().isBadRequest());
+      result.andExpect(
+          jsonPath(
+              "$.message",
+              equalTo(
+                  "Destination must be another todo in the same group with the same todo status.")));
     }
   }
 
   @Nested
   @DisplayName("투두 Star 추가 테스트")
   class StarTodo {
-    @Test
+    @ParameterizedTest
+    @EnumSource(GroupRole.class)
     @DisplayName("성공 - 서로 다른 role에 대해 성공")
-    void HappyPath_1() throws Exception {
+    void HappyPath_1(GroupRole role) throws Exception {
       // Given
+      User user =
+          entityFactory.insertUser("username" + role.toString(), "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), role);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result = mvc.perform(post(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isCreated());
     }
 
     @Test
     @DisplayName("성공 - 이미 star 표기된 케이스")
     void HappyPath_2() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      entityFactory.insertUserTodoStar(user.getId(), todo.getId());
+
+      String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result = mvc.perform(post(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isCreated());
     }
 
     @Test
     @DisplayName("실패 - 로그인 하지 않은 경우")
     void Failure_NoToken() throws Exception {
       // Given
+      String path = String.format("/api/v1/group/%d/todo/%d/star", 1L, 1L);
 
       // When
+      ResultActions result = mvc.perform(post(path));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
     }
 
     @Test
     @DisplayName("실패 - 유저가 없는 경우")
     void Failure_NoUser() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      Cookie cookie = userCookie(user);
+      th.delete(userGroup);
+      th.delete(todo);
+      th.delete(user);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
 
       // When
+      ResultActions result = mvc.perform(post(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
     }
 
     @Test
     @DisplayName("실패 - 그룹이 없는 경우")
     void Failure_NoGroup() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      Group wrongGroup = entityFactory.insertGroup("group name", "group description");
+      th.delete(wrongGroup);
+
+      String path =
+          String.format("/api/v1/group/%d/todo/%d/star", wrongGroup.getId(), todo.getId());
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result = mvc.perform(post(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
     }
 
     @Test
     @DisplayName("실패 - 가입하지 않은 그룹")
     void Failure_NoUserGroup() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result = mvc.perform(post(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
     }
 
     @Test
     @DisplayName("실패 - 없는 Todo")
     void Failure_NoTodo() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo worngTodo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "worngTodo title",
+              "todo description",
+              TodoStatus.IN_PROGRESS,
+              false);
+      th.delete(worngTodo);
+
+      String path =
+          String.format("/api/v1/group/%d/todo/%d/star", group.getId(), worngTodo.getId());
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result = mvc.perform(post(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isNotFound());
+      result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
     }
 
     @Test
     @DisplayName("실패 - 다른 그룹의 Todo")
     void Failure_TodoInAnotherGroup() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group1 = entityFactory.insertGroup("group1", "desc1");
+      Group group2 = entityFactory.insertGroup("group2", "desc2");
+      entityFactory.insertUserGroup(user.getId(), group1.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(user.getId(), group2.getId(), GroupRole.MEMBER);
+      Todo todoInGroup2 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group2.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      String path =
+          String.format("/api/v1/group/%d/todo/%d/star", group1.getId(), todoInGroup2.getId());
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result = mvc.perform(post(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isNotFound());
+      result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
     }
   }
 
   @Nested
   @DisplayName("투두 Star 제거 테스트")
   class UnStarTodo {
-    @Test
+    @ParameterizedTest
+    @EnumSource(GroupRole.class)
     @DisplayName("성공 - 서로 다른 role에 대해 성공")
-    void HappyPath_1() throws Exception {
+    void HappyPath_1(GroupRole role) throws Exception {
       // Given
+      User user =
+          entityFactory.insertUser("username" + role.toString(), "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), role);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      entityFactory.insertUserTodoStar(user.getId(), todo.getId());
+
+      String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result = mvc.perform(delete(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isNoContent());
     }
 
     @Test
     @DisplayName("성공 - star가 없는 케이스")
     void HappyPath_2() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result = mvc.perform(delete(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isNoContent());
     }
 
     @Test
     @DisplayName("실패 - 로그인 하지 않은 경우")
     void Failure_NoToken() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      entityFactory.insertUserTodoStar(user.getId(), todo.getId());
+
+      String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
 
       // When
+      ResultActions result = mvc.perform(delete(path));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
     }
 
     @Test
     @DisplayName("실패 - 유저가 없는 경우")
     void Failure_NoUser() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      Cookie cookie = userCookie(user);
+
+      th.delete(todo);
+      th.delete(userGroup);
+      th.delete(user);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
 
       // When
+      ResultActions result = mvc.perform(delete(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
     }
 
     @Test
     @DisplayName("실패 - 그룹이 없는 경우")
     void Failure_NoGroup() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      long wrongGroupId = group.getId() + 1;
+      String path = String.format("/api/v1/group/%d/todo/%d/star", wrongGroupId, todo.getId());
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result = mvc.perform(delete(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
     }
 
     @Test
     @DisplayName("실패 - 가입하지 않은 그룹")
     void Failure_NoUserGroup() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result = mvc.perform(delete(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
     }
 
     @Test
     @DisplayName("실패 - 없는 Todo")
     void Failure_NoTodo() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo wrongTodo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+              th.delete(wrongTodo);
+      String path =
+          String.format("/api/v1/group/%d/todo/%d/star", group.getId(), wrongTodo.getId());
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result = mvc.perform(delete(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isNotFound());
+      result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
     }
 
     @Test
     @DisplayName("실패 - 다른 그룹의 Todo")
     void Failure_TodoInAnotherGroup() throws Exception {
       // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group1 = entityFactory.insertGroup("group1", "desc1");
+      Group group2 = entityFactory.insertGroup("group2", "desc2");
+      entityFactory.insertUserGroup(user.getId(), group1.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(user.getId(), group2.getId(), GroupRole.MEMBER);
+      Todo todoInGroup2 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group2.getId(),
+              "todo",
+              "desc",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      String path =
+          String.format("/api/v1/group/%d/todo/%d/star", group1.getId(), todoInGroup2.getId());
+      Cookie cookie = userCookie(user);
 
       // When
+      ResultActions result = mvc.perform(delete(path).cookie(cookie));
 
       // Then
-
+      result.andExpect(status().isNotFound());
+      result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
     }
   }
 }
