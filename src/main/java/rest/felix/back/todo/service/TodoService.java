@@ -1,6 +1,8 @@
 package rest.felix.back.todo.service;
 
 import java.util.List;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,14 +27,14 @@ public class TodoService {
   @Transactional(readOnly = true)
   public List<TodoDTO> getTodosInGroup(long groupId) {
 
-    return todoRepository.getTodosInGroup(groupId);
+    return todoRepository.findByGroupId(groupId);
   }
 
   @Transactional(readOnly = true)
   public TodoDTO getTodoInGroup(long groupId, long todoId) {
 
     return todoRepository
-        .getTodoInGroup(groupId, todoId)
+        .findByIdAndGroupId(groupId, todoId)
         .orElseThrow(ResourceNotFoundException::new);
   }
 
@@ -45,7 +47,7 @@ public class TodoService {
   @Transactional
   public void deleteTodo(long todoId) {
 
-    todoRepository.deleteTodo(todoId);
+    todoRepository.deleteById(todoId);
   }
 
   @Transactional
@@ -55,40 +57,69 @@ public class TodoService {
   }
 
   @Transactional
-  public void assertCanModifyTodo(long userId, long groupId, long todoId) {
+  public void assertTodoAuthority(
+      long userId, long groupId, long todoId, Predicate<TodoDTO> authorityChecker) {
+
+    userGroupRepository
+        .findByUserIdAndGroupId(userId, groupId)
+        .map(dto -> dto.getGroupRole())
+        .orElseThrow(UserAccessDeniedException::new);
+    TodoDTO todo = todoRepository.findById(groupId, todoId).orElseThrow(TodoNotFoundException::new);
+
+    if (!authorityChecker.test(todo)) {
+      throw new UserAccessDeniedException();
+    }
+  }
+
+  @Transactional
+  public void assertTodoAuthority(
+      long userId, long groupId, long todoId, BiPredicate<GroupRole, TodoDTO> authorityChecker) {
     GroupRole role =
         userGroupRepository
             .findByUserIdAndGroupId(userId, groupId)
             .map(dto -> dto.getGroupRole())
             .orElseThrow(UserAccessDeniedException::new);
-    TodoDTO todo = todoRepository.findById(todoId).orElseThrow(TodoNotFoundException::new);
+    TodoDTO todo = todoRepository.findById(groupId, todoId).orElseThrow(TodoNotFoundException::new);
 
-    if (role.gte(GroupRole.MANAGER)) {
-      return; // 통과
-    }
-
-    if (role.eq(GroupRole.VIEWER)) {
-      throw new UserAccessDeniedException();
-    }
-
-    if (userId != todo.getAuthorId()) {
+    if (!authorityChecker.test(role, todo)) {
       throw new UserAccessDeniedException();
     }
   }
 
   @Transactional
-  public void moveTodo(long targetId, Long destinationId, TodoStatus todoStatus) {
+  public void assertTodoAuthority(long userId, long groupId, long todoId, GroupRole groupRole) {
 
-    todoRepository.moveTodo(targetId, destinationId, todoStatus);
+    userGroupRepository
+        .findByUserIdAndGroupId(userId, groupId)
+        .map(dto -> dto.getGroupRole())
+        .filter(role -> role.gte(groupRole))
+        .orElseThrow(UserAccessDeniedException::new);
+    todoRepository.findById(groupId, todoId).orElseThrow(TodoNotFoundException::new);
+  }
+
+  @Transactional
+  public TodoDTO moveTodo(long targetId, Long destinationId, TodoStatus todoStatus) {
+    return todoRepository.moveTodo(targetId, destinationId, todoStatus);
   }
 
   @Transactional
   public void starTodo(long userId, long groupId, long todoId) {
+
+    if (todoRepository.starExistsById(userId, todoId)) return;
+
     todoRepository.starTodo(userId, todoId);
   }
 
   @Transactional
   public void unstarTodo(long userId, long groupId, long todoId) {
+
+    if (!todoRepository.starExistsById(userId, todoId)) return;
+
     todoRepository.unstarTodo(userId, todoId);
+  }
+
+  public void findById() {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'findById'");
   }
 }

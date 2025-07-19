@@ -44,6 +44,26 @@ public class UserGroupRepository {
     }
   }
 
+  public List<UserGroupDTO> findByGroupId(long groupId) {
+
+    return em
+        .createQuery(
+            """
+              SELECT
+                  ug
+              FROM
+                  UserGroup ug
+              WHERE
+                  ug.group.id = :groupId
+              """,
+            UserGroup.class)
+        .setParameter("groupId", groupId)
+        .getResultList()
+        .stream()
+        .map(UserGroupDTO::of)
+        .toList();
+  }
+
   public void registerUserToGroup(long userId, long groupId, GroupRole role) {
     User userRef = em.getReference(User.class, userId);
     Group groupRef = em.getReference(Group.class, groupId);

@@ -11,11 +11,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
-import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.Pair;
+import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.todo.dto.CreateTodoDTO;
 import rest.felix.back.todo.dto.TodoDTO;
@@ -25,18 +24,18 @@ import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.user.entity.User;
 
 @SpringBootTest
-@Transactional
 @ActiveProfiles("test")
 class TodoServiceTest {
 
   @Autowired private EntityManager em;
   @Autowired private TodoService todoService;
-  @Autowired private PasswordService passwordService;
-  private EntityFactory entityFactory;
+  @Autowired private EntityFactory entityFactory;
+
+  @Autowired private TestHelper th;
 
   @BeforeEach
   void setUp() {
-    entityFactory = new EntityFactory(passwordService, em);
+    th.cleanUp();
   }
 
   @Test
@@ -60,8 +59,6 @@ class TodoServiceTest {
                   String.format("todo order %d", idx),
                   false);
             });
-
-    em.flush();
 
     // When
 
@@ -117,8 +114,6 @@ class TodoServiceTest {
 
     Group group = entityFactory.insertGroup("group name", "group description");
 
-    em.flush();
-
     // When
 
     List<TodoDTO> todoDTOs = todoService.getTodosInGroup(group.getId());
@@ -136,9 +131,7 @@ class TodoServiceTest {
 
     Group group = entityFactory.insertGroup("group name", "group description");
 
-    em.remove(group);
-
-    em.flush();
+    th.delete(group);
 
     // When
 
@@ -156,8 +149,6 @@ class TodoServiceTest {
     User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
 
     Group group = entityFactory.insertGroup("group name", "group description");
-
-    em.flush();
 
     CreateTodoDTO createTodoDTO =
         new CreateTodoDTO(
@@ -185,11 +176,7 @@ class TodoServiceTest {
 
     Group group = entityFactory.insertGroup("group name", "group description");
 
-    em.flush();
-
-    em.remove(user);
-
-    em.flush();
+    th.delete(user);
 
     CreateTodoDTO createTodoDTO =
         new CreateTodoDTO(
@@ -210,10 +197,8 @@ class TodoServiceTest {
 
     User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
     Group group = entityFactory.insertGroup("group name", "group description");
-    em.flush();
 
-    em.remove(group);
-    em.flush();
+    th.delete(group);
 
     CreateTodoDTO createTodoDTO =
         new CreateTodoDTO(
@@ -246,8 +231,6 @@ class TodoServiceTest {
             TodoStatus.TO_DO,
             "todo order",
             false);
-
-    em.flush();
 
     CreateTodoDTO createTodoDTO =
         new CreateTodoDTO(
@@ -295,8 +278,6 @@ class TodoServiceTest {
                 })
             .toList();
 
-    em.flush();
-
     todos.forEach(
         todo -> {
 
@@ -334,10 +315,7 @@ class TodoServiceTest {
             "todo order",
             false);
 
-    em.flush();
-
-    em.remove(todo);
-    em.flush();
+    th.delete(todo);
 
     // When
 
@@ -367,11 +345,8 @@ class TodoServiceTest {
             "todo order",
             false);
 
-    em.flush();
-
-    em.remove(todo);
-    em.remove(group);
-    em.flush();
+    th.delete(todo);
+    th.delete(group);
 
     // When
 
@@ -403,8 +378,6 @@ class TodoServiceTest {
             "todo order",
             false);
 
-    em.flush();
-
     // When
 
     Runnable lambda = () -> todoService.getTodoInGroup(group2.getId(), todo.getId());
@@ -432,8 +405,6 @@ class TodoServiceTest {
             TodoStatus.IN_PROGRESS,
             "todo order",
             false);
-
-    em.flush();
 
     // When
 
@@ -479,10 +450,7 @@ class TodoServiceTest {
             "todo order",
             false);
 
-    em.flush();
-
-    em.remove(todo);
-    em.flush();
+    th.delete(todo);
 
     // When
 
@@ -511,8 +479,6 @@ class TodoServiceTest {
             TodoStatus.IN_PROGRESS,
             "todo order",
             false);
-
-    em.flush();
 
     UpdateTodoDTO updateTodoDTO =
         new UpdateTodoDTO(todo.getId(), "todo updated title", "todo updated description");
@@ -561,11 +527,7 @@ class TodoServiceTest {
             "todo order",
             false);
 
-    em.flush();
-
-    em.remove(todo);
-
-    em.flush();
+    th.delete(todo);
 
     UpdateTodoDTO updateTodoDTO =
         new UpdateTodoDTO(todo.getId(), "updated todo title", "updated todo description");

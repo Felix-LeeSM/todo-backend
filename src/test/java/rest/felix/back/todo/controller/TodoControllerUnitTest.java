@@ -11,9 +11,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
-import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
+import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.common.util.Trio;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
@@ -25,22 +24,23 @@ import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.todo.exception.TodoNotFoundException;
+import rest.felix.back.todo.repository.TodoRepository;
 import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.entity.User;
 import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @SpringBootTest
-@Transactional
 public class TodoControllerUnitTest {
 
   @Autowired private EntityManager em;
   @Autowired private TodoController todoController;
-  @Autowired private PasswordService passwordService;
-  private EntityFactory entityFactory;
+  @Autowired private EntityFactory entityFactory;
+  @Autowired private TodoRepository todoRepository;
+  @Autowired private TestHelper th;
 
   @BeforeEach
   void setUp() {
-    entityFactory = new EntityFactory(passwordService, em);
+    th.cleanUp();
   }
 
   @Test
@@ -76,8 +76,6 @@ public class TodoControllerUnitTest {
               order,
               false);
         });
-
-    em.flush();
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -138,8 +136,6 @@ public class TodoControllerUnitTest {
 
     entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    em.flush();
-
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
@@ -163,11 +159,7 @@ public class TodoControllerUnitTest {
 
     Group group = entityFactory.insertGroup("group", "description");
 
-    em.flush();
-
-    em.remove(user);
-
-    em.flush();
+    th.delete(user);
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -191,11 +183,8 @@ public class TodoControllerUnitTest {
     UserGroup userGroup =
         entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    em.flush();
-
-    em.remove(userGroup);
-    em.remove(group);
-    em.flush();
+    th.delete(userGroup);
+    th.delete(group);
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -219,10 +208,7 @@ public class TodoControllerUnitTest {
     UserGroup userGroup =
         entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    em.flush();
-
-    em.remove(userGroup);
-    em.flush();
+    th.delete(userGroup);
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -244,8 +230,6 @@ public class TodoControllerUnitTest {
     Group group = entityFactory.insertGroup("group", "description");
 
     entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
-    em.flush();
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -281,8 +265,6 @@ public class TodoControllerUnitTest {
 
     entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
 
-    em.flush();
-
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
@@ -309,11 +291,8 @@ public class TodoControllerUnitTest {
     UserGroup userGroup =
         entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    em.flush();
-
-    em.remove(userGroup);
-    em.remove(user);
-    em.flush();
+    th.delete(userGroup);
+    th.delete(user);
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -341,11 +320,8 @@ public class TodoControllerUnitTest {
     UserGroup userGroup =
         entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    em.flush();
-
-    em.remove(userGroup);
-    em.remove(group);
-    em.flush();
+    th.delete(userGroup);
+    th.delete(group);
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -373,10 +349,7 @@ public class TodoControllerUnitTest {
     UserGroup userGroup =
         entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    em.flush();
-
-    em.remove(userGroup);
-    em.flush();
+    th.delete(userGroup);
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -414,8 +387,6 @@ public class TodoControllerUnitTest {
         "todo order",
         false);
 
-    em.flush();
-
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
@@ -452,8 +423,6 @@ public class TodoControllerUnitTest {
             "todo order",
             false);
 
-    em.flush();
-
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     // When
@@ -465,21 +434,7 @@ public class TodoControllerUnitTest {
 
     Assertions.assertEquals(HttpStatus.NO_CONTENT, responseEntity.getStatusCode());
 
-    Assertions.assertTrue(
-        em.createQuery(
-                """
-                SELECT
-                  t
-                FROM
-                  Todo t
-                WHERE
-                  t.id = :todoId
-                """,
-                Todo.class)
-            .setParameter("todoId", todo.getId())
-            .getResultStream()
-            .findFirst()
-            .isEmpty());
+    Assertions.assertTrue(todoRepository.findById(todo.getId()).isEmpty());
   }
 
   @Test
@@ -504,13 +459,9 @@ public class TodoControllerUnitTest {
             "todo order",
             false);
 
-    em.flush();
-
-    em.remove(todo);
-    em.remove(userGroup);
-    em.remove(user);
-
-    em.flush();
+    th.delete(todo);
+    th.delete(userGroup);
+    th.delete(user);
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -545,11 +496,7 @@ public class TodoControllerUnitTest {
             "todo order",
             false);
 
-    em.flush();
-
-    em.remove(userGroup);
-
-    em.flush();
+    th.delete(userGroup);
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -582,8 +529,6 @@ public class TodoControllerUnitTest {
             TodoStatus.IN_PROGRESS,
             "todo order",
             false);
-
-    em.flush();
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -619,8 +564,6 @@ public class TodoControllerUnitTest {
             "todo order",
             false);
 
-    em.flush();
-
     AuthUserDTO authUser = AuthUserDTO.of(author);
 
     // When
@@ -654,13 +597,9 @@ public class TodoControllerUnitTest {
             "todo order",
             false);
 
-    em.flush();
-
-    em.remove(todo);
-    em.remove(userGroup);
-    em.remove(group);
-
-    em.flush();
+    th.delete(todo);
+    th.delete(userGroup);
+    th.delete(group);
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -694,11 +633,7 @@ public class TodoControllerUnitTest {
             "todo order",
             false);
 
-    em.flush();
-
-    em.remove(todo);
-
-    em.flush();
+    th.delete(todo);
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
@@ -732,8 +667,6 @@ public class TodoControllerUnitTest {
             "todo order",
             false);
 
-    em.flush();
-
     UpdateTodoRequestDTO updateTodoRequestDTO =
         new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
@@ -755,20 +688,11 @@ public class TodoControllerUnitTest {
     Assertions.assertEquals("updated todo title", todoDTO.getTitle());
     Assertions.assertEquals("updated todo description", todoDTO.getDescription());
 
-    Todo updatedTodo =
-        em.createQuery(
-                """
-            SELECT t
-            FROM Todo t
-            WHERE t.id = :todoId
-            """,
-                Todo.class)
-            .setParameter("todoId", todo.getId())
-            .getSingleResult();
+    TodoDTO updatedTodo = todoRepository.findById(todo.getId()).orElseThrow();
 
     Assertions.assertEquals(updatedTodo.getId(), updatedTodo.getId());
-    Assertions.assertEquals(user.getId(), updatedTodo.getAuthor().getId());
-    Assertions.assertEquals(group.getId(), updatedTodo.getGroup().getId());
+    Assertions.assertEquals(user.getId(), updatedTodo.getAuthorId());
+    Assertions.assertEquals(group.getId(), updatedTodo.getGroupId());
     Assertions.assertEquals("updated todo title", updatedTodo.getTitle());
     Assertions.assertEquals("updated todo description", updatedTodo.getDescription());
   }
@@ -795,13 +719,9 @@ public class TodoControllerUnitTest {
             "todo order",
             false);
 
-    em.flush();
-
-    em.remove(todo);
-    em.remove(userGroup);
-    em.remove(user);
-
-    em.flush();
+    th.delete(todo);
+    th.delete(userGroup);
+    th.delete(user);
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
         new UpdateTodoRequestDTO("updated todo title", "updated todo description");
@@ -841,11 +761,7 @@ public class TodoControllerUnitTest {
             "todo order",
             false);
 
-    em.flush();
-
-    em.remove(userGroup);
-
-    em.flush();
+    th.delete(userGroup);
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
         new UpdateTodoRequestDTO("updated todo title", "updated todo description");
@@ -883,8 +799,6 @@ public class TodoControllerUnitTest {
             TodoStatus.IN_PROGRESS,
             "todo order",
             false);
-
-    em.flush();
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
         new UpdateTodoRequestDTO("updated todo title", "updated todo description");
@@ -925,7 +839,6 @@ public class TodoControllerUnitTest {
             "todo order",
             false);
 
-    em.flush();
     UpdateTodoRequestDTO updateTodoRequestDTO =
         new UpdateTodoRequestDTO("updated todo title", "updated todo description");
 
@@ -946,43 +859,24 @@ public class TodoControllerUnitTest {
   void updateTodo_Failure_NoGroup() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "password", "nickname");
+    Group group = entityFactory.insertGroup("group", "description");
+    UserGroup userGroup =
+        entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    em.persist(user);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            null,
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            false);
 
-    Group group = new Group();
-    group.setName("group");
-    group.setDescription("description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-    userGroup.setGroupRole(GroupRole.OWNER);
-
-    em.persist(userGroup);
-
-    Todo todo = new Todo();
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-
-    em.persist(todo);
-
-    em.flush();
-
-    em.remove(todo);
-    em.remove(userGroup);
-    em.remove(group);
-
-    em.flush();
+    th.delete(todo);
+    th.delete(userGroup);
+    th.delete(group);
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
         new UpdateTodoRequestDTO("updated todo title", "updated todo description");
@@ -1004,41 +898,21 @@ public class TodoControllerUnitTest {
   void updateTodo_Failure_NoTodo() {
     // Given
 
-    User user = new User();
-    user.setUsername("username");
-    user.setNickname("nickname");
-    user.setHashedPassword("hashedPassword");
+    User user = entityFactory.insertUser("username", "password", "nickname");
+    Group group = entityFactory.insertGroup("group", "description");
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-    em.persist(user);
+    Todo todo =
+        entityFactory.insertTodo(
+            user.getId(),
+            null,
+            group.getId(),
+            "todo title",
+            "todo description",
+            TodoStatus.IN_PROGRESS,
+            false);
 
-    Group group = new Group();
-    group.setName("group");
-    group.setDescription("description");
-
-    em.persist(group);
-
-    UserGroup userGroup = new UserGroup();
-    userGroup.setUser(user);
-    userGroup.setGroup(group);
-    userGroup.setGroupRole(GroupRole.OWNER);
-
-    em.persist(userGroup);
-
-    Todo todo = new Todo();
-    todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-    todo.setTitle("todo title");
-    todo.setDescription("todo description");
-    todo.setOrder("todo order");
-    todo.setAuthor(user);
-    todo.setGroup(group);
-
-    em.persist(todo);
-
-    em.flush();
-
-    em.remove(todo);
-
-    em.flush();
+    th.delete(todo);
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
         new UpdateTodoRequestDTO("updated todo title", "updated todo description");

@@ -9,9 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
-import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
+import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.user.dto.SignupDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
 import rest.felix.back.user.dto.UserDTO;
@@ -21,19 +20,19 @@ import rest.felix.back.user.exception.UsernameTakenException;
 import rest.felix.back.user.repository.UserRepository;
 
 @SpringBootTest
-@Transactional
 @ActiveProfiles("test")
 class UserServiceTest {
 
   @Autowired private UserService userService;
   @Autowired private UserRepository userRepository;
   @Autowired private EntityManager em;
-  @Autowired private PasswordService passwordService;
-  private EntityFactory entityFactory;
+  @Autowired EntityFactory entityFactory;
+
+  @Autowired private TestHelper th;
 
   @BeforeEach
   void setUp() {
-    entityFactory = new EntityFactory(passwordService, em);
+    th.cleanUp();
   }
 
   @Test
@@ -66,7 +65,6 @@ class UserServiceTest {
     // When
 
     userService.signup(signupDTO);
-    em.flush();
 
     // Then
 
@@ -74,7 +72,6 @@ class UserServiceTest {
         DataIntegrityViolationException.class,
         () -> {
           userService.signup(duplicatedUsernameSignupDTO);
-          em.flush();
         });
   }
 
@@ -138,7 +135,6 @@ class UserServiceTest {
     // Given
 
     User user = entityFactory.insertUser("username", "password", "nickname");
-    em.flush();
 
     // When
 

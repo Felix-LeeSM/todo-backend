@@ -13,10 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
-import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
+import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.DetailedGroupDTO;
 import rest.felix.back.group.dto.GroupDTO;
@@ -24,23 +23,23 @@ import rest.felix.back.group.dto.MemberDTO;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
+import rest.felix.back.group.repository.GroupRepository;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.user.entity.User;
 
 @SpringBootTest
-@Transactional
 @ActiveProfiles("test")
 class GroupServiceTest {
 
   @Autowired private EntityManager em;
   @Autowired private GroupService groupService;
-  @Autowired private PasswordService passwordService;
-
-  private EntityFactory entityFactory;
+  @Autowired private GroupRepository groupRepository;
+  @Autowired private EntityFactory entityFactory;
+  @Autowired private TestHelper th;
 
   @BeforeEach
-  void setup() {
-    entityFactory = new EntityFactory(passwordService, em);
+  void setUp() {
+    th.cleanUp();
   }
 
   @Nested
@@ -51,8 +50,6 @@ class GroupServiceTest {
       // Given
 
       User user = entityFactory.insertUser("username", "some password", "nickname");
-
-      em.flush();
 
       CreateGroupDTO createGroupDTO =
           new CreateGroupDTO(user.getId(), "groupName", "group description");
@@ -86,9 +83,7 @@ class GroupServiceTest {
 
       User user = entityFactory.insertUser("username", "some password", "nickname");
 
-      em.remove(user);
-
-      em.flush();
+      th.delete(user);
 
       CreateGroupDTO createGroupDTO =
           new CreateGroupDTO(user.getId(), "groupName", "group description");
@@ -128,8 +123,6 @@ class GroupServiceTest {
                         String.format("user2 group%d description", idx));
                 entityFactory.insertUserGroup(user2.getId(), group2.getId(), GroupRole.OWNER);
               });
-
-      em.flush();
 
       // When
 
@@ -181,8 +174,7 @@ class GroupServiceTest {
 
       User user = entityFactory.insertUser("usernaem1", "some password", "nickname1");
 
-      em.remove(user);
-      em.flush();
+      th.delete(user);
 
       // When
 
@@ -199,8 +191,6 @@ class GroupServiceTest {
       // Given
 
       User user = entityFactory.insertUser("usernaem1", "some password", "nickname1");
-
-      em.flush();
 
       // When
 
@@ -282,8 +272,6 @@ class GroupServiceTest {
           "c",
           false);
 
-      em.flush();
-
       // When
       List<DetailedGroupDTO> detailedGroups =
           groupService.findDetailedGroupsByUserId(mainUser.getId());
@@ -343,8 +331,6 @@ class GroupServiceTest {
           "a",
           false);
 
-      em.flush();
-
       // When
       List<DetailedGroupDTO> detailedGroups =
           groupService.findDetailedGroupsByUserId(mainUser.getId());
@@ -374,8 +360,6 @@ class GroupServiceTest {
       Group group1 = entityFactory.insertGroup("Group 1", "Description 1");
       entityFactory.insertUserGroup(mainUser.getId(), group1.getId(), GroupRole.OWNER);
 
-      em.flush();
-
       // When
       List<DetailedGroupDTO> detailedGroups =
           groupService.findDetailedGroupsByUserId(mainUser.getId());
@@ -403,8 +387,7 @@ class GroupServiceTest {
       // Given
       User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
       long userId = mainUser.getId();
-      em.remove(mainUser);
-      em.flush();
+      th.delete(mainUser);
 
       // When
       List<DetailedGroupDTO> detailedGroups = groupService.findDetailedGroupsByUserId(userId);
@@ -419,7 +402,6 @@ class GroupServiceTest {
       // Given
       User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
       entityFactory.insertGroup("Group 1", "Description 1");
-      em.flush();
 
       // When
       List<DetailedGroupDTO> detailedGroups =
@@ -442,16 +424,12 @@ class GroupServiceTest {
       User user = entityFactory.insertUser("username1", "some password", "nickname1");
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      em.flush();
-
       for (GroupRole groupRole :
           new GroupRole[] {
             GroupRole.VIEWER, GroupRole.MEMBER, GroupRole.MANAGER, GroupRole.OWNER
           }) {
 
         UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), groupRole);
-
-        em.flush();
 
         // When
 
@@ -466,8 +444,7 @@ class GroupServiceTest {
 
               Assertions.assertEquals(groupRole, foundGroupRole);
 
-              em.remove(userGroup);
-              em.flush();
+              th.delete(userGroup);
             });
       }
     }
@@ -479,8 +456,6 @@ class GroupServiceTest {
 
       User user = entityFactory.insertUser("username1", "some password", "nickname1");
       Group group = entityFactory.insertGroup("group name", "group description");
-
-      em.flush();
 
       // When
 
@@ -498,10 +473,7 @@ class GroupServiceTest {
       User user = entityFactory.insertUser("username1", "some password", "nickname1");
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      em.flush();
-
-      em.remove(user);
-      em.flush();
+      th.delete(user);
 
       // When
 
@@ -519,10 +491,7 @@ class GroupServiceTest {
       User user = entityFactory.insertUser("username1", "some password", "nickname1");
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      em.flush();
-
-      em.remove(group);
-      em.flush();
+      th.delete(group);
 
       // When
 
@@ -542,8 +511,6 @@ class GroupServiceTest {
       // Given
 
       Group group = entityFactory.insertGroup("group name", "group description");
-
-      em.flush();
 
       // When
 
@@ -566,10 +533,7 @@ class GroupServiceTest {
 
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      em.flush();
-
-      em.remove(group);
-      em.flush();
+      th.delete(group);
 
       // When
 
@@ -591,26 +555,13 @@ class GroupServiceTest {
 
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      em.flush();
-
       // When
 
       groupService.deleteGroupById(group.getId());
 
       // Then
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-                SELECT g
-                FROM Group g
-                WHERE g.id = :groupId
-                """,
-                  Group.class)
-              .setParameter("groupId", group.getId())
-              .getResultStream()
-              .findFirst()
-              .isEmpty());
+      Assertions.assertTrue(groupRepository.findById(group.getId()).isEmpty());
     }
 
     @Test
@@ -618,10 +569,8 @@ class GroupServiceTest {
       // Given
 
       Group group = entityFactory.insertGroup("group name", "group description");
-      em.flush();
 
-      em.remove(group);
-      em.flush();
+      th.delete(group);
 
       // When
 
@@ -629,18 +578,7 @@ class GroupServiceTest {
 
       // Then
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-                SELECT g
-                FROM Group g
-                WHERE g.id = :groupId
-                """,
-                  Group.class)
-              .setParameter("groupId", group.getId())
-              .getResultStream()
-              .findFirst()
-              .isEmpty());
+      Assertions.assertTrue(groupRepository.findById(group.getId()).isEmpty());
     }
   }
 }

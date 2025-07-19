@@ -20,6 +20,7 @@ import rest.felix.back.group.dto.FullGroupDetailsDTO;
 import rest.felix.back.group.dto.FullGroupDetailsResponseDTO;
 import rest.felix.back.group.dto.GroupDTO;
 import rest.felix.back.group.dto.GroupResponseDTO;
+import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.group.service.GroupService;
 import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.service.UserService;
@@ -79,7 +80,8 @@ public class GroupController {
   @DeleteMapping("/{groupId}")
   public ResponseEntity<Void> deleteGroup(
       @AuthenticationPrincipal AuthUserDTO authUser, @PathVariable(name = "groupId") long groupId) {
-    groupService.assertCanDeleteGroup(groupId, groupId);
+    long userId = authUser.getUserId();
+    groupService.assertGroupAuthority(userId, groupId, GroupRole.OWNER);
 
     groupService.deleteGroupById(groupId);
 

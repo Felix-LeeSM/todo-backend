@@ -9,10 +9,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
-import rest.felix.back.common.security.JwtTokenProvider;
-import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
+import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.dto.SignInRequestDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
@@ -24,20 +22,19 @@ import rest.felix.back.user.exception.UsernameTakenException;
 import rest.felix.back.user.repository.UserRepository;
 
 @SpringBootTest
-@Transactional
 @ActiveProfiles("test")
 class UserControllerUnitTest {
 
   @Autowired private UserController userController;
   @Autowired private UserRepository userRepository;
   @Autowired private EntityManager em;
-  @Autowired private JwtTokenProvider jwtTokenProvider;
-  @Autowired private PasswordService passwordService;
-  private EntityFactory entityFactory;
+  @Autowired private EntityFactory entityFactory;
+
+  @Autowired private TestHelper th;
 
   @BeforeEach
   void setUp() {
-    entityFactory = new EntityFactory(passwordService, em);
+    th.cleanUp();
   }
 
   @Test
@@ -186,7 +183,6 @@ class UserControllerUnitTest {
     // Given
 
     User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-    em.flush();
 
     // When
 
@@ -210,10 +206,8 @@ class UserControllerUnitTest {
     // Given
 
     User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-    em.flush();
 
-    em.remove(user);
-    em.flush();
+    th.delete(user);
 
     // When
 

@@ -2,6 +2,9 @@ package rest.felix.back.common.util;
 
 import jakarta.persistence.EntityManager;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.GroupInvitation;
@@ -12,14 +15,11 @@ import rest.felix.back.todo.entity.UserTodoStar;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.user.entity.User;
 
+@Component
+@Transactional
 public class EntityFactory {
-  public EntityFactory(PasswordService passwordService, EntityManager entityManager) {
-    this.passwordService = passwordService;
-    this.entityManager = entityManager;
-  }
-
-  private final PasswordService passwordService;
-  private final EntityManager entityManager;
+  @Autowired private PasswordService passwordService;
+  @Autowired private EntityManager entityManager;
 
   public User insertUser(String username, String password, String nickname) {
 
@@ -44,6 +44,25 @@ public class EntityFactory {
     entityManager.persist(group);
 
     return group;
+  }
+
+  public Trio<User, Group, UserGroup> insertUserGroup() {
+    User user =
+        insertUser(
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString(),
+            UUID.randomUUID().toString());
+    Group group = insertGroup(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+
+    UserGroup userGroup = new UserGroup();
+
+    userGroup.setUser(user);
+    userGroup.setGroup(group);
+    userGroup.setGroupRole(GroupRole.OWNER);
+
+    entityManager.persist(userGroup);
+
+    return new Trio<>(user, group, userGroup);
   }
 
   public UserGroup insertUserGroup(Long userId, Long groupId, GroupRole groupRole) {

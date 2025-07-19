@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.Cookie;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,17 +22,15 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.security.JwtTokenProvider;
-import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
+import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.dto.SignInRequestDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
 import rest.felix.back.user.entity.User;
 
 @SpringBootTest
-@Transactional
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class UserControllerWebTest {
@@ -41,13 +38,13 @@ public class UserControllerWebTest {
   @Autowired private MockMvc mvc;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private JwtTokenProvider jwtTokenProvider;
-  @Autowired private PasswordService passwordService;
-  @Autowired private EntityManager em;
-  private EntityFactory entityFactory;
+  @Autowired private EntityFactory entityFactory;
+
+  @Autowired private TestHelper th;
 
   @BeforeEach
   void setUp() {
-    entityFactory = new EntityFactory(passwordService, em);
+    th.cleanUp();
   }
 
   private Cookie userCookie(User user) {

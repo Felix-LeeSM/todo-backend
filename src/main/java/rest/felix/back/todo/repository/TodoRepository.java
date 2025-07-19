@@ -18,6 +18,9 @@ import rest.felix.back.todo.dto.UpdateTodoDTO;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.UserTodoStar;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
+import rest.felix.back.todo.exception.DestinationNotFoundException;
+import rest.felix.back.todo.exception.InvalidDestinationException;
+import rest.felix.back.todo.exception.TodoNotFoundException;
 import rest.felix.back.todo.service.OrderGenerator;
 import rest.felix.back.user.entity.User;
 
@@ -27,7 +30,8 @@ public class TodoRepository {
 
   private final EntityManager em;
 
-  public List<TodoDTO> getTodosInGroup(long groupId) {
+  @Transactional(readOnly = true)
+  public List<TodoDTO> findByGroupId(long groupId) {
     return em
         .createQuery(
             """
@@ -67,16 +71,16 @@ public class TodoRepository {
         .collect(Collectors.toMap(TodoCountDTO::getGroupId, dto -> dto));
   }
 
-  public Optional<TodoDTO> getTodoInGroup(long groupId, long todoId) {
+  public Optional<TodoDTO> findByIdAndGroupId(long groupId, long todoId) {
     return em
         .createQuery(
             """
-                                SELECT t
-                                FROM Group g
-                                JOIN g.todos t
-                                WHERE g.id = :groupId AND t.id = :todoId
-                                ORDER BY t.order ASC
-                                """,
+          SELECT t
+          FROM Group g
+          JOIN g.todos t
+          WHERE g.id = :groupId AND t.id = :todoId
+          ORDER BY t.order ASC
+          """,
             Todo.class)
         .setParameter("groupId", groupId)
         .setParameter("todoId", todoId)
@@ -86,50 +90,67 @@ public class TodoRepository {
         .map(TodoDTO::of);
   }
 
+  @Transactional
   public TodoDTO createTodo(CreateTodoDTO createTodoDTO) {
     Todo todo = new Todo();
 
     User author = em.getReference(User.class, createTodoDTO.getAuthorId());
     Group group = em.getReference(Group.class, createTodoDTO.getGroupId());
 
+    // TodoStatus defaultTodoStatus = TodoStatus.TO_DO;
+
     todo.setAuthor(author);
     todo.setGroup(group);
     todo.setTitle(createTodoDTO.getTitle());
     todo.setDescription(createTodoDTO.getDescription());
     todo.setOrder(createTodoDTO.getOrder());
+    // todo.setTodoStatus(defaultTodoStatus);
+
+    // String maxOrder =
+    // em.createQuery(
+    //         "SELECT MAX(t.order) FROM Todo t WHERE t.group = :group AND t.todoStatus =
+    // :todoStatus",
+    //         String.class)
+    //     .setParameter("group", group)
+    //     .setParameter("todoStatus", defaultTodoStatus)
+    //     .getSingleResult();
+
+    // String newOrder = OrderGenerator.generate(maxOrder, null);
+
+    // todo.setOrder(newOrder);
 
     em.persist(todo);
 
     return TodoDTO.of(todo);
   }
 
-  @Transactional()
-  public void deleteTodo(long todoId) {
+  @Transactional
+  public void deleteById(long todoId) {
     em.createQuery(
             """
-                        DELETE FROM UserTodoStar uts
-                        WHERE uts.todo.id = :todoId
-                        """)
+          DELETE FROM UserTodoStar uts
+          WHERE uts.todo.id = :todoId
+          """)
         .setParameter("todoId", todoId)
         .executeUpdate();
     em.createQuery(
             """
-                        DELETE FROM Todo t
-                        WHERE t.id = :todoId
-                        """)
+          DELETE FROM Todo t
+          WHERE t.id = :todoId
+          """)
         .setParameter("todoId", todoId)
         .executeUpdate();
   }
 
-  @Transactional()
+  @Transactional
   public TodoDTO updateTodo(UpdateTodoDTO updateTodoDTO) {
     return em
         .createQuery(
             """
-                                SELECT t
-                                FROM Todo t
-                                WHERE t.id = :todoId
-                                """,
+          SELECT t
+          FROM Todo t
+          WHERE t.id = :todoId
+          """,
             Todo.class)
         .setParameter("todoId", updateTodoDTO.getId())
         .getResultList()
@@ -146,31 +167,54 @@ public class TodoRepository {
         .orElseThrow(ResourceNotFoundException::new);
   }
 
-  @Transactional()
+  @Transactional
   public void deleteByGroupId(long groupId) {
     em.createQuery(
             """
-                        DELETE FROM UserTodoStar uts
-                        WHERE uts.todo.id IN (
-                            SELECT t.id FROM Todo t WHERE t.group.id = :groupId
-                        )
-                        """)
+          DELETE FROM UserTodoStar uts
+          WHERE uts.todo.id IN (
+            SELECT t.id FROM Todo t WHERE t.group.id = :groupId
+          )
+          """)
         .setParameter("groupId", groupId)
         .executeUpdate();
     em.createQuery(
             """
-                        DELETE FROM Todo t WHERE t.group.id = :groupId
-                        """)
+          DELETE FROM Todo t WHERE t.group.id = :groupId
+          """)
         .setParameter("groupId", groupId)
         .executeUpdate();
   }
 
   @Transactional(readOnly = true)
   public Optional<TodoDTO> findById(long todoId) {
+    return Optional.ofNullable(em.find(Todo.class, todoId)).map(TodoDTO::of);
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<Todo> findEntityById(long todoId) {
     try {
       Todo todo =
           em.createQuery("SELECT t FROM Todo t WHERE t.id = :todoId", Todo.class)
               .setParameter("todoId", todoId)
+              .getSingleResult();
+
+      return Optional.of(todo);
+
+    } catch (NoResultException e) {
+      return Optional.empty();
+    }
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<TodoDTO> findById(long groupId, long todoId) {
+    try {
+      Todo todo =
+          em.createQuery(
+                  "SELECT t FROM Todo t JOIN Group g ON t.group.id = :groupId WHERE t.id = :todoId",
+                  Todo.class)
+              .setParameter("todoId", todoId)
+              .setParameter("groupId", groupId)
               .getSingleResult();
 
       return Optional.of(TodoDTO.of(todo));
@@ -181,13 +225,28 @@ public class TodoRepository {
   }
 
   @Transactional
-  public void moveTodo(long targetId, Long destinationId, TodoStatus todoStatus) {
-    Todo targetTodo = em.find(Todo.class, targetId);
+  public TodoDTO moveTodo(long targetId, Long destinationId, TodoStatus todoStatus) {
+    Todo targetTodo = findEntityById(targetId).orElseThrow(TodoNotFoundException::new);
+
+    // destinationId가 있을 경우 검증 수행
+    if (destinationId != null) {
+      Todo destinationTodo = em.find(Todo.class, destinationId);
+      if (destinationTodo == null) throw new DestinationNotFoundException();
+
+      if (!destinationTodo.getGroup().equals(targetTodo.getGroup()))
+        throw new InvalidDestinationException();
+
+      if (!destinationTodo.getTodoStatus().equals(todoStatus))
+        throw new InvalidDestinationException();
+
+      if (destinationId.equals(targetId)) throw new InvalidDestinationException();
+    }
+
     targetTodo.setTodoStatus(todoStatus);
 
     String newOrder;
     if (destinationId == null) {
-      // 맨 뒤로 보내는 로직
+      // 리스트 끝으로 이동
       String maxOrder =
           em.createQuery(
                   "SELECT MAX(t.order) FROM Todo t WHERE t.group = :group AND t.todoStatus = :todoStatus",
@@ -200,7 +259,6 @@ public class TodoRepository {
       Todo destinationTodo = em.find(Todo.class, destinationId);
       String destinationOrder = destinationTodo.getOrder();
 
-      // destinationTodo의 이전 todo를 찾는다.
       String prevOrder =
           em.createQuery(
                   "SELECT MAX(t.order) FROM Todo t WHERE t.group = :group AND t.order < :destinationOrder AND t.todoStatus = :todoStatus",
@@ -214,7 +272,7 @@ public class TodoRepository {
     }
 
     targetTodo.setOrder(newOrder);
-    em.flush();
+    return TodoDTO.of(targetTodo);
   }
 
   @Transactional
@@ -236,5 +294,36 @@ public class TodoRepository {
         .setParameter("userId", userId)
         .setParameter("todoId", todoId)
         .executeUpdate();
+  }
+
+  @Transactional(readOnly = true)
+  public boolean starExistsById(long userId, long todoId) {
+    return !em.createQuery(
+            """
+            SELECT 1L
+            FROM UserTodoStar uts
+            WHERE uts.user.id = :userId AND uts.todo.id = :todoId
+            """,
+            Long.class)
+        .setParameter("userId", userId)
+        .setParameter("todoId", todoId)
+        .setMaxResults(1) // 1개만 찾으면 조회를 멈추도록 설정
+        .getResultList()
+        .isEmpty();
+  }
+
+  @Transactional(readOnly = true)
+  public boolean starExistsById(long todoId) {
+    return !em.createQuery(
+            """
+            SELECT 1L
+            FROM UserTodoStar uts
+            WHERE uts.todo.id = :todoId
+            """,
+            Long.class)
+        .setParameter("todoId", todoId)
+        .setMaxResults(1)
+        .getResultList()
+        .isEmpty();
   }
 }

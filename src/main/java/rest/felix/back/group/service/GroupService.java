@@ -116,7 +116,7 @@ public class GroupService {
 
     List<MemberDTO> memberDTOs = userRepository.findMembersByGroupId(groupId);
 
-    List<TodoDTO> todoDTOs = todoRepository.getTodosInGroup(groupId);
+    List<TodoDTO> todoDTOs = todoRepository.findByGroupId(groupId);
 
     return new FullGroupDetailsDTO(
         groupId,
@@ -129,20 +129,12 @@ public class GroupService {
   }
 
   @Transactional
-  public void assertCanUpdateGroup(long userId, long groupId) {
-    userGroupRepository
-        .findByUserIdAndGroupId(userId, groupId)
-        .map(dto -> dto.getGroupRole())
-        .filter(role -> role.gte(GroupRole.MANAGER))
-        .orElseThrow(UserAccessDeniedException::new);
-  }
+  public void assertGroupAuthority(long userId, long groupId, GroupRole groupRole) {
 
-  @Transactional
-  public void assertCanDeleteGroup(long userId, long groupId) {
     userGroupRepository
         .findByUserIdAndGroupId(userId, groupId)
         .map(dto -> dto.getGroupRole())
-        .filter(role -> role.gte(GroupRole.OWNER))
+        .filter(role -> role.gte(groupRole))
         .orElseThrow(UserAccessDeniedException::new);
   }
 }

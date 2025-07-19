@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -55,6 +56,9 @@ public class Todo {
 
   @Column(nullable = false)
   private String order;
+
+  @Column(nullable = true)
+  private LocalDate dueDate;
 
   @Column(nullable = false)
   private boolean isImportant = false;

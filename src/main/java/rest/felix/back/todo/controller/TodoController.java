@@ -56,10 +56,7 @@ public class TodoController {
 
     long userId = authUser.getUserId();
 
-    groupService
-        .findUserRole(userId, groupId)
-        .filter(role -> role.gte(GroupRole.MEMBER))
-        .orElseThrow(UserAccessDeniedException::new);
+    groupService.assertGroupAuthority(userId, groupId, GroupRole.MEMBER);
 
     CreateTodoDTO createTodoDTO =
         new CreateTodoDTO(
@@ -84,7 +81,13 @@ public class TodoController {
 
     long userId = authUser.getUserId();
 
-    todoService.assertCanModifyTodo(userId, groupId, todoId);
+    todoService.assertTodoAuthority(
+        userId,
+        groupId,
+        todoId,
+        (role, todo) ->
+            role.gte(GroupRole.MANAGER)
+                || (role.eq(GroupRole.MEMBER) && todo.getAuthorId() == userId));
 
     todoService.deleteTodo(todoId);
 
@@ -100,7 +103,13 @@ public class TodoController {
 
     long userId = authUser.getUserId();
 
-    todoService.assertCanModifyTodo(userId, groupId, todoId);
+    todoService.assertTodoAuthority(
+        userId,
+        groupId,
+        todoId,
+        (role, todo) ->
+            role.gte(GroupRole.MANAGER)
+                || (role.eq(GroupRole.MEMBER) && todo.getAuthorId() == userId));
 
     UpdateTodoDTO updateTodoDTO =
         new UpdateTodoDTO(
@@ -111,20 +120,21 @@ public class TodoController {
     return ResponseEntity.ok().body(updatedTodoDTO);
   }
 
-  @PostMapping("/group/{groupId}/todo/{todoId}/move")
-  public ResponseEntity<Void> moveTodo(
+  @PutMapping("/group/{groupId}/todo/{todoId}/move")
+  public ResponseEntity<TodoResponseDTO> moveTodo(
       @AuthenticationPrincipal AuthUserDTO authUser,
       @PathVariable(name = "groupId") long groupId,
       @PathVariable(name = "todoId") long todoId,
       @RequestBody MoveTodoRequestDTO moveTodoRequestDTO) {
     long userId = authUser.getUserId();
 
-    todoService.assertCanModifyTodo(userId, groupId, todoId);
+    todoService.assertTodoAuthority(userId, groupId, todoId, GroupRole.MEMBER);
 
-    todoService.moveTodo(
-        todoId, moveTodoRequestDTO.getDestinationId(), moveTodoRequestDTO.getTodoStatus());
+    TodoDTO todo =
+        todoService.moveTodo(
+            todoId, moveTodoRequestDTO.getDestinationId(), moveTodoRequestDTO.getTodoStatus());
 
-    return ResponseEntity.ok().build();
+    return ResponseEntity.ok().body(TodoResponseDTO.of(todo));
   }
 
   @PostMapping("/group/{groupId}/todo/{todoId}/star")
@@ -133,7 +143,8 @@ public class TodoController {
       @PathVariable(name = "groupId") long groupId,
       @PathVariable(name = "todoId") long todoId) {
     long userId = authUser.getUserId();
-    groupService.findUserRole(userId, groupId).orElseThrow(UserAccessDeniedException::new);
+
+    todoService.assertTodoAuthority(userId, groupId, todoId, GroupRole.VIEWER);
 
     todoService.starTodo(userId, groupId, todoId);
     return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -145,7 +156,9 @@ public class TodoController {
       @PathVariable(name = "groupId") long groupId,
       @PathVariable(name = "todoId") long todoId) {
     long userId = authUser.getUserId();
-    groupService.findUserRole(userId, groupId).orElseThrow(UserAccessDeniedException::new);
+
+    todoService.assertTodoAuthority(userId, groupId, todoId, GroupRole.VIEWER);
+
     todoService.unstarTodo(userId, groupId, todoId);
     return ResponseEntity.noContent().build();
   }

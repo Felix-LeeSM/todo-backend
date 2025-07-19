@@ -12,10 +12,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
-import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.Pair;
+import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.group.dto.CreateGroupRequestDTO;
 import rest.felix.back.group.dto.DetailedGroupResponseDTO;
 import rest.felix.back.group.dto.FullGroupDetailsResponseDTO;
@@ -32,22 +31,21 @@ import rest.felix.back.user.exception.NoMatchingUserException;
 import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @SpringBootTest
-@Transactional
 @ActiveProfiles("test")
 public class GroupControllerUnitTest {
 
   @Autowired private GroupController groupController;
-  @Autowired private PasswordService passwordService;
   @Autowired private EntityManager em;
-  private EntityFactory entityFactory;
+  @Autowired private EntityFactory entityFactory;
+
+  @Autowired private TestHelper th;
 
   @BeforeEach
   void setUp() {
-    entityFactory = new EntityFactory(passwordService, em);
+    th.cleanUp();
   }
 
   @SpringBootTest
-  @Transactional
   @ActiveProfiles("test")
   @DisplayName("그룹 생성 테스트")
   class CreateGroupTest {
@@ -117,9 +115,7 @@ public class GroupControllerUnitTest {
 
       User user = entityFactory.insertUser("username", "some_password", "nickname");
 
-      em.flush();
-      em.remove(user);
-      em.flush();
+      th.delete(user);
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
@@ -137,7 +133,6 @@ public class GroupControllerUnitTest {
   }
 
   @SpringBootTest
-  @Transactional
   @DisplayName("유저 전체 그룹 조회 테스트")
   class GetMyDetailedGroupsTest {
 
@@ -208,8 +203,6 @@ public class GroupControllerUnitTest {
           "c",
           false);
 
-      em.flush();
-
       AuthUserDTO authUserDTO = AuthUserDTO.of(mainUser);
 
       // When
@@ -274,8 +267,6 @@ public class GroupControllerUnitTest {
           "a",
           false);
 
-      em.flush();
-
       AuthUserDTO authUserDTO = AuthUserDTO.of(mainUser);
 
       // When
@@ -310,8 +301,6 @@ public class GroupControllerUnitTest {
       User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
       entityFactory.insertGroup("Group 1", "Description 1");
 
-      em.flush();
-
       AuthUserDTO authUserDTO = AuthUserDTO.of(mainUser);
 
       // When
@@ -333,8 +322,7 @@ public class GroupControllerUnitTest {
       User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
       AuthUserDTO authUserDTO = AuthUserDTO.of(mainUser);
 
-      em.remove(mainUser);
-      em.flush();
+      th.delete(mainUser);
 
       // When
       Runnable lambda = () -> groupController.getMyDetailedGroups(authUserDTO);
@@ -345,7 +333,6 @@ public class GroupControllerUnitTest {
   }
 
   @SpringBootTest
-  @Transactional
   @DisplayName("유저 단일 그룹 조회 테스트")
   class GetUserGroupTest {
 
@@ -399,8 +386,6 @@ public class GroupControllerUnitTest {
           TodoStatus.DONE,
           "d",
           false);
-
-      em.flush();
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(ownerUser);
 
@@ -473,8 +458,6 @@ public class GroupControllerUnitTest {
           "c",
           false);
 
-      em.flush();
-
       AuthUserDTO authUserDTO = AuthUserDTO.of(memberUser1);
 
       // When
@@ -544,8 +527,6 @@ public class GroupControllerUnitTest {
           "c",
           false);
 
-      em.flush();
-
       AuthUserDTO authUserDTO = AuthUserDTO.of(managerUser);
 
       // When
@@ -578,7 +559,6 @@ public class GroupControllerUnitTest {
     public void Failure_NoGroup() {
       // Given
       User user = entityFactory.insertUser("testUser4", "password", "nick4");
-      em.flush();
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
       Long nonExistentGroupId = 999L; // A group ID that does not exist
@@ -598,10 +578,8 @@ public class GroupControllerUnitTest {
       User user = entityFactory.insertUser("testUser5", "password", "nick5");
       Group group = entityFactory.insertGroup("Test Group 5", "Description 5");
       entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-      em.flush();
 
-      em.remove(user); // Remove the user to simulate no such user
-      em.flush();
+      th.delete(user); // Remove the user to simulate no such user
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
@@ -619,7 +597,6 @@ public class GroupControllerUnitTest {
       User user = entityFactory.insertUser("testUser6", "password", "nick6");
       Group group = entityFactory.insertGroup("Test Group 6", "Description 6");
       // User is not associated with the group
-      em.flush();
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
@@ -632,7 +609,6 @@ public class GroupControllerUnitTest {
   }
 
   @SpringBootTest
-  @Transactional
   @DisplayName("그룹 삭제 테스트 테스트")
   class DeleteGroupTest {
 
@@ -655,8 +631,6 @@ public class GroupControllerUnitTest {
           TodoStatus.IN_PROGRESS,
           "todo order",
           false);
-
-      em.flush();
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
@@ -713,8 +687,6 @@ public class GroupControllerUnitTest {
 
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      em.flush();
-
       ;
       Stream.of(
               Pair.of(GroupRole.MANAGER, 1),
@@ -739,8 +711,6 @@ public class GroupControllerUnitTest {
                     TodoStatus.IN_PROGRESS,
                     String.format("todo order %d", idx),
                     false);
-
-                em.flush();
 
                 AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
@@ -803,12 +773,8 @@ public class GroupControllerUnitTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.remove(user);
-
-      em.flush();
+      th.delete(userGroup);
+      th.delete(user);
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
@@ -844,11 +810,7 @@ public class GroupControllerUnitTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-
-      em.flush();
+      th.delete(userGroup);
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
@@ -884,12 +846,8 @@ public class GroupControllerUnitTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.remove(group);
-
-      em.flush();
+      th.delete(userGroup);
+      th.delete(group);
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 

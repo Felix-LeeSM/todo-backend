@@ -25,35 +25,38 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.security.JwtTokenProvider;
-import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
+import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.group.dto.CreateGroupRequestDTO;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
-import rest.felix.back.todo.entity.Todo;
+import rest.felix.back.group.repository.GroupRepository;
+import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
+import rest.felix.back.todo.repository.TodoRepository;
 import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.entity.User;
 
 @SpringBootTest
-@Transactional
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class GroupControllerWebTest {
 
   @Autowired private EntityManager em;
+  @Autowired private TodoRepository todoRepository;
+  @Autowired private GroupRepository groupRepository;
+  @Autowired private UserGroupRepository userGroupRepository;
   @Autowired private MockMvc mvc;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private JwtTokenProvider jwtTokenProvider;
-  @Autowired private PasswordService passwordService;
-  private EntityFactory entityFactory;
+  @Autowired private EntityFactory entityFactory;
+  @Autowired private TestHelper th;
 
   @BeforeEach
   void setUp() {
-    entityFactory = new EntityFactory(passwordService, em);
+    th.cleanUp();
   }
 
   private Cookie userCookie(User user) {
@@ -70,7 +73,7 @@ public class GroupControllerWebTest {
       // Given
 
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-      em.flush();
+
       Cookie cookie = userCookie(user);
 
       String path = "/api/v1/group";
@@ -103,9 +106,9 @@ public class GroupControllerWebTest {
       // Given
 
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-      em.flush();
-      em.remove(user);
-      em.flush();
+
+      th.delete(user);
+
       Cookie cookie = userCookie(user);
 
       String path = "/api/v1/group";
@@ -160,7 +163,7 @@ public class GroupControllerWebTest {
       // Given
 
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-      em.flush();
+
       Cookie cookie = userCookie(user);
 
       String path = "/api/v1/group";
@@ -257,8 +260,6 @@ public class GroupControllerWebTest {
           "c",
           false);
 
-      em.flush();
-
       Cookie cookie = userCookie(mainUser);
       String path = "/api/v1/group/my";
 
@@ -308,8 +309,6 @@ public class GroupControllerWebTest {
           "a",
           false);
 
-      em.flush();
-
       Cookie cookie = userCookie(mainUser);
       String path = "/api/v1/group/my";
 
@@ -335,8 +334,6 @@ public class GroupControllerWebTest {
       User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
       entityFactory.insertGroup("Group 1", "Description 1");
 
-      em.flush();
-
       Cookie cookie = userCookie(mainUser);
       String path = "/api/v1/group/my";
 
@@ -354,8 +351,7 @@ public class GroupControllerWebTest {
       User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
       Cookie cookie = userCookie(mainUser);
 
-      em.remove(mainUser);
-      em.flush();
+      th.delete(mainUser);
 
       String path = "/api/v1/group/my";
 
@@ -421,8 +417,6 @@ public class GroupControllerWebTest {
           TodoStatus.DONE,
           "d",
           false);
-
-      em.flush();
 
       Cookie cookie = userCookie(ownerUser);
 
@@ -503,8 +497,6 @@ public class GroupControllerWebTest {
 
       entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
       String path = String.format("/api/v1/group/%d", group.getId());
 
       // When
@@ -530,12 +522,8 @@ public class GroupControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.remove(user);
-
-      em.flush();
+      th.delete(userGroup);
+      th.delete(user);
 
       Cookie cookie = userCookie(user);
 
@@ -568,12 +556,8 @@ public class GroupControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.remove(group);
-
-      em.flush();
+      th.delete(userGroup);
+      th.delete(group);
 
       Cookie cookie = userCookie(user);
 
@@ -605,8 +589,6 @@ public class GroupControllerWebTest {
       Group group = entityFactory.insertGroup("group name", "group description");
 
       // User is not associated with the group
-
-      em.flush();
 
       Cookie cookie = userCookie(user);
 
@@ -640,15 +622,11 @@ public class GroupControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
       long groupId = group.getId();
 
-      em.remove(userGroup);
-      em.flush();
-      em.remove(group);
+      th.delete(userGroup);
 
-      em.flush();
+      th.delete(group);
 
       Cookie cookie = userCookie(user);
 
@@ -695,8 +673,6 @@ public class GroupControllerWebTest {
           "todo order",
           false);
 
-      em.flush();
-
       Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d", group.getId());
@@ -714,44 +690,11 @@ public class GroupControllerWebTest {
 
       result.andExpect(status().isNoContent());
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-              SELECT g
-              FROM Group g
-              WHERE g.id = :groupId
-              """,
-                  Group.class)
-              .setParameter("groupId", group.getId())
-              .getResultStream()
-              .findFirst()
-              .isEmpty());
+      Assertions.assertTrue(groupRepository.findById(group.getId()).isEmpty());
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-              SELECT t
-              FROM Todo t
-              WHERE t.group.id = :groupId
-              """,
-                  Todo.class)
-              .setParameter("groupId", group.getId())
-              .getResultStream()
-              .findFirst()
-              .isEmpty());
+      Assertions.assertTrue(todoRepository.findByGroupId(group.getId()).isEmpty());
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-              SELECT ug
-              FROM UserGroup ug
-              WHERE ug.group.id = :groupId
-              """,
-                  UserGroup.class)
-              .setParameter("groupId", group.getId())
-              .getResultStream()
-              .findFirst()
-              .isEmpty());
+      Assertions.assertTrue(userGroupRepository.findByGroupId(group.getId()).isEmpty());
     }
 
     @Test
@@ -766,12 +709,8 @@ public class GroupControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.remove(user);
-
-      em.flush();
+      th.delete(userGroup);
+      th.delete(user);
 
       Cookie cookie = userCookie(user);
 
@@ -804,11 +743,7 @@ public class GroupControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-
-      em.flush();
+      th.delete(userGroup);
 
       Cookie cookie = userCookie(user);
 
@@ -842,8 +777,6 @@ public class GroupControllerWebTest {
 
         entityFactory.insertUserGroup(user.getId(), group.getId(), role);
 
-        em.flush();
-
         Cookie cookie = userCookie(user);
 
         String path = String.format("/api/v1/group/%d", group.getId());
@@ -876,12 +809,8 @@ public class GroupControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.remove(group);
-
-      em.flush();
+      th.delete(userGroup);
+      th.delete(group);
 
       Cookie cookie = userCookie(user);
 

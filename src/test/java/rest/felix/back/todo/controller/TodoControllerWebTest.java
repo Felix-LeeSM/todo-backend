@@ -27,10 +27,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.security.JwtTokenProvider;
-import rest.felix.back.common.security.PasswordService;
 import rest.felix.back.common.util.EntityFactory;
+import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.common.util.Trio;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
@@ -38,13 +37,12 @@ import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.todo.dto.CreateTodoRequestDTO;
 import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
 import rest.felix.back.todo.entity.Todo;
-import rest.felix.back.todo.entity.UserTodoStar;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
+import rest.felix.back.todo.repository.TodoRepository;
 import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.entity.User;
 
 @SpringBootTest
-@Transactional
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class TodoControllerWebTest {
@@ -53,12 +51,13 @@ public class TodoControllerWebTest {
   @Autowired private MockMvc mvc;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private JwtTokenProvider jwtTokenProvider;
-  @Autowired private PasswordService passwordService;
-  private EntityFactory entityFactory;
+  @Autowired private EntityFactory entityFactory;
+  @Autowired private TodoRepository todoRepository;
+  @Autowired private TestHelper th;
 
   @BeforeEach
   void setUp() {
-    entityFactory = new EntityFactory(passwordService, em);
+    th.cleanUp();
   }
 
   private Cookie userCookie(User user) {
@@ -78,8 +77,7 @@ public class TodoControllerWebTest {
 
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      
-          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
       List<Trio<TodoStatus, String, Integer>> list =
           Arrays.asList(
@@ -104,8 +102,6 @@ public class TodoControllerWebTest {
                 order,
                 false);
           });
-
-      em.flush();
 
       Cookie cookie = userCookie(user);
 
@@ -154,8 +150,6 @@ public class TodoControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
       Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d/todo", group.getId());
@@ -187,11 +181,8 @@ public class TodoControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.remove(user);
-      em.flush();
+      th.delete(userGroup);
+      th.delete(user);
 
       Cookie cookie = userCookie(user);
 
@@ -224,11 +215,8 @@ public class TodoControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.remove(group);
-      em.flush();
+      th.delete(userGroup);
+      th.delete(group);
 
       Cookie cookie = userCookie(user);
 
@@ -261,10 +249,7 @@ public class TodoControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.flush();
+      th.delete(userGroup);
 
       Cookie cookie = userCookie(user);
 
@@ -299,8 +284,6 @@ public class TodoControllerWebTest {
       Group group = entityFactory.insertGroup("group name", "group description");
 
       entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
-      em.flush();
 
       Cookie cookie = userCookie(user);
 
@@ -344,8 +327,6 @@ public class TodoControllerWebTest {
 
       entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
       CreateTodoRequestDTO createTodoRequestDTO =
           new CreateTodoRequestDTO("todo title", "todo description", "todo order");
 
@@ -379,11 +360,8 @@ public class TodoControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.remove(user);
-      em.flush();
+      th.delete(userGroup);
+      th.delete(user);
 
       Cookie cookie = userCookie(user);
 
@@ -422,11 +400,8 @@ public class TodoControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.remove(group);
-      em.flush();
+      th.delete(userGroup);
+      th.delete(group);
 
       Cookie cookie = userCookie(user);
 
@@ -465,10 +440,7 @@ public class TodoControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.flush();
+      th.delete(userGroup);
 
       Cookie cookie = userCookie(user);
 
@@ -507,11 +479,8 @@ public class TodoControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
 
-      em.flush();
-
-      em.remove(userGroup);
-      em.remove(group);
-      em.flush();
+      th.delete(userGroup);
+      th.delete(group);
 
       Cookie cookie = userCookie(user);
 
@@ -558,8 +527,6 @@ public class TodoControllerWebTest {
           TodoStatus.TO_DO,
           "todo order",
           false);
-
-      em.flush();
 
       Cookie cookie = userCookie(user);
 
@@ -611,8 +578,6 @@ public class TodoControllerWebTest {
               "todo order",
               false);
 
-      em.flush();
-
       Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
@@ -630,21 +595,9 @@ public class TodoControllerWebTest {
 
       result.andExpect(status().isNoContent());
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-                  SELECT
-                    t
-                  FROM
-                    Todo t
-                  WHERE
-                    t.id = :todoId
-                  """,
-                  Todo.class)
-              .setParameter("todoId", todo.getId())
-              .getResultStream()
-              .findFirst()
-              .isEmpty());
+      Assertions.assertTrue(todoRepository.findById(todo.getId()).isEmpty());
+
+      Assertions.assertTrue(!todoRepository.starExistsById(todo.getId()));
     }
 
     @Test
@@ -670,8 +623,6 @@ public class TodoControllerWebTest {
 
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
 
-      em.flush();
-
       Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
@@ -689,31 +640,9 @@ public class TodoControllerWebTest {
 
       result.andExpect(status().isNoContent());
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-                  SELECT t
-                  FROM Todo t
-                  WHERE t.id = :todoId
-                  """,
-                  Todo.class)
-              .setParameter("todoId", todo.getId())
-              .getResultStream()
-              .findFirst()
-              .isEmpty());
+      Assertions.assertTrue(todoRepository.findById(todo.getId()).isEmpty());
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-                  SELECT uts
-                  FROM UserTodoStar uts
-                  WHERE uts.id = :todoId
-                  """,
-                  UserTodoStar.class)
-              .setParameter("todoId", todo.getId())
-              .getResultStream()
-              .findFirst()
-              .isEmpty());
+      Assertions.assertTrue(!todoRepository.starExistsById(todo.getId()));
     }
 
     @Test
@@ -738,13 +667,9 @@ public class TodoControllerWebTest {
               "todo order",
               false);
 
-      em.flush();
-
-      em.remove(todo);
-      em.remove(userGroup);
-      em.remove(user);
-
-      em.flush();
+      th.delete(todo);
+      th.delete(userGroup);
+      th.delete(user);
 
       Cookie cookie = userCookie(user);
 
@@ -787,11 +712,7 @@ public class TodoControllerWebTest {
               "todo order",
               false);
 
-      em.flush();
-
-      em.remove(userGroup);
-
-      em.flush();
+      th.delete(userGroup);
 
       Cookie cookie = userCookie(user);
 
@@ -834,11 +755,7 @@ public class TodoControllerWebTest {
               "todo order",
               false);
 
-      em.flush();
-
-      em.remove(userGroup);
-
-      em.flush();
+      th.delete(userGroup);
 
       Cookie cookie = userCookie(user);
 
@@ -885,8 +802,6 @@ public class TodoControllerWebTest {
               "todo order",
               false);
 
-      em.flush();
-
       Cookie cookie = userCookie(user);
 
       String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
@@ -915,7 +830,7 @@ public class TodoControllerWebTest {
       Group group = entityFactory.insertGroup("group name", "group description");
 
       UserGroup userGroup =
-          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MANAGER);
 
       Todo todo =
           entityFactory.insertTodo(
@@ -928,13 +843,9 @@ public class TodoControllerWebTest {
               "todo order",
               false);
 
-      em.flush();
-
-      em.remove(todo);
-      em.remove(userGroup);
-      em.remove(group);
-
-      em.flush();
+      th.delete(todo);
+      th.delete(userGroup);
+      th.delete(group);
 
       Cookie cookie = userCookie(user);
 
@@ -959,41 +870,24 @@ public class TodoControllerWebTest {
     void Failure_NoTodo() throws Exception {
       // Given
 
-      User user = new User();
-      user.setUsername("username123");
-      user.setNickname("nickname");
-      user.setHashedPassword("hashedPassword");
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
 
-      em.persist(user);
+      Group group = entityFactory.insertGroup("group name", "group description");
 
-      Group group = new Group();
-      group.setName("group name");
-      group.setDescription("group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
-      em.persist(group);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.IN_PROGRESS,
+              "todo order",
+              false);
 
-      UserGroup userGroup = new UserGroup();
-      userGroup.setGroupRole(GroupRole.VIEWER);
-      userGroup.setUser(user);
-      userGroup.setGroup(group);
-
-      em.persist(userGroup);
-
-      Todo todo = new Todo();
-      todo.setTitle("todo title");
-      todo.setDescription("todo description");
-      todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-      todo.setOrder("todo order");
-      todo.setAuthor(user);
-      todo.setGroup(group);
-
-      em.persist(todo);
-
-      em.flush();
-
-      em.remove(todo);
-
-      em.flush();
+      th.delete(todo);
 
       Cookie cookie = userCookie(user);
 
@@ -1027,8 +921,7 @@ public class TodoControllerWebTest {
 
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      UserGroup userGroup =
-          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
       Todo todo =
           entityFactory.insertTodo(
@@ -1039,8 +932,6 @@ public class TodoControllerWebTest {
               "todo description",
               TodoStatus.IN_PROGRESS,
               false);
-
-      em.flush();
 
       UpdateTodoRequestDTO updateTodoRequestDTO =
           new UpdateTodoRequestDTO("updated todo title", "updated todo description");
@@ -1099,23 +990,19 @@ public class TodoControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
-      Todo todo = new Todo();
-      todo.setTitle("todo title");
-      todo.setDescription("todo description");
-      todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-      todo.setOrder("todo order");
-      todo.setAuthor(user);
-      todo.setGroup(group);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.IN_PROGRESS,
+              false);
 
-      em.persist(todo);
-
-      em.flush();
-
-      em.remove(todo);
-      em.remove(userGroup);
-      em.remove(user);
-
-      em.flush();
+      th.delete(todo);
+      th.delete(userGroup);
+      th.delete(user);
 
       UpdateTodoRequestDTO updateTodoRequestDTO =
           new UpdateTodoRequestDTO("updated todo title", "updated todo description");
@@ -1153,23 +1040,17 @@ public class TodoControllerWebTest {
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MANAGER);
 
-      em.persist(userGroup);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.IN_PROGRESS,
+              false);
 
-      Todo todo = new Todo();
-      todo.setTitle("todo title");
-      todo.setDescription("todo description");
-      todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-      todo.setOrder("todo order");
-      todo.setAuthor(user);
-      todo.setGroup(group);
-
-      em.persist(todo);
-
-      em.flush();
-
-      em.remove(userGroup);
-
-      em.flush();
+      th.delete(userGroup);
 
       UpdateTodoRequestDTO updateTodoRequestDTO =
           new UpdateTodoRequestDTO("updated todo title", "updated todo description");
@@ -1204,22 +1085,17 @@ public class TodoControllerWebTest {
 
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      UserGroup userGroup =
-          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
 
-      em.persist(userGroup);
-
-      Todo todo = new Todo();
-      todo.setTitle("todo title");
-      todo.setDescription("todo description");
-      todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-      todo.setOrder("todo order");
-      todo.setAuthor(user);
-      todo.setGroup(group);
-
-      em.persist(todo);
-
-      em.flush();
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.IN_PROGRESS,
+              false);
 
       UpdateTodoRequestDTO updateTodoRequestDTO =
           new UpdateTodoRequestDTO("updated todo title", "updated todo description");
@@ -1252,29 +1128,22 @@ public class TodoControllerWebTest {
 
       User user = entityFactory.insertUser("uesrname123", "hashedPassword", "nickname");
 
-      User author = new User();
-      author.setUsername("username123_author");
-      author.setNickname("nickname_author");
-      author.setHashedPassword("hashedPassword");
-
-      em.persist(author);
+      User author =
+          entityFactory.insertUser("username123_author", "hashedPassword", "nickname_author");
 
       Group group = entityFactory.insertGroup("group name", "group description");
 
       entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
       entityFactory.insertUserGroup(author.getId(), group.getId(), GroupRole.MEMBER);
-
-      Todo todo = new Todo();
-      todo.setTitle("todo title");
-      todo.setDescription("todo description");
-      todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-      todo.setOrder("todo order");
-      todo.setAuthor(author);
-      todo.setGroup(group);
-
-      em.persist(todo);
-
-      em.flush();
+      Todo todo =
+          entityFactory.insertTodo(
+              author.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.IN_PROGRESS,
+              false);
 
       UpdateTodoRequestDTO updateTodoRequestDTO =
           new UpdateTodoRequestDTO("updated todo title", "updated todo description");
@@ -1309,30 +1178,22 @@ public class TodoControllerWebTest {
 
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      UserGroup userGroup = new UserGroup();
-      userGroup.setGroupRole(GroupRole.VIEWER);
-      userGroup.setUser(user);
-      userGroup.setGroup(group);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
 
-      em.persist(userGroup);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.IN_PROGRESS,
+              false);
 
-      Todo todo = new Todo();
-      todo.setTitle("todo title");
-      todo.setDescription("todo description");
-      todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-      todo.setOrder("todo order");
-      todo.setAuthor(user);
-      todo.setGroup(group);
-
-      em.persist(todo);
-
-      em.flush();
-
-      em.remove(todo);
-      em.remove(userGroup);
-      em.remove(group);
-
-      em.flush();
+      th.delete(todo);
+      th.delete(userGroup);
+      th.delete(group);
 
       UpdateTodoRequestDTO updateTodoRequestDTO =
           new UpdateTodoRequestDTO("updated todo title", "updated todo description");
@@ -1366,29 +1227,19 @@ public class TodoControllerWebTest {
       User user = entityFactory.insertUser("uesrname123", "hashedPassword", "nickname");
 
       Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
 
-      UserGroup userGroup = new UserGroup();
-      userGroup.setGroupRole(GroupRole.VIEWER);
-      userGroup.setUser(user);
-      userGroup.setGroup(group);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.IN_PROGRESS,
+              false);
 
-      em.persist(userGroup);
-
-      Todo todo = new Todo();
-      todo.setTitle("todo title");
-      todo.setDescription("todo description");
-      todo.setTodoStatus(TodoStatus.IN_PROGRESS);
-      todo.setOrder("todo order");
-      todo.setAuthor(user);
-      todo.setGroup(group);
-
-      em.persist(todo);
-
-      em.flush();
-
-      em.remove(todo);
-
-      em.flush();
+      th.delete(todo);
 
       UpdateTodoRequestDTO updateTodoRequestDTO =
           new UpdateTodoRequestDTO("updated todo title", "updated todo description");
@@ -1413,6 +1264,384 @@ public class TodoControllerWebTest {
 
       result.andExpect(status().isNotFound());
       result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
+    }
+
+    @Test
+    void Failure_TodoInAnotherGorup() throws Exception {
+      // Given
+
+      User user = entityFactory.insertUser("uesrname123", "hashedPassword", "nickname");
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+      Group group2 = entityFactory.insertGroup("group name", "group description");
+
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.VIEWER);
+      entityFactory.insertUserGroup(user.getId(), group2.getId(), GroupRole.VIEWER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.IN_PROGRESS,
+              false);
+
+      UpdateTodoRequestDTO updateTodoRequestDTO =
+          new UpdateTodoRequestDTO("updated todo title", "updated todo description");
+
+      Cookie cookie = userCookie(user);
+
+      String path = String.format("/api/v1/group/%d/todo/%d", group.getId(), todo.getId());
+
+      String body = objectMapper.writeValueAsString(updateTodoRequestDTO);
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    }
+  }
+
+  @Nested
+  @DisplayName("투두 순서 및 상태 변경 테스트")
+  class MoveTodo {
+    @Test
+    @DisplayName("성공 - 상태만 변경 (맨 뒤로 이동)")
+    void HappyPath_1() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("성공 - 상태 및 순서 변경")
+    void HappyPath_2() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("성공 - 순서를 여러회 변경 후 정렬 순서")
+    void HappyPath_3() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 로그인 하지 않은 상태")
+    void Failure_Token() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 유저")
+    void Failure_NoUser() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 권한 부족 - VIEWER")
+    void Failure_NoAuthority() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 그룹")
+    void Failure_NoGroup() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 가입하지 않은 그룹")
+    void Failure_NoUserGroup() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 Todo를 이동하기")
+    void Failure_NoTodo() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 다른 그룹의 Todo를 옮기기")
+    void Failure_TodoInAnotherGroup() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 대상과 destination이 일치하는 경우")
+    void Failure_InvalidDestination_1() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - destination이 다른 그룹에 속한 경우")
+    void Failure_InvalidDestination_2() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - destination이 다른 todoStatus에 속한 경우")
+    void Failure_InvalidDestination_3() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+  }
+
+  @Nested
+  @DisplayName("투두 Star 추가 테스트")
+  class StarTodo {
+    @Test
+    @DisplayName("성공 - 서로 다른 role에 대해 성공")
+    void HappyPath_1() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("성공 - 이미 star 표기된 케이스")
+    void HappyPath_2() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 로그인 하지 않은 경우")
+    void Failure_NoToken() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 유저가 없는 경우")
+    void Failure_NoUser() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 그룹이 없는 경우")
+    void Failure_NoGroup() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 가입하지 않은 그룹")
+    void Failure_NoUserGroup() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 Todo")
+    void Failure_NoTodo() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 다른 그룹의 Todo")
+    void Failure_TodoInAnotherGroup() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+  }
+
+  @Nested
+  @DisplayName("투두 Star 제거 테스트")
+  class UnStarTodo {
+    @Test
+    @DisplayName("성공 - 서로 다른 role에 대해 성공")
+    void HappyPath_1() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("성공 - star가 없는 케이스")
+    void HappyPath_2() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 로그인 하지 않은 경우")
+    void Failure_NoToken() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 유저가 없는 경우")
+    void Failure_NoUser() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 그룹이 없는 경우")
+    void Failure_NoGroup() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 가입하지 않은 그룹")
+    void Failure_NoUserGroup() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 Todo")
+    void Failure_NoTodo() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
+    }
+
+    @Test
+    @DisplayName("실패 - 다른 그룹의 Todo")
+    void Failure_TodoInAnotherGroup() throws Exception {
+      // Given
+
+      // When
+
+      // Then
+
     }
   }
 }
