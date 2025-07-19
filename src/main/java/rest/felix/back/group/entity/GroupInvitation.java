@@ -8,7 +8,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.SequenceGenerator;
 import java.time.ZonedDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -24,11 +23,7 @@ import rest.felix.back.user.entity.User;
 @Entity
 public class GroupInvitation {
   @Id
-  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "group_invitation_id_generator")
-  @SequenceGenerator(
-      name = "group_invitation_id_generator",
-      sequenceName = "group_invitation_id_sequence",
-      allocationSize = 50)
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Setter(AccessLevel.NONE)
   private Long id;
 

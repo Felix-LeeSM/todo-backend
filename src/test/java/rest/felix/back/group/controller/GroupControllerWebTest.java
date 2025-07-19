@@ -553,7 +553,6 @@ public class GroupControllerWebTest {
       // Then
 
       result.andExpect(status().isForbidden());
-      result.andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
       result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
     }
 

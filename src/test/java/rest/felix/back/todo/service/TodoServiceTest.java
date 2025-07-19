@@ -209,13 +209,10 @@ class TodoServiceTest {
     // Given
 
     User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-
     Group group = entityFactory.insertGroup("group name", "group description");
-
     em.flush();
 
     em.remove(group);
-
     em.flush();
 
     CreateTodoDTO createTodoDTO =

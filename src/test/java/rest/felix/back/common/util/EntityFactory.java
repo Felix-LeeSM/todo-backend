@@ -99,7 +99,7 @@ public class EntityFactory {
       TodoStatus todoStatus,
       boolean isImportant) {
     User author = entityManager.getReference(User.class, authorId);
-    User assignee = entityManager.getReference(User.class, assigneeId);
+    User assignee = assigneeId != null ? entityManager.getReference(User.class, assigneeId) : null;
     Group group = entityManager.getReference(Group.class, groupId);
 
     Todo todo = new Todo();

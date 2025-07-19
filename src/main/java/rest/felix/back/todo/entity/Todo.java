@@ -34,7 +34,7 @@ public class Todo {
   @Setter(AccessLevel.NONE)
   private Long id;
 
-  @ManyToOne(optional = true, fetch = FetchType.LAZY)
+  @ManyToOne(optional = false, fetch = FetchType.LAZY)
   private User author;
 
   @ManyToOne(optional = true, fetch = FetchType.LAZY)

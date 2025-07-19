@@ -7,7 +7,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.SequenceGenerator;
 import java.time.ZonedDateTime;
 import java.util.List;
 import lombok.AccessLevel;
@@ -25,11 +24,7 @@ import rest.felix.back.group.entity.UserGroup;
 public class User {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_id_generator")
-  @SequenceGenerator(
-      name = "user_id_generator",
-      sequenceName = "user_id_sequence",
-      allocationSize = 50)
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Setter(AccessLevel.NONE)
   private Long id;
 

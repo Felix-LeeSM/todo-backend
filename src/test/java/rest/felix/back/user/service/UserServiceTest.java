@@ -2,12 +2,12 @@ package rest.felix.back.user.service;
 
 import jakarta.persistence.EntityManager;
 import java.util.Optional;
-import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.security.PasswordService;
@@ -71,7 +71,7 @@ class UserServiceTest {
     // Then
 
     Assertions.assertThrows(
-        ConstraintViolationException.class,
+        DataIntegrityViolationException.class,
         () -> {
           userService.signup(duplicatedUsernameSignupDTO);
           em.flush();
