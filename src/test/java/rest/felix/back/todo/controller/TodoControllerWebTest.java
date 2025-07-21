@@ -155,8 +155,7 @@ public class TodoControllerWebTest {
 
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      UserGroup userGroup =
-          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
       Cookie cookie = userCookie(user);
 
@@ -2378,7 +2377,7 @@ public class TodoControllerWebTest {
               "a",
               false);
 
-              th.delete(wrongTodo);
+      th.delete(wrongTodo);
       String path =
           String.format("/api/v1/group/%d/todo/%d/star", group.getId(), wrongTodo.getId());
       Cookie cookie = userCookie(user);

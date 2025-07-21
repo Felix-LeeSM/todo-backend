@@ -117,9 +117,4 @@ public class TodoService {
 
     todoRepository.unstarTodo(userId, todoId);
   }
-
-  public void findById() {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'findById'");
-  }
 }

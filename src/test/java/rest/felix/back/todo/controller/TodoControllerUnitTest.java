@@ -1134,7 +1134,8 @@ public class TodoControllerUnitTest {
       // Given
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group name", "group description");
-      UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
       Todo todo =
           entityFactory.insertTodo(
               user.getId(),
@@ -1155,9 +1156,7 @@ public class TodoControllerUnitTest {
 
       // When
       Runnable lambda =
-          () ->
-              todoController.moveTodo(
-                  authUser, group.getId(), todo.getId(), moveTodoRequestDTO);
+          () -> todoController.moveTodo(authUser, group.getId(), todo.getId(), moveTodoRequestDTO);
 
       // Then
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
@@ -1215,9 +1214,7 @@ public class TodoControllerUnitTest {
 
       // When
       Runnable lambda =
-          () ->
-              todoController.moveTodo(
-                  authUser, group.getId(), todo.getId(), moveTodoRequestDTO);
+          () -> todoController.moveTodo(authUser, group.getId(), todo.getId(), moveTodoRequestDTO);
 
       // Then
       Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
@@ -1325,7 +1322,8 @@ public class TodoControllerUnitTest {
       // Given
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group name", "group description");
-      UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
       Todo todo =
           entityFactory.insertTodo(
               user.getId(),
@@ -1393,7 +1391,7 @@ public class TodoControllerUnitTest {
               TodoStatus.TO_DO,
               "a",
               false);
-      
+
       th.delete(todo);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1428,7 +1426,8 @@ public class TodoControllerUnitTest {
       AuthUserDTO authUser = AuthUserDTO.of(user);
 
       // When
-      Runnable lambda = () -> todoController.starTodo(authUser, group1.getId(), todoInGroup2.getId());
+      Runnable lambda =
+          () -> todoController.starTodo(authUser, group1.getId(), todoInGroup2.getId());
 
       // Then
       Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
@@ -1503,7 +1502,8 @@ public class TodoControllerUnitTest {
       // Given
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group name", "group description");
-      UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
       Todo todo =
           entityFactory.insertTodo(
               user.getId(),
@@ -1603,13 +1603,14 @@ public class TodoControllerUnitTest {
               TodoStatus.TO_DO,
               "a",
               false);
-              
+
       entityFactory.insertUserTodoStar(user.getId(), todoInGroup2.getId());
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
 
       // When
-      Runnable lambda = () -> todoController.unstarTodo(authUser, group1.getId(), todoInGroup2.getId());
+      Runnable lambda =
+          () -> todoController.unstarTodo(authUser, group1.getId(), todoInGroup2.getId());
 
       // Then
       Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
