@@ -103,7 +103,7 @@ public class TodoService {
   }
 
   @Transactional
-  public void starTodo(long userId, long groupId, long todoId) {
+  public void starTodo(long userId, long todoId) {
 
     if (todoRepository.starExistsById(userId, todoId)) return;
 
@@ -111,7 +111,7 @@ public class TodoService {
   }
 
   @Transactional
-  public void unstarTodo(long userId, long groupId, long todoId) {
+  public void unstarTodo(long userId, long todoId) {
 
     if (!todoRepository.starExistsById(userId, todoId)) return;
 

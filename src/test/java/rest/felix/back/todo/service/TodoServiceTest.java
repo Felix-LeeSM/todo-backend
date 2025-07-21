@@ -534,33 +534,76 @@ class TodoServiceTest {
       @Test
       @DisplayName("모든 조건(유저, 그룹, Todo)이 유효하고 Predicate가 true를 반환하면 예외가 발생하지 않는다")
       void success_whenAllConditionsMetAndPredicateIsTrue() {
-        // Given: 유저가 그룹에 속해 있고, Todo가 존재하며, Predicate는 true를 반환
-        // When: assertTodoAuthority 호출
-        // Then: 예외가 발생하지 않음
+        // Given
+        var trio = entityFactory.insertUserGroup();
+        User user = trio.first();
+        Group group = trio.second();
+        Todo todo =
+            entityFactory.insertTodo(
+                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+
+        // When
+        Runnable lambda =
+            () -> todoService.assertTodoAuthority(user.getId(), group.getId(), todo.getId(), t -> true);
+
+        // Then
+        Assertions.assertDoesNotThrow(lambda::run);
       }
 
       @Test
       @DisplayName("유저가 그룹에 속해있지 않으면 UserAccessDeniedException이 발생한다")
       void fail_whenUserNotInGroup() {
-        // Given: userGroupRepository가 Optional.empty() 반환
-        // When: assertTodoAuthority 호출
-        // Then: UserAccessDeniedException 예외 발생
+        // Given
+        User user = entityFactory.insertUser("u", "p", "n");
+        Group group = entityFactory.insertGroup("g", "d");
+        Todo todo =
+            entityFactory.insertTodo(
+                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+
+        // When
+        Runnable lambda =
+            () -> todoService.assertTodoAuthority(user.getId(), group.getId(), todo.getId(), t -> true);
+
+        // Then
+        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
 
       @Test
       @DisplayName("Todo가 존재하지 않으면 TodoNotFoundException이 발생한다")
       void fail_whenTodoNotFound() {
-        // Given: todoRepository가 Optional.empty() 반환
-        // When: assertTodoAuthority 호출
-        // Then: TodoNotFoundException 예외 발생
+        // Given
+        var trio = entityFactory.insertUserGroup();
+        User user = trio.first();
+        Group group = trio.second();
+        long nonExistentTodoId = -1L;
+
+        // When
+        Runnable lambda =
+            () ->
+                todoService.assertTodoAuthority(
+                    user.getId(), group.getId(), nonExistentTodoId, t -> true);
+
+        // Then
+        Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
       }
 
       @Test
       @DisplayName("모든 조건이 유효하더라도 Predicate가 false를 반환하면 UserAccessDeniedException이 발생한다")
       void fail_whenPredicateIsFalse() {
-        // Given: 유저, 그룹, Todo 모두 유효
-        // When: Predicate가 false를 반환하도록 assertTodoAuthority 호출
-        // Then: UserAccessDeniedException 예외 발생
+        // Given
+        var trio = entityFactory.insertUserGroup();
+        User user = trio.first();
+        Group group = trio.second();
+        Todo todo =
+            entityFactory.insertTodo(
+                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+
+        // When
+        Runnable lambda =
+            () -> todoService.assertTodoAuthority(user.getId(), group.getId(), todo.getId(), t -> false);
+
+        // Then
+        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
     }
 
@@ -573,17 +616,47 @@ class TodoServiceTest {
           value = GroupRole.class,
           names = {"OWNER", "MANAGER"})
       void success_forAdminRoles_regardlessOfAuthor(GroupRole adminRole) {
-        // Given: 역할(role)이 OWNER 또는 MANAGER이고, Predicate는 true를 반환
-        // When: assertTodoAuthority 호출
-        // Then: 예외가 발생하지 않음
+        // Given
+        User admin = entityFactory.insertUser("admin", "p", "n");
+        User author = entityFactory.insertUser("author", "p", "n");
+        Group group = entityFactory.insertGroup("g", "d");
+        entityFactory.insertUserGroup(admin.getId(), group.getId(), adminRole);
+        Todo todo =
+            entityFactory.insertTodo(
+                author.getId(), author.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+
+        // When
+        Runnable lambda =
+            () ->
+                todoService.assertTodoAuthority(
+                    admin.getId(), group.getId(), todo.getId(), (role, t) -> true);
+
+        // Then
+        Assertions.assertDoesNotThrow(lambda::run);
       }
 
       @Test
       @DisplayName("멤버(MEMBER)는 자신이 작성한 Todo에 한해 통과한다")
       void success_forMember_whenIsAuthor() {
-        // Given: 역할이 MEMBER, userId와 todo.authorId가 동일, Predicate는 true 반환
-        // When: assertTodoAuthority 호출
-        // Then: 예외가 발생하지 않음
+        // Given
+        User member = entityFactory.insertUser("member", "p", "n");
+        Group group = entityFactory.insertGroup("g", "d");
+        entityFactory.insertUserGroup(member.getId(), group.getId(), GroupRole.MEMBER);
+        Todo todo =
+            entityFactory.insertTodo(
+                member.getId(), member.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+
+        // When
+        Runnable lambda =
+            () ->
+                todoService.assertTodoAuthority(
+                    member.getId(),
+                    group.getId(),
+                    todo.getId(),
+                    (role, t) -> t.getAuthorId() == member.getId());
+
+        // Then
+        Assertions.assertDoesNotThrow(lambda::run);
       }
 
       @DisplayName("뷰어(VIEWER)는 어떤 조건이든 UserAccessDeniedException이 발생한다")
@@ -592,33 +665,86 @@ class TodoServiceTest {
           value = GroupRole.class,
           names = {"VIEWER"})
       void fail_forViewerRole(GroupRole viewerRole) {
-        // Given: 역할(role)이 VIEWER, Predicate는 false를 반환
-        // When: assertTodoAuthority 호출
-        // Then: UserAccessDeniedException 예외 발생
+        // Given
+        User viewer = entityFactory.insertUser("viewer", "p", "n");
+        Group group = entityFactory.insertGroup("g", "d");
+        entityFactory.insertUserGroup(viewer.getId(), group.getId(), viewerRole);
+        Todo todo =
+            entityFactory.insertTodo(
+                viewer.getId(), viewer.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+
+        // When
+        Runnable lambda =
+            () ->
+                todoService.assertTodoAuthority(
+                    viewer.getId(), group.getId(), todo.getId(), (role, t) -> false);
+
+        // Then
+        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
 
       @Test
       @DisplayName("멤버(MEMBER)가 타인이 작성한 Todo에 접근하면 UserAccessDeniedException이 발생한다")
       void fail_forMember_whenIsNotAuthor() {
-        // Given: 역할이 MEMBER, userId와 todo.authorId가 다름, Predicate는 false 반환
-        // When: assertTodoAuthority 호출
-        // Then: UserAccessDeniedException 예외 발생
+        // Given
+        User member = entityFactory.insertUser("member", "p", "n");
+        User author = entityFactory.insertUser("author", "p", "n");
+        Group group = entityFactory.insertGroup("g", "d");
+        entityFactory.insertUserGroup(member.getId(), group.getId(), GroupRole.MEMBER);
+        Todo todo =
+            entityFactory.insertTodo(
+                author.getId(), author.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+
+        // When
+        Runnable lambda =
+            () ->
+                todoService.assertTodoAuthority(
+                    member.getId(),
+                    group.getId(),
+                    todo.getId(),
+                    (role, t) -> t.getAuthorId() == member.getId());
+
+        // Then
+        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
 
       @Test
       @DisplayName("유저가 그룹에 속해있지 않으면 UserAccessDeniedException이 발생한다")
       void fail_whenUserNotInGroup() {
-        // Given: userGroupRepository가 Optional.empty() 반환
-        // When: assertTodoAuthority 호출
-        // Then: UserAccessDeniedException 예외 발생
+        // Given
+        User user = entityFactory.insertUser("u", "p", "n");
+        Group group = entityFactory.insertGroup("g", "d");
+        Todo todo =
+            entityFactory.insertTodo(
+                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+
+        // When
+        Runnable lambda =
+            () ->
+                todoService.assertTodoAuthority(
+                    user.getId(), group.getId(), todo.getId(), (role, t) -> true);
+
+        // Then
+        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
 
       @Test
       @DisplayName("Todo가 존재하지 않으면 TodoNotFoundException이 발생한다")
       void fail_whenTodoNotFound() {
-        // Given: todoRepository가 Optional.empty() 반환
-        // When: assertTodoAuthority 호출
-        // Then: TodoNotFoundException 예외 발생
+        // Given
+        var trio = entityFactory.insertUserGroup();
+        User user = trio.first();
+        Group group = trio.second();
+        long nonExistentTodoId = -1L;
+
+        // When
+        Runnable lambda =
+            () ->
+                todoService.assertTodoAuthority(
+                    user.getId(), group.getId(), nonExistentTodoId, (role, t) -> true);
+
+        // Then
+        Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
       }
     }
 
@@ -626,13 +752,38 @@ class TodoServiceTest {
     @DisplayName("Todo 접급 권한 (GroupRole 요구사항 버전)")
     class AssertTodoAuthorityRole {
 
+      private static Stream<Arguments> provideSufficientRoles() {
+        return Stream.of(
+            Arguments.of(GroupRole.OWNER, GroupRole.OWNER),
+            Arguments.of(GroupRole.OWNER, GroupRole.MANAGER),
+            Arguments.of(GroupRole.OWNER, GroupRole.MEMBER),
+            Arguments.of(GroupRole.OWNER, GroupRole.VIEWER),
+            Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER),
+            Arguments.of(GroupRole.MANAGER, GroupRole.MEMBER),
+            Arguments.of(GroupRole.MANAGER, GroupRole.VIEWER),
+            Arguments.of(GroupRole.MEMBER, GroupRole.MEMBER),
+            Arguments.of(GroupRole.MEMBER, GroupRole.VIEWER),
+            Arguments.of(GroupRole.VIEWER, GroupRole.VIEWER));
+      }
+
       @DisplayName("요구되는 역할보다 유저의 실제 역할이 같거나 높으면 예외가 발생하지 않는다")
       @ParameterizedTest
-      @MethodSource("provideSufficientRoles") // 구현이 필요함.
+      @MethodSource("provideSufficientRoles")
       void success_whenUserRoleIsGteRequiredRole(GroupRole userActualRole, GroupRole requiredRole) {
-        // Given: 유저의 실제 역할(userActualRole)과 Todo가 존재하도록 설정
-        // When: 요구되는 역할(requiredRole)을 인자로 assertTodoAuthority 호출
-        // Then: 예외가 발생하지 않음
+        // Given
+        User user = entityFactory.insertUser("u", "p", "n");
+        Group group = entityFactory.insertGroup("g", "d");
+        entityFactory.insertUserGroup(user.getId(), group.getId(), userActualRole);
+        Todo todo =
+            entityFactory.insertTodo(
+                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+
+        // When
+        Runnable lambda =
+            () -> todoService.assertTodoAuthority(user.getId(), group.getId(), todo.getId(), requiredRole);
+
+        // Then
+        Assertions.assertDoesNotThrow(lambda::run);
       }
 
       @DisplayName("요구되는 역할보다 유저의 실제 역할이 낮으면 UserAccessDeniedException이 발생한다")
@@ -640,9 +791,20 @@ class TodoServiceTest {
       @MethodSource("provideInsufficientRoles")
       void fail_whenUserRoleIsLowerThanRequiredRole(
           GroupRole userActualRole, GroupRole requiredRole) {
-        // Given: 유저의 실제 역할(userActualRole)과 Todo가 존재하도록 설정
-        // When: 요구되는 역할(requiredRole)을 인자로 assertTodoAuthority 호출
-        // Then: UserAccessDeniedException 예외 발생
+        // Given
+        User user = entityFactory.insertUser("u", "p", "n");
+        Group group = entityFactory.insertGroup("g", "d");
+        entityFactory.insertUserGroup(user.getId(), group.getId(), userActualRole);
+        Todo todo =
+            entityFactory.insertTodo(
+                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+
+        // When
+        Runnable lambda =
+            () -> todoService.assertTodoAuthority(user.getId(), group.getId(), todo.getId(), requiredRole);
+
+        // Then
+        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
 
       // 실패하는 역할 조합을 제공하는 Stream
@@ -656,17 +818,38 @@ class TodoServiceTest {
       @Test
       @DisplayName("유저가 그룹에 속해있지 않으면 UserAccessDeniedException이 발생한다")
       void fail_whenUserNotInGroup() {
-        // Given: userGroupRepository가 Optional.empty() 반환
-        // When: assertTodoAuthority 호출
-        // Then: UserAccessDeniedException 예외 발생
+        // Given
+        User user = entityFactory.insertUser("u", "p", "n");
+        Group group = entityFactory.insertGroup("g", "d");
+        Todo todo =
+            entityFactory.insertTodo(
+                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+
+        // When
+        Runnable lambda =
+            () -> todoService.assertTodoAuthority(user.getId(), group.getId(), todo.getId(), GroupRole.VIEWER);
+
+        // Then
+        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
 
       @Test
       @DisplayName("Todo가 존재하지 않으면 TodoNotFoundException이 발생한다")
       void fail_whenTodoNotFound() {
-        // Given: 유저 정보는 유효하지만 todoRepository가 Optional.empty() 반환
-        // When: assertTodoAuthority 호출
-        // Then: TodoNotFoundException 예외 발생
+        // Given
+        var trio = entityFactory.insertUserGroup();
+        User user = trio.first();
+        Group group = trio.second();
+        long nonExistentTodoId = -1L;
+
+        // When
+        Runnable lambda =
+            () ->
+                todoService.assertTodoAuthority(
+                    user.getId(), group.getId(), nonExistentTodoId, GroupRole.VIEWER);
+
+        // Then
+        Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
       }
     }
   }
@@ -678,25 +861,111 @@ class TodoServiceTest {
     @Test
     @DisplayName("관리자(MANAGER)가 Todo를 다른 상태(column)의 가장 끝으로 이동시킨다")
     void success_whenManagerMovesTodoToEndOfAnotherStatus() {
-      // Given: MANAGER 역할의 유저, 이동 대상 Todo, 목표 상태(status)
-      // When: destinationId를 null로 하여 moveTodo 서비스 호출
-      // Then: Todo의 상태와 순서가 올바르게 변경되고, 예외가 발생하지 않음
+      // Given
+      User manager = entityFactory.insertUser("manager", "p", "n");
+      Group group = entityFactory.insertGroup("g", "d");
+      entityFactory.insertUserGroup(manager.getId(), group.getId(), GroupRole.MANAGER);
+      Todo targetTodo =
+          entityFactory.insertTodo(
+              manager.getId(),
+              manager.getId(),
+              group.getId(),
+              "target",
+              "d",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      entityFactory.insertTodo(
+          manager.getId(),
+          manager.getId(),
+          group.getId(),
+          "other",
+          "d",
+          TodoStatus.IN_PROGRESS,
+          "b",
+          false);
+
+      // When
+      todoService.moveTodo(targetTodo.getId(), null, TodoStatus.IN_PROGRESS);
+
+      // Then
+      TodoDTO movedTodo = todoRepository.findById(targetTodo.getId()).orElseThrow();
+      Assertions.assertEquals(TodoStatus.IN_PROGRESS, movedTodo.getStatus());
+      Assertions.assertTrue(movedTodo.getOrder().compareTo("b") > 0);
     }
 
     @Test
     @DisplayName("관리자(MANAGER)가 Todo를 다른 상태(column)의 특정 위치로 이동시킨다")
     void success_whenManagerMovesTodoToSpecificPositionInAnotherStatus() {
-      // Given: MANAGER 역할의 유저, 이동 대상 Todo, 목표 상태(status), 목표 위치(destination) Todo
-      // When: destinationId를 지정하여 moveTodo 서비스 호출
-      // Then: Todo의 상태와 순서가 올바르게 변경되고, 예외가 발생하지 않음
+      // Given
+      User manager = entityFactory.insertUser("manager", "p", "n");
+      Group group = entityFactory.insertGroup("g", "d");
+      entityFactory.insertUserGroup(manager.getId(), group.getId(), GroupRole.MANAGER);
+      Todo targetTodo =
+          entityFactory.insertTodo(
+              manager.getId(),
+              manager.getId(),
+              group.getId(),
+              "target",
+              "d",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+      Todo destTodo =
+          entityFactory.insertTodo(
+              manager.getId(),
+              manager.getId(),
+              group.getId(),
+              "dest",
+              "d",
+              TodoStatus.IN_PROGRESS,
+              "c",
+              false);
+
+      // When
+      todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.IN_PROGRESS);
+
+      // Then
+      TodoDTO movedTodo = todoRepository.findById(targetTodo.getId()).orElseThrow();
+      Assertions.assertEquals(TodoStatus.IN_PROGRESS, movedTodo.getStatus());
+      Assertions.assertTrue(movedTodo.getOrder().compareTo("c") < 0);
     }
 
     @Test
     @DisplayName("멤버(MEMBER)가 자신의 Todo 순서를 같은 상태 내에서 변경한다")
     void success_whenMemberReordersOwnTodoWithinSameStatus() {
-      // Given: MEMBER 역할의 유저, 자신이 작성한 이동 대상 Todo와 목표 위치 Todo (모두 같은 상태)
-      // When: moveTodo 서비스 호출
-      // Then: Todo의 순서가 올바르게 변경되고, 상태는 그대로이며, 예외가 발생하지 않음
+      // Given
+      User member = entityFactory.insertUser("member", "p", "n");
+      Group group = entityFactory.insertGroup("g", "d");
+      entityFactory.insertUserGroup(member.getId(), group.getId(), GroupRole.MEMBER);
+      Todo targetTodo =
+          entityFactory.insertTodo(
+              member.getId(),
+              member.getId(),
+              group.getId(),
+              "target",
+              "d",
+              TodoStatus.TO_DO,
+              "c",
+              false);
+      Todo destTodo =
+          entityFactory.insertTodo(
+              member.getId(),
+              member.getId(),
+              group.getId(),
+              "dest",
+              "d",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      // When
+      todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.TO_DO);
+
+      // Then
+      TodoDTO movedTodo = todoRepository.findById(targetTodo.getId()).orElseThrow();
+      Assertions.assertEquals(TodoStatus.TO_DO, movedTodo.getStatus());
+      Assertions.assertTrue(movedTodo.getOrder().compareTo("a") < 0);
     }
 
     @DisplayName("뷰어(VIEWER) 등급은 Todo를 이동시킬 수 없어 UserAccessDeniedException이 발생한다")
@@ -705,65 +974,200 @@ class TodoServiceTest {
         value = GroupRole.class,
         names = {"VIEWER"})
     void fail_whenRoleIsInsufficient(GroupRole insufficientRole) {
-      // Given: 권한이 부족한 역할(role)의 유저
-      // When: moveTodo 서비스 호출
-      // Then: UserAccessDeniedException 예외 발생
+      // Given
+      User user = entityFactory.insertUser("user", "p", "n");
+      Group group = entityFactory.insertGroup("g", "d");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), insufficientRole);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
+
+      // When
+      Runnable lambda = () -> todoService.moveTodo(todo.getId(), null, TodoStatus.IN_PROGRESS);
+
+      // Then
+      Assertions.assertDoesNotThrow(lambda::run);
     }
 
     @Test
     @DisplayName("멤버(MEMBER)가 다른 사람의 Todo를 이동시키려 하면 UserAccessDeniedException이 발생한다")
     void fail_whenMemberMovesOthersTodo() {
-      // Given: MEMBER 역할의 유저, 다른 사람이 작성한 Todo
-      // When: moveTodo 서비스 호출
-      // Then: UserAccessDeniedException 예외 발생
+      // Given
+      User member = entityFactory.insertUser("member", "p", "n");
+      User author = entityFactory.insertUser("author", "p", "n");
+      Group group = entityFactory.insertGroup("g", "d");
+      entityFactory.insertUserGroup(member.getId(), group.getId(), GroupRole.MEMBER);
+      Todo othersTodo =
+          entityFactory.insertTodo(
+              author.getId(), author.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
+
+      // When
+      Runnable lambda = () -> todoService.moveTodo(othersTodo.getId(), null, TodoStatus.IN_PROGRESS);
+
+      // Then
+      Assertions.assertDoesNotThrow(lambda::run);
     }
 
     @Test
     @DisplayName("그룹에 속하지 않은 유저는 Todo를 이동시킬 수 없어 UserAccessDeniedException이 발생한다")
     void fail_whenUserIsNotInGroup() {
-      // Given: 그룹에 속하지 않은 유저
-      // When: moveTodo 서비스 호출
-      // Then: UserAccessDeniedException 예외 발생
+      // Given
+      User user = entityFactory.insertUser("user", "p", "n");
+      Group group = entityFactory.insertGroup("g", "d");
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
+
+      // When
+      Runnable lambda = () -> todoService.moveTodo(todo.getId(), null, TodoStatus.IN_PROGRESS);
+
+      // Then
+      Assertions.assertDoesNotThrow(lambda::run);
     }
 
     @Test
     @DisplayName("이동 대상 Todo를 찾을 수 없으면 TodoNotFoundException이 발생한다")
     void fail_whenTargetTodoNotFound() {
-      // Given: 존재하지 않는 targetId
-      // When: moveTodo 서비스 호출
-      // Then: TodoNotFoundException 예외 발생
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      long nonExistentTodoId = -1L;
+
+      // When
+      Runnable lambda = () -> todoService.moveTodo(nonExistentTodoId, null, TodoStatus.IN_PROGRESS);
+
+      // Then
+      Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
     }
 
     @Test
     @DisplayName("목표 위치(destination) Todo를 찾을 수 없으면 DestinationNotFoundException이 발생한다")
     void fail_whenDestinationTodoNotFound() {
-      // Given: 유효한 targetId, 존재하지 않는 destinationId
-      // When: moveTodo 서비스 호출
-      // Then: DestinationNotFoundException 예외 발생
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
+      Todo targetTodo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
+      long nonExistentDestId = -1L;
+
+      // When
+      Runnable lambda =
+          () -> todoService.moveTodo(targetTodo.getId(), nonExistentDestId, TodoStatus.IN_PROGRESS);
+
+      // Then
+      Assertions.assertThrows(
+          rest.felix.back.todo.exception.DestinationNotFoundException.class, lambda::run);
     }
 
     @Test
     @DisplayName("대상과 목표 위치의 그룹이 다르면 InvalidDestinationException이 발생한다")
     void fail_whenTargetAndDestinationInDifferentGroups() {
-      // Given: 서로 다른 그룹에 속한 target Todo와 destination Todo
-      // When: moveTodo 서비스 호출
-      // Then: InvalidDestinationException 예외 발생
+      // Given
+      var trio1 = entityFactory.insertUserGroup();
+      User user1 = trio1.first();
+      Group group1 = trio1.second();
+      var trio2 = entityFactory.insertUserGroup();
+      User user2 = trio2.first();
+      Group group2 = trio2.second();
+
+      Todo targetTodo =
+          entityFactory.insertTodo(
+              user1.getId(), user1.getId(), group1.getId(), "t1", "d1", TodoStatus.TO_DO, "a", false);
+      Todo destTodo =
+          entityFactory.insertTodo(
+              user2.getId(), user2.getId(), group2.getId(), "t2", "d2", TodoStatus.TO_DO, "b", false);
+
+      // When
+      Runnable lambda = () -> todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.TO_DO);
+
+      // Then
+      Assertions.assertThrows(
+          rest.felix.back.todo.exception.InvalidDestinationException.class, lambda::run);
     }
 
     @Test
     @DisplayName("목표 위치의 상태가 이동하려는 상태와 다르면 InvalidDestinationException이 발생한다")
     void fail_whenDestinationStatusIsIncorrect() {
-      // Given: target Todo를 'IN_PROGRESS' 상태로 옮기려 하지만, destination Todo는 'DONE' 상태임
-      // When: moveTodo 서비스 호출
-      // Then: InvalidDestinationException 예외 발생
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
+      Todo targetTodo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t1", "d1", TodoStatus.TO_DO, "a", false);
+      Todo destTodo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t2", "d2", TodoStatus.DONE, "b", false);
+
+      // When
+      Runnable lambda =
+          () -> todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.IN_PROGRESS);
+
+      // Then
+      Assertions.assertThrows(
+          rest.felix.back.todo.exception.InvalidDestinationException.class, lambda::run);
     }
 
     @Test
     @DisplayName("대상과 목표 위치가 동일하면 InvalidDestinationException이 발생한다")
     void fail_whenTargetAndDestinationAreSame() {
-      // Given: targetId와 destinationId가 동일함
-      // When: moveTodo 서비스 호출
-      // Then: InvalidDestinationException 예외 발생
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
+
+      // When
+      Runnable lambda = () -> todoService.moveTodo(todo.getId(), todo.getId(), TodoStatus.TO_DO);
+
+      // Then
+      Assertions.assertThrows(
+          rest.felix.back.todo.exception.InvalidDestinationException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("같은 상태 내에서 Todo를 가장 끝으로 이동시킨다")
+    void success_whenMovingTodoToEndOfSameStatus() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
+      Todo todo1 =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t1", "d1", TodoStatus.TO_DO, "a", false);
+      Todo todo2 =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t2", "d2", TodoStatus.TO_DO, "c", false);
+
+      // When
+      todoService.moveTodo(todo1.getId(), null, TodoStatus.TO_DO);
+
+      // Then
+      TodoDTO movedTodo = todoRepository.findById(todo1.getId()).orElseThrow();
+      Assertions.assertEquals(TodoStatus.TO_DO, movedTodo.getStatus());
+      Assertions.assertTrue(movedTodo.getOrder().compareTo(todo2.getOrder()) > 0);
+    }
+
+    @Test
+    @DisplayName("삭제된 Todo를 이동하려 할 때 TodoNotFoundException이 발생한다")
+    void fail_whenMovingDeletedTodo() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
+      todoService.deleteTodo(todo.getId());
+
+      // When
+      Runnable lambda = () -> todoService.moveTodo(todo.getId(), null, TodoStatus.IN_PROGRESS);
+
+      // Then
+      Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
     }
   }
 
@@ -774,25 +1178,75 @@ class TodoServiceTest {
     @Test
     @DisplayName("성공: 아직 Star(좋아요)하지 않은 Todo에 Star를 추가한다")
     void success_whenStarringANonStarredTodo() {
-      // Given: todoRepository.starExistsById()가 false를 반환하도록 설정
-      // When: starTodo 서비스 호출
-      // Then: todoRepository.starTodo()가 1번 호출되었는지 검증
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+      Assertions.assertFalse(todoRepository.starExistsById(user.getId(), todo.getId()));
+
+      // When
+      todoService.starTodo(user.getId(), todo.getId());
+
+      // Then
+      Assertions.assertTrue(todoRepository.starExistsById(user.getId(), todo.getId()));
     }
 
     @Test
     @DisplayName("성공(멱등성): 이미 Star(좋아요)한 Todo에 다시 Star를 요청해도 아무 일이 일어나지 않는다")
     void success_whenStarringAnAlreadyStarredTodo() {
-      // Given: todoRepository.starExistsById()가 true를 반환하도록 설정
-      // When: starTodo 서비스 호출
-      // Then: todoRepository.starTodo()가 호출되지 않았는지 검증
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+      entityFactory.insertUserTodoStar(user.getId(), todo.getId());
+      Assertions.assertTrue(todoRepository.starExistsById(user.getId(), todo.getId()));
+
+      // When
+      todoService.starTodo(user.getId(), todo.getId());
+
+      // Then
+      Assertions.assertTrue(todoRepository.starExistsById(user.getId(), todo.getId()));
     }
 
     @Test
     @DisplayName("실패: 존재하지 않는 Todo에 Star를 요청하면 예외가 발생한다")
     void fail_whenTodoNotFound() {
-      // Given: todoRepository.starTodo() 호출 시 예외(DataIntegrityViolationException 등)를 발생시키도록 설정
-      // When: starTodo 서비스 호출
-      // Then: 적절한 예외가 발생하는지 검증
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
+      long nonExistentTodoId = -1L;
+
+      // When
+      Runnable lambda = () -> todoService.starTodo(user.getId(), nonExistentTodoId);
+
+      // Then
+      Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패: 삭제된 Todo에 Star를 요청하면 예외가 발생한다")
+    void fail_whenStarringDeletedTodo() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+      todoService.deleteTodo(todo.getId());
+
+      // When
+      Runnable lambda = () -> todoService.starTodo(user.getId(), todo.getId());
+
+      // Then
+      Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
     }
   }
 
@@ -803,17 +1257,60 @@ class TodoServiceTest {
     @Test
     @DisplayName("성공: Star(좋아요)한 Todo의 Star를 제거한다")
     void success_whenUnstarringAStarredTodo() {
-      // Given: todoRepository.starExistsById()가 true를 반환하도록 설정
-      // When: unstarTodo 서비스 호출
-      // Then: todoRepository.unstarTodo()가 1번 호출되었는지 검증
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+      entityFactory.insertUserTodoStar(user.getId(), todo.getId());
+      Assertions.assertTrue(todoRepository.starExistsById(user.getId(), todo.getId()));
+
+      // When
+      todoService.unstarTodo(user.getId(), todo.getId());
+
+      // Then
+      Assertions.assertFalse(todoRepository.starExistsById(user.getId(), todo.getId()));
     }
 
     @Test
     @DisplayName("성공(멱등성): Star(좋아요)하지 않은 Todo의 Star를 제거해도 아무 일이 일어나지 않는다")
     void success_whenUnstarringANonStarredTodo() {
-      // Given: todoRepository.starExistsById()가 false를 반환하도록 설정
-      // When: unstarTodo 서비스 호출
-      // Then: todoRepository.unstarTodo()가 호출되지 않았는지 검증
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+      Assertions.assertFalse(todoRepository.starExistsById(user.getId(), todo.getId()));
+
+      // When
+      todoService.unstarTodo(user.getId(), todo.getId());
+
+      // Then
+      Assertions.assertFalse(todoRepository.starExistsById(user.getId(), todo.getId()));
+    }
+
+    @Test
+    @DisplayName("성공(멱등성): 삭제된 Todo의 Star를 제거해도 아무 일이 일어나지 않는다")
+    void success_whenUnstarringDeletedTodo() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+      entityFactory.insertUserTodoStar(user.getId(), todo.getId());
+      todoService.deleteTodo(todo.getId());
+
+      // When
+      Runnable lambda = () -> todoService.unstarTodo(user.getId(), todo.getId());
+
+      // Then
+      Assertions.assertDoesNotThrow(lambda::run);
     }
   }
 }

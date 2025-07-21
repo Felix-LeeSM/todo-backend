@@ -146,7 +146,7 @@ public class TodoController {
 
     todoService.assertTodoAuthority(userId, groupId, todoId, GroupRole.VIEWER);
 
-    todoService.starTodo(userId, groupId, todoId);
+    todoService.starTodo(userId, todoId);
     return ResponseEntity.status(HttpStatus.CREATED).build();
   }
 
@@ -159,7 +159,7 @@ public class TodoController {
 
     todoService.assertTodoAuthority(userId, groupId, todoId, GroupRole.VIEWER);
 
-    todoService.unstarTodo(userId, groupId, todoId);
+    todoService.unstarTodo(userId, todoId);
     return ResponseEntity.noContent().build();
   }
 }
