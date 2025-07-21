@@ -59,7 +59,6 @@ public class TodoController {
         new CreateTodoDTO(
             createTodoRequestDTO.getTitle(),
             createTodoRequestDTO.getDescription(),
-            createTodoRequestDTO.getOrder(),
             userId,
             groupId);
 

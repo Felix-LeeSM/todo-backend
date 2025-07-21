@@ -14,7 +14,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import rest.felix.back.common.util.EntityFactory;
@@ -241,7 +240,7 @@ public class TodoControllerUnitTest {
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
-        new CreateTodoRequestDTO("todo title", "todo description", "todo order");
+        new CreateTodoRequestDTO("todo title", "todo description");
 
     // When
 
@@ -259,7 +258,7 @@ public class TodoControllerUnitTest {
     Assertions.assertEquals(TodoStatus.TO_DO, todoResponseDTO.status());
     Assertions.assertEquals(user.getId(), todoResponseDTO.authorId());
     Assertions.assertEquals(group.getId(), todoResponseDTO.groupId());
-    Assertions.assertEquals("todo order", todoResponseDTO.order());
+    Assertions.assertNotNull(todoResponseDTO.order());
   }
 
   @Test
@@ -275,7 +274,7 @@ public class TodoControllerUnitTest {
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
-        new CreateTodoRequestDTO("todo title", "todo description", "todo order");
+        new CreateTodoRequestDTO("todo title", "todo description");
 
     // When
 
@@ -304,7 +303,7 @@ public class TodoControllerUnitTest {
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
-        new CreateTodoRequestDTO("todo title", "todo description", "todo order");
+        new CreateTodoRequestDTO("todo title", "todo description");
 
     // When
 
@@ -333,7 +332,7 @@ public class TodoControllerUnitTest {
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
-        new CreateTodoRequestDTO("todo title", "todo description", "todo order");
+        new CreateTodoRequestDTO("todo title", "todo description");
 
     // When
 
@@ -361,7 +360,7 @@ public class TodoControllerUnitTest {
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
-        new CreateTodoRequestDTO("todo title", "todo description", "todo order");
+        new CreateTodoRequestDTO("todo title", "todo description");
 
     // When
 
@@ -371,42 +370,6 @@ public class TodoControllerUnitTest {
     // Then
 
     Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
-  }
-
-  @Test
-  void createTodo_Failure_Failure_Duplicated_Order_Status_In_Group() throws Exception {
-
-    // Given
-
-    User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
-    entityFactory.insertTodo(
-        user.getId(),
-        user.getId(),
-        group.getId(),
-        "todo title",
-        "todo description",
-        TodoStatus.TO_DO,
-        "todo order",
-        false);
-
-    AuthUserDTO authUser = AuthUserDTO.of(user);
-
-    CreateTodoRequestDTO createTodoRequestDTO =
-        new CreateTodoRequestDTO("todo title", "todo description", "todo order");
-
-    // When
-
-    Runnable lambda =
-        () -> todoController.createTodo(authUser, group.getId(), createTodoRequestDTO);
-
-    // Then
-
-    Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
   }
 
   @Test

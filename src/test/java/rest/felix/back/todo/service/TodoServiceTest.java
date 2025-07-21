@@ -129,8 +129,7 @@ class TodoServiceTest {
       User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group name", "group description");
       CreateTodoDTO createTodoDTO =
-          new CreateTodoDTO(
-              "todo title", "todo description", "todo order", user.getId(), group.getId());
+          new CreateTodoDTO("todo title", "todo description", user.getId(), group.getId());
 
       // When
       TodoDTO todoDTO = todoService.createTodo(createTodoDTO);
@@ -141,7 +140,7 @@ class TodoServiceTest {
       Assertions.assertEquals(TodoStatus.TO_DO, todoDTO.getStatus());
       Assertions.assertEquals(user.getId(), todoDTO.getAuthorId());
       Assertions.assertEquals(group.getId(), todoDTO.getGroupId());
-      Assertions.assertEquals("todo order", todoDTO.getOrder());
+      Assertions.assertNotNull(todoDTO.getOrder());
     }
 
     @Test
@@ -152,8 +151,7 @@ class TodoServiceTest {
       Group group = entityFactory.insertGroup("group name", "group description");
       th.delete(user);
       CreateTodoDTO createTodoDTO =
-          new CreateTodoDTO(
-              "todo title", "todo description", "todo order", user.getId(), group.getId());
+          new CreateTodoDTO("todo title", "todo description", user.getId(), group.getId());
 
       // When
       Runnable lambda = () -> todoService.createTodo(createTodoDTO);
@@ -170,34 +168,7 @@ class TodoServiceTest {
       Group group = entityFactory.insertGroup("group name", "group description");
       th.delete(group);
       CreateTodoDTO createTodoDTO =
-          new CreateTodoDTO(
-              "todo title", "todo description", "todo order", user.getId(), group.getId());
-
-      // When
-      Runnable lambda = () -> todoService.createTodo(createTodoDTO);
-
-      // Then
-      Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
-    }
-
-    @Test
-    @DisplayName("실패: 같은 그룹 내에서 order와 status가 중복될 경우 예외가 발생한다")
-    void fail_whenOrderAndStatusAreDuplicatedInSameGroup() {
-      // Given
-      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group name", "group description");
-      entityFactory.insertTodo(
-          user.getId(),
-          user.getId(),
-          group.getId(),
-          "todo title",
-          "todo description",
-          TodoStatus.TO_DO,
-          "todo order",
-          false);
-      CreateTodoDTO createTodoDTO =
-          new CreateTodoDTO(
-              "new todo title", "new todo description", "todo order", user.getId(), group.getId());
+          new CreateTodoDTO("todo title", "todo description", user.getId(), group.getId());
 
       // When
       Runnable lambda = () -> todoService.createTodo(createTodoDTO);
@@ -213,7 +184,7 @@ class TodoServiceTest {
       User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group name", "group description");
       CreateTodoDTO createTodoDTO =
-          new CreateTodoDTO("todo title", "todo description", null, user.getId(), group.getId());
+          new CreateTodoDTO("todo title", "todo description", user.getId(), group.getId());
 
       // When
       TodoDTO todoDTO = todoService.createTodo(createTodoDTO);

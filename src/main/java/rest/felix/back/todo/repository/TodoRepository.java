@@ -115,7 +115,7 @@ public class TodoRepository {
 
     String newOrder = OrderGenerator.generate(maxOrder, null);
 
-    todo.setOrder(createTodoDTO.getOrder() != null ? createTodoDTO.getOrder() : newOrder);
+    todo.setOrder(newOrder);
 
     em.persist(todo);
 

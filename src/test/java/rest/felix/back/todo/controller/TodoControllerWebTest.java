@@ -295,7 +295,7 @@ public class TodoControllerWebTest {
       Cookie cookie = userCookie(user);
 
       CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description", "todo order");
+          new CreateTodoRequestDTO("todo title", "todo description");
 
       String body = objectMapper.writeValueAsString(createTodoRequestDTO);
 
@@ -320,7 +320,7 @@ public class TodoControllerWebTest {
       result.andExpect(jsonPath("$.title", equalTo("todo title")));
       result.andExpect(jsonPath("$.description", equalTo("todo description")));
       result.andExpect(jsonPath("$.status", equalTo("TO_DO")));
-      result.andExpect(jsonPath("$.order", equalTo("todo order")));
+      result.andExpect(jsonPath("$.order", notNullValue()));
     }
 
     @Test
@@ -335,7 +335,7 @@ public class TodoControllerWebTest {
       entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
       CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description", "todo order");
+          new CreateTodoRequestDTO("todo title", "todo description");
 
       String body = objectMapper.writeValueAsString(createTodoRequestDTO);
 
@@ -373,7 +373,7 @@ public class TodoControllerWebTest {
       Cookie cookie = userCookie(user);
 
       CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description", "todo order");
+          new CreateTodoRequestDTO("todo title", "todo description");
 
       String body = objectMapper.writeValueAsString(createTodoRequestDTO);
 
@@ -413,7 +413,7 @@ public class TodoControllerWebTest {
       Cookie cookie = userCookie(user);
 
       CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description", "todo order");
+          new CreateTodoRequestDTO("todo title", "todo description");
 
       String body = objectMapper.writeValueAsString(createTodoRequestDTO);
 
@@ -452,7 +452,7 @@ public class TodoControllerWebTest {
       Cookie cookie = userCookie(user);
 
       CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description", "todo order");
+          new CreateTodoRequestDTO("todo title", "todo description");
 
       String body = objectMapper.writeValueAsString(createTodoRequestDTO);
 
@@ -492,7 +492,7 @@ public class TodoControllerWebTest {
       Cookie cookie = userCookie(user);
 
       CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description", "todo order");
+          new CreateTodoRequestDTO("todo title", "todo description");
 
       String body = objectMapper.writeValueAsString(createTodoRequestDTO);
 
@@ -512,52 +512,6 @@ public class TodoControllerWebTest {
 
       result.andExpect(status().isForbidden());
       result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
-    }
-
-    @Test
-    void Failure_Duplicated_Order_Status_In_Group() throws Exception {
-
-      // Given
-
-      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-
-      Group group = entityFactory.insertGroup("group name", "group description");
-
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
-      entityFactory.insertTodo(
-          user.getId(),
-          user.getId(),
-          group.getId(),
-          "todo title",
-          "todo description",
-          TodoStatus.TO_DO,
-          "todo order",
-          false);
-
-      Cookie cookie = userCookie(user);
-
-      CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description", "todo order");
-
-      String body = objectMapper.writeValueAsString(createTodoRequestDTO);
-
-      String path = String.format("/api/v1/group/%d/todo", group.getId());
-
-      // When
-
-      ResultActions result =
-          mvc.perform(
-              post(path)
-                  .cookie(cookie)
-                  .accept(MediaType.APPLICATION_JSON)
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(body));
-
-      // Then
-
-      result.andExpect(status().isBadRequest());
-      result.andExpect(jsonPath("$.message", equalTo("Bad Request, please try again later.")));
     }
   }
 
