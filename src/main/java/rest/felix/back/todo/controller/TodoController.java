@@ -24,7 +24,6 @@ import rest.felix.back.todo.dto.UpdateTodoDTO;
 import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
 import rest.felix.back.todo.service.TodoService;
 import rest.felix.back.user.dto.AuthUserDTO;
-import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -38,9 +37,7 @@ public class TodoController {
   public ResponseEntity<List<TodoResponseDTO>> getTodos(
       @AuthenticationPrincipal AuthUserDTO authUser, @PathVariable(name = "groupId") long groupId) {
 
-    long userId = authUser.getUserId();
-
-    groupService.findUserRole(userId, groupId).orElseThrow(UserAccessDeniedException::new);
+    groupService.assertGroupAuthority(authUser.getUserId(), groupId, GroupRole.VIEWER);
 
     List<TodoResponseDTO> todoResponseDTOs =
         todoService.getTodosInGroup(groupId).stream().map(TodoResponseDTO::of).toList();

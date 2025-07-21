@@ -18,7 +18,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
 import rest.felix.back.common.util.EntityFactory;
-import rest.felix.back.common.util.Pair;
 import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.enumerated.GroupRole;
@@ -46,482 +45,451 @@ class TodoServiceTest {
     th.cleanUp();
   }
 
-  @Test
-  void getTodosInGroup_HappyPath() {
-    // Given
+  @Nested
+  @DisplayName("그룹의 모든 Todo 조회 (getTodosInGroup)")
+  class GetTodosInGroup {
+    @Test
+    @DisplayName("성공: 그룹에 속한 모든 Todo 목록을 반환한다")
+    void success_whenTodosExistInGroup() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      Arrays.stream(new int[] {1, 2, 3})
+          .forEach(
+              idx -> {
+                entityFactory.insertTodo(
+                    user.getId(),
+                    user.getId(),
+                    group.getId(),
+                    String.format("todo %d", idx),
+                    String.format("todo %d description", idx),
+                    TodoStatus.TO_DO,
+                    String.format("todo order %d", idx),
+                    false);
+              });
 
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      // When
+      List<TodoDTO> todoDTOs = todoService.getTodosInGroup(group.getId());
 
-    Group group = entityFactory.insertGroup("group name", "group description");
+      // Then
+      Assertions.assertEquals(3, todoDTOs.size());
+      Assertions.assertTrue(
+          todoDTOs.stream().map(TodoDTO::getStatus).allMatch(status -> status == TodoStatus.TO_DO));
+      Assertions.assertTrue(
+          todoDTOs.stream()
+              .map(TodoDTO::getGroupId)
+              .allMatch(groupId -> groupId.equals(group.getId())));
+      Assertions.assertTrue(
+          todoDTOs.stream()
+              .map(TodoDTO::getAuthorId)
+              .allMatch(authorId -> authorId.equals(user.getId())));
+      Assertions.assertTrue(
+          todoDTOs.stream()
+              .map(TodoDTO::getTitle)
+              .toList()
+              .containsAll(List.of("todo 1", "todo 2", "todo 3")));
+    }
 
-    Arrays.stream(new int[] {1, 2, 3})
-        .forEach(
-            idx -> {
-              entityFactory.insertTodo(
-                  user.getId(),
-                  user.getId(),
-                  group.getId(),
-                  String.format("todo %d", idx),
-                  String.format("todo %d description", idx),
-                  TodoStatus.TO_DO,
-                  String.format("todo order %d", idx),
-                  false);
-            });
+    @Test
+    @DisplayName("성공: 그룹에 Todo가 하나도 없을 때 빈 목록을 반환한다")
+    void success_whenNoTodosInGroup() {
+      // Given
+      entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
 
-    // When
+      // When
+      List<TodoDTO> todoDTOs = todoService.getTodosInGroup(group.getId());
 
-    List<TodoDTO> todoDTOs = todoService.getTodosInGroup(group.getId());
+      // Then
+      Assertions.assertEquals(0, todoDTOs.size());
+    }
 
-    // Then
+    @Test
+    @DisplayName("성공: 존재하지 않는 그룹 ID로 조회 시 빈 목록을 반환한다")
+    void success_whenGroupNotFound() {
+      // Given
+      Group group = entityFactory.insertGroup("g", "d");
+      th.delete(group);
 
-    Assertions.assertEquals(3, todoDTOs.size());
+      // When
+      List<TodoDTO> todoDTOs = todoService.getTodosInGroup(group.getId());
 
-    Assertions.assertTrue(
-        todoDTOs.stream()
-            .map(TodoDTO::getStatus)
-            .map(status -> status == TodoStatus.TO_DO)
-            .reduce(true, (one, another) -> one && another));
-
-    Assertions.assertTrue(
-        todoDTOs.stream()
-            .map(TodoDTO::getGroupId)
-            .map(groupId -> groupId.equals(group.getId()))
-            .reduce(true, (one, another) -> one && another));
-
-    Assertions.assertTrue(
-        todoDTOs.stream()
-            .map(TodoDTO::getAuthorId)
-            .map(authorId -> authorId.equals(user.getId()))
-            .reduce(true, (one, another) -> one && another));
-
-    Assertions.assertTrue(
-        todoDTOs.stream()
-            .map(TodoDTO::getTitle)
-            .toList()
-            .containsAll(List.of("todo 1", "todo 2", "todo 3")));
-
-    Assertions.assertTrue(
-        todoDTOs.stream()
-            .map(TodoDTO::getDescription)
-            .toList()
-            .containsAll(
-                List.of("todo 1 description", "todo 2 description", "todo 3 description")));
-
-    Assertions.assertTrue(
-        todoDTOs.stream()
-            .map(TodoDTO::getOrder)
-            .toList()
-            .containsAll(List.of("todo order 1", "todo order 2", "todo order 3")));
+      // Then
+      Assertions.assertEquals(0, todoDTOs.size());
+    }
   }
 
-  @Test
-  void getTodosInGroup_HappyPath_NoTodo() {
-    // Given
+  @Nested
+  @DisplayName("Todo 생성 (createTodo)")
+  class CreateTodo {
+    @Test
+    @DisplayName("성공: 새로운 Todo를 생성한다")
+    void success_whenCreatingNewTodo() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      CreateTodoDTO createTodoDTO =
+          new CreateTodoDTO(
+              "todo title", "todo description", "todo order", user.getId(), group.getId());
 
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      // When
+      TodoDTO todoDTO = todoService.createTodo(createTodoDTO);
 
-    Group group = entityFactory.insertGroup("group name", "group description");
+      // Then
+      Assertions.assertEquals("todo title", todoDTO.getTitle());
+      Assertions.assertEquals("todo description", todoDTO.getDescription());
+      Assertions.assertEquals(TodoStatus.TO_DO, todoDTO.getStatus());
+      Assertions.assertEquals(user.getId(), todoDTO.getAuthorId());
+      Assertions.assertEquals(group.getId(), todoDTO.getGroupId());
+      Assertions.assertEquals("todo order", todoDTO.getOrder());
+    }
 
-    // When
+    @Test
+    @DisplayName("실패: 존재하지 않는 유저 ID로 생성 시 예외가 발생한다")
+    void fail_whenUserNotFound() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      th.delete(user);
+      CreateTodoDTO createTodoDTO =
+          new CreateTodoDTO(
+              "todo title", "todo description", "todo order", user.getId(), group.getId());
 
-    List<TodoDTO> todoDTOs = todoService.getTodosInGroup(group.getId());
+      // When
+      Runnable lambda = () -> todoService.createTodo(createTodoDTO);
 
-    // Then
+      // Then
+      Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
+    }
 
-    Assertions.assertEquals(0, todoDTOs.size());
+    @Test
+    @DisplayName("실패: 존재하지 않는 그룹 ID로 생성 시 예외가 발생한다")
+    void fail_whenGroupNotFound() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      th.delete(group);
+      CreateTodoDTO createTodoDTO =
+          new CreateTodoDTO(
+              "todo title", "todo description", "todo order", user.getId(), group.getId());
+
+      // When
+      Runnable lambda = () -> todoService.createTodo(createTodoDTO);
+
+      // Then
+      Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패: 같은 그룹 내에서 order와 status가 중복될 경우 예외가 발생한다")
+    void fail_whenOrderAndStatusAreDuplicatedInSameGroup() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertTodo(
+          user.getId(),
+          user.getId(),
+          group.getId(),
+          "todo title",
+          "todo description",
+          TodoStatus.TO_DO,
+          "todo order",
+          false);
+      CreateTodoDTO createTodoDTO =
+          new CreateTodoDTO(
+              "new todo title", "new todo description", "todo order", user.getId(), group.getId());
+
+      // When
+      Runnable lambda = () -> todoService.createTodo(createTodoDTO);
+
+      // Then
+      Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("성공: order가 null일 때 자동으로 생성된다")
+    void success_whenOrderIsNull() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      CreateTodoDTO createTodoDTO =
+          new CreateTodoDTO("todo title", "todo description", null, user.getId(), group.getId());
+
+      // When
+      TodoDTO todoDTO = todoService.createTodo(createTodoDTO);
+
+      // Then
+      Assertions.assertNotNull(todoDTO.getOrder());
+      Assertions.assertFalse(todoDTO.getOrder().isEmpty());
+    }
   }
 
-  @Test
-  void getTodosInGroup_HappyPath_NoGroup() {
-    // Given
+  @Nested
+  @DisplayName("특정 Todo 조회 (getTodoInGroup)")
+  class GetTodoInGroup {
+    @Test
+    @DisplayName("성공: 특정 Todo의 정보를 조회한다")
+    void success_whenTodoExists() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.IN_PROGRESS,
+              "o",
+              false);
 
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      // When
+      TodoDTO todoDTO = todoService.getTodoInGroup(group.getId(), todo.getId());
 
-    Group group = entityFactory.insertGroup("group name", "group description");
+      // Then
+      Assertions.assertEquals(todo.getId(), todoDTO.getId());
+      Assertions.assertEquals(todo.getTodoStatus(), todoDTO.getStatus());
+      Assertions.assertEquals(todo.getDescription(), todoDTO.getDescription());
+      Assertions.assertEquals(todo.getTitle(), todoDTO.getTitle());
+      Assertions.assertEquals(todo.getGroup().getId(), todoDTO.getGroupId());
+      Assertions.assertEquals(todo.getAuthor().getId(), todoDTO.getAuthorId());
+    }
 
-    th.delete(group);
+    @Test
+    @DisplayName("실패: 존재하지 않는 Todo ID로 조회 시 예외가 발생한다")
+    void fail_whenTodoNotFound() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      Group group = trio.second();
+      Todo todo =
+          entityFactory.insertTodo(
+              trio.first().getId(),
+              trio.first().getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              false);
+      th.delete(todo);
 
-    // When
+      // When
+      Runnable lambda = () -> todoService.getTodoInGroup(group.getId(), todo.getId());
 
-    List<TodoDTO> todoDTOs = todoService.getTodosInGroup(group.getId());
+      // Then
+      Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
+    }
 
-    // Then
+    @Test
+    @DisplayName("실패: Todo가 요청한 그룹에 속해있지 않으면 예외가 발생한다")
+    void fail_whenTodoInDifferentGroup() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group1 = entityFactory.insertGroup("group1 name", "group1 description");
+      Group group2 = entityFactory.insertGroup("group2 name", "group2 description");
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group1.getId(),
+              "t",
+              "d",
+              TodoStatus.IN_PROGRESS,
+              "o",
+              false);
 
-    Assertions.assertEquals(0, todoDTOs.size());
+      // When
+      Runnable lambda = () -> todoService.getTodoInGroup(group2.getId(), todo.getId());
+
+      // Then
+      Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
+    }
   }
 
-  @Test
-  void createTodo_HappyPath() {
-    // Given
+  @Nested
+  @DisplayName("Todo 삭제 (deleteTodo)")
+  class DeleteTodo {
+    @Test
+    @DisplayName("성공: 특정 Todo를 삭제한다")
+    void success_whenDeletingTodo() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      Todo todo =
+          entityFactory.insertTodo(
+              trio.first().getId(),
+              trio.first().getId(),
+              trio.second().getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              false);
 
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      // When
+      todoService.deleteTodo(todo.getId());
 
-    Group group = entityFactory.insertGroup("group name", "group description");
+      // Then
+      Assertions.assertTrue(todoRepository.findById(todo.getId()).isEmpty());
+    }
 
-    CreateTodoDTO createTodoDTO =
-        new CreateTodoDTO(
-            "todo title", "todo description", "todo order", user.getId(), group.getId());
+    @Test
+    @DisplayName("성공(멱등성): 존재하지 않는 Todo ID로 삭제 요청 시 아무 일도 일어나지 않는다")
+    void success_whenDeletingNonExistentTodo() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      Todo todo =
+          entityFactory.insertTodo(
+              trio.first().getId(),
+              trio.first().getId(),
+              trio.second().getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              false);
+      th.delete(todo);
 
-    // When
+      // When
+      Runnable lambda = () -> todoService.deleteTodo(todo.getId());
 
-    TodoDTO todoDTO = todoService.createTodo(createTodoDTO);
+      // Then
+      Assertions.assertDoesNotThrow(lambda::run);
+    }
 
-    // Then
+    @Test
+    @DisplayName("성공: Todo 삭제 시 관련된 Star 정보도 함께 삭제된다")
+    void success_whenTodoIsDeleted_relatedStarsAreAlsoDeleted() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), trio.second().getId(), "t", "d", TodoStatus.TO_DO, false);
+      entityFactory.insertUserTodoStar(user.getId(), todo.getId());
+      Assertions.assertTrue(todoRepository.starExistsById(user.getId(), todo.getId()));
 
-    Assertions.assertEquals("todo title", todoDTO.getTitle());
-    Assertions.assertEquals("todo description", todoDTO.getDescription());
-    Assertions.assertEquals(TodoStatus.TO_DO, todoDTO.getStatus());
-    Assertions.assertEquals(user.getId(), todoDTO.getAuthorId());
-    Assertions.assertEquals(group.getId(), todoDTO.getGroupId());
-    Assertions.assertEquals("todo order", todoDTO.getOrder());
+      // When
+      todoService.deleteTodo(todo.getId());
+
+      // Then
+      Assertions.assertTrue(todoRepository.findById(todo.getId()).isEmpty());
+      Assertions.assertFalse(todoRepository.starExistsById(user.getId(), todo.getId()));
+    }
   }
 
-  @Test
-  void createTodo_Failure_NoUser() {
-    // Given
-
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    th.delete(user);
-
-    CreateTodoDTO createTodoDTO =
-        new CreateTodoDTO(
-            "todo title", "todo description", "todo order", user.getId(), group.getId());
-
-    // When
-
-    Runnable lambda = () -> todoService.createTodo(createTodoDTO);
-
-    // Then
-
-    Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
-  }
-
-  @Test
-  void createTodo_Failure_NoGroup() {
-    // Given
-
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    th.delete(group);
-
-    CreateTodoDTO createTodoDTO =
-        new CreateTodoDTO(
-            "todo title", "todo description", "todo order", user.getId(), group.getId());
-
-    // When
-
-    Runnable lambda = () -> todoService.createTodo(createTodoDTO);
-
-    // Then
-
-    Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
-  }
-
-  @Test
-  void createTodo_Failure_Duplicated_Order_Status_In_Group() {
-    // Given
-
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    Todo todo =
-        entityFactory.insertTodo(
-            user.getId(),
-            user.getId(),
-            group.getId(),
-            "todo title",
-            "todo description",
-            TodoStatus.TO_DO,
-            "todo order",
-            false);
-
-    CreateTodoDTO createTodoDTO =
-        new CreateTodoDTO(
-            "new todo title", "new todo description", "todo order", user.getId(), group.getId());
-
-    // When
-
-    Runnable lambda = () -> todoService.createTodo(createTodoDTO);
-
-    // Then
-
-    Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
-  }
-
-  @Test
-  void getTodoInGroup_HappyPath() {
-    // Given
-
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    List<Todo> todos =
-        Stream.of(
-                new Pair<>(TodoStatus.TO_DO, 1),
-                new Pair<>(TodoStatus.IN_PROGRESS, 2),
-                new Pair<>(TodoStatus.DONE, 3),
-                new Pair<>(TodoStatus.ON_HOLD, 4))
-            .map(
-                pair -> {
-                  TodoStatus todoStatus = pair.first();
-                  int idx = pair.second();
-
-                  Todo todo =
-                      entityFactory.insertTodo(
-                          user.getId(),
-                          user.getId(),
-                          group.getId(),
-                          String.format("todo %d", idx),
-                          String.format("todo %d description", idx),
-                          todoStatus,
-                          String.format("todo %d order", idx),
-                          false);
-                  return todo;
-                })
-            .toList();
-
-    todos.forEach(
-        todo -> {
-
-          // When
-
-          TodoDTO todoDTO = todoService.getTodoInGroup(group.getId(), todo.getId());
-
-          // Then
-
-          Assertions.assertEquals(todo.getId(), todoDTO.getId());
-          Assertions.assertEquals(todo.getTodoStatus(), todoDTO.getStatus());
-          Assertions.assertEquals(todo.getDescription(), todoDTO.getDescription());
-          Assertions.assertEquals(todo.getTitle(), todoDTO.getTitle());
-          Assertions.assertEquals(todo.getGroup().getId(), todoDTO.getGroupId());
-          Assertions.assertEquals(todo.getAuthor().getId(), todoDTO.getAuthorId());
-        });
-  }
-
-  @Test
-  void getTodoInGroup_Failure_NoTodo() {
-    // Given
-
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    Todo todo =
-        entityFactory.insertTodo(
-            user.getId(),
-            user.getId(),
-            group.getId(),
-            "todo title",
-            "todo description",
-            TodoStatus.IN_PROGRESS,
-            "todo order",
-            false);
-
-    th.delete(todo);
-
-    // When
-
-    Runnable lambda = () -> todoService.getTodoInGroup(group.getId(), todo.getId());
-
-    // Then
-
-    Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
-  }
-
-  @Test
-  void getTodoInGroup_Failure_NoGroup() {
-    // Given
-
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    Todo todo =
-        entityFactory.insertTodo(
-            user.getId(),
-            user.getId(),
-            group.getId(),
-            "todo title",
-            "todo description",
-            TodoStatus.IN_PROGRESS,
-            "todo order",
-            false);
-
-    th.delete(todo);
-    th.delete(group);
-
-    // When
-
-    Runnable lambda = () -> todoService.getTodoInGroup(group.getId(), todo.getId());
-
-    // Then
-
-    Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
-  }
-
-  @Test
-  void getTodoInGroup_Failure_WrongGroup() {
-    // Given
-
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-
-    Group group1 = entityFactory.insertGroup("group1 name", "group1 description");
-
-    Group group2 = entityFactory.insertGroup("group2 name", "group2 description");
-
-    Todo todo =
-        entityFactory.insertTodo(
-            user.getId(),
-            user.getId(),
-            group1.getId(),
-            "todo title",
-            "todo description",
-            TodoStatus.IN_PROGRESS,
-            "todo order",
-            false);
-
-    // When
-
-    Runnable lambda = () -> todoService.getTodoInGroup(group2.getId(), todo.getId());
-
-    // Then
-
-    Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
-  }
-
-  @Test
-  void deleteTodo_HappyPath() {
-    // Given
-
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    Todo todo =
-        entityFactory.insertTodo(
-            user.getId(),
-            user.getId(),
-            group.getId(),
-            "todo title",
-            "todo description",
-            TodoStatus.IN_PROGRESS,
-            "todo order",
-            false);
-
-    // When
-
-    todoService.deleteTodo(todo.getId());
-
-    // Then
-
-    Assertions.assertTrue(todoRepository.findById(todo.getId()).isEmpty());
-  }
-
-  @Test
-  void deleteTodo_HappyPath_NoTodo() {
-    // Given
-
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    Todo todo =
-        entityFactory.insertTodo(
-            user.getId(),
-            user.getId(),
-            group.getId(),
-            "todo title",
-            "todo description",
-            TodoStatus.IN_PROGRESS,
-            "todo order",
-            false);
-
-    th.delete(todo);
-
-    // When
-
-    Runnable lambda = () -> todoService.deleteTodo(todo.getId());
-
-    // Then
-
-    Assertions.assertDoesNotThrow(lambda::run);
-  }
-
-  @Test
-  void updateTodo_HappyPath() {
-    // Given
-
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    Todo todo =
-        entityFactory.insertTodo(
-            user.getId(),
-            user.getId(),
-            group.getId(),
-            "todo title",
-            "todo description",
-            TodoStatus.IN_PROGRESS,
-            "todo order",
-            false);
-
-    UpdateTodoDTO updateTodoDTO =
-        new UpdateTodoDTO(todo.getId(), "todo updated title", "todo updated description");
-
-    // When
-
-    TodoDTO todoDTO = todoService.updateTodo(updateTodoDTO);
-    TodoDTO updatedTodo =
-        todoRepository.findById(todo.getId()).orElseThrow(TodoNotFoundException::new);
-
-    // Then
-
-    Assertions.assertEquals(todo.getId(), todoDTO.getId());
-    Assertions.assertEquals("todo updated title", todoDTO.getTitle());
-    Assertions.assertEquals("todo updated description", todoDTO.getDescription());
-
-    Assertions.assertEquals("todo updated title", updatedTodo.getTitle());
-    Assertions.assertEquals("todo updated description", updatedTodo.getDescription());
-  }
-
-  @Test
-  void updateTodo_Failure_NoTodo() {
-    // Given
-
-    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-
-    Group group = entityFactory.insertGroup("group name", "group description");
-
-    Todo todo =
-        entityFactory.insertTodo(
-            user.getId(),
-            user.getId(),
-            group.getId(),
-            "todo title",
-            "todo description",
-            TodoStatus.IN_PROGRESS,
-            "todo order",
-            false);
-
-    th.delete(todo);
-
-    UpdateTodoDTO updateTodoDTO =
-        new UpdateTodoDTO(todo.getId(), "updated todo title", "updated todo description");
-
-    // When
-
-    Runnable lambda = () -> todoService.updateTodo(updateTodoDTO);
-
-    // Then
-
-    Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
+  @Nested
+  @DisplayName("Todo 수정 (updateTodo)")
+  class UpdateTodo {
+    @Test
+    @DisplayName("성공: Todo의 제목과 설명을 수정한다")
+    void success_whenUpdatingTitleAndDescription() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      Todo todo =
+          entityFactory.insertTodo(
+              trio.first().getId(),
+              trio.first().getId(),
+              trio.second().getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              false);
+      UpdateTodoDTO updateTodoDTO =
+          new UpdateTodoDTO(todo.getId(), "todo updated title", "todo updated description");
+
+      // When
+      TodoDTO todoDTO = todoService.updateTodo(updateTodoDTO);
+      TodoDTO updatedTodo =
+          todoRepository.findById(todo.getId()).orElseThrow(TodoNotFoundException::new);
+
+      // Then
+      Assertions.assertEquals(todo.getId(), todoDTO.getId());
+      Assertions.assertEquals("todo updated title", todoDTO.getTitle());
+      Assertions.assertEquals("todo updated description", todoDTO.getDescription());
+      Assertions.assertEquals("todo updated title", updatedTodo.getTitle());
+      Assertions.assertEquals("todo updated description", updatedTodo.getDescription());
+    }
+
+    @Test
+    @DisplayName("실패: 존재하지 않는 Todo ID로 수정 요청 시 예외가 발생한다")
+    void fail_whenTodoNotFound() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      Todo todo =
+          entityFactory.insertTodo(
+              trio.first().getId(),
+              trio.first().getId(),
+              trio.second().getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              false);
+      th.delete(todo);
+      UpdateTodoDTO updateTodoDTO =
+          new UpdateTodoDTO(todo.getId(), "updated todo title", "updated todo description");
+
+      // When
+      Runnable lambda = () -> todoService.updateTodo(updateTodoDTO);
+
+      // Then
+      Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("성공: 제목만 업데이트하고 설명은 그대로 둔다")
+    void success_whenUpdatingOnlyTitle() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      Todo todo =
+          entityFactory.insertTodo(
+              trio.first().getId(),
+              trio.first().getId(),
+              trio.second().getId(),
+              "original title",
+              "original description",
+              TodoStatus.TO_DO,
+              false);
+      UpdateTodoDTO updateTodoDTO = new UpdateTodoDTO(todo.getId(), "updated title", null);
+
+      // When
+      TodoDTO todoDTO = todoService.updateTodo(updateTodoDTO);
+      TodoDTO updatedTodo =
+          todoRepository.findById(todo.getId()).orElseThrow(TodoNotFoundException::new);
+
+      // Then
+      Assertions.assertEquals(todo.getId(), todoDTO.getId());
+      Assertions.assertEquals("updated title", todoDTO.getTitle());
+      Assertions.assertEquals("original description", todoDTO.getDescription());
+      Assertions.assertEquals("updated title", updatedTodo.getTitle());
+      Assertions.assertEquals("original description", updatedTodo.getDescription());
+    }
+
+    @Test
+    @DisplayName("성공: 설명만 업데이트하고 제목은 그대로 둔다")
+    void success_whenUpdatingOnlyDescription() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      Todo todo =
+          entityFactory.insertTodo(
+              trio.first().getId(),
+              trio.first().getId(),
+              trio.second().getId(),
+              "original title",
+              "original description",
+              TodoStatus.TO_DO,
+              false);
+      UpdateTodoDTO updateTodoDTO = new UpdateTodoDTO(todo.getId(), null, "updated description");
+
+      // When
+      TodoDTO todoDTO = todoService.updateTodo(updateTodoDTO);
+      TodoDTO updatedTodo =
+          todoRepository.findById(todo.getId()).orElseThrow(TodoNotFoundException::new);
+
+      // Then
+      Assertions.assertEquals(todo.getId(), todoDTO.getId());
+      Assertions.assertEquals("original title", todoDTO.getTitle());
+      Assertions.assertEquals("updated description", todoDTO.getDescription());
+      Assertions.assertEquals("original title", updatedTodo.getTitle());
+      Assertions.assertEquals("updated description", updatedTodo.getDescription());
+    }
   }
 
   @Nested
@@ -544,7 +512,9 @@ class TodoServiceTest {
 
         // When
         Runnable lambda =
-            () -> todoService.assertTodoAuthority(user.getId(), group.getId(), todo.getId(), t -> true);
+            () ->
+                todoService.assertTodoAuthority(
+                    user.getId(), group.getId(), todo.getId(), t -> true);
 
         // Then
         Assertions.assertDoesNotThrow(lambda::run);
@@ -562,10 +532,13 @@ class TodoServiceTest {
 
         // When
         Runnable lambda =
-            () -> todoService.assertTodoAuthority(user.getId(), group.getId(), todo.getId(), t -> true);
+            () ->
+                todoService.assertTodoAuthority(
+                    user.getId(), group.getId(), todo.getId(), t -> true);
 
         // Then
-        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
+        Assertions.assertThrows(
+            rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
 
       @Test
@@ -575,13 +548,16 @@ class TodoServiceTest {
         var trio = entityFactory.insertUserGroup();
         User user = trio.first();
         Group group = trio.second();
-        long nonExistentTodoId = -1L;
+        Todo todo =
+            entityFactory.insertTodo(
+                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+        th.delete(todo);
 
         // When
         Runnable lambda =
             () ->
                 todoService.assertTodoAuthority(
-                    user.getId(), group.getId(), nonExistentTodoId, t -> true);
+                    user.getId(), group.getId(), todo.getId(), t -> true);
 
         // Then
         Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
@@ -600,10 +576,13 @@ class TodoServiceTest {
 
         // When
         Runnable lambda =
-            () -> todoService.assertTodoAuthority(user.getId(), group.getId(), todo.getId(), t -> false);
+            () ->
+                todoService.assertTodoAuthority(
+                    user.getId(), group.getId(), todo.getId(), t -> false);
 
         // Then
-        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
+        Assertions.assertThrows(
+            rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
     }
 
@@ -680,7 +659,8 @@ class TodoServiceTest {
                     viewer.getId(), group.getId(), todo.getId(), (role, t) -> false);
 
         // Then
-        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
+        Assertions.assertThrows(
+            rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
 
       @Test
@@ -705,12 +685,13 @@ class TodoServiceTest {
                     (role, t) -> t.getAuthorId() == member.getId());
 
         // Then
-        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
+        Assertions.assertThrows(
+            rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
 
       @Test
       @DisplayName("유저가 그룹에 속해있지 않으면 UserAccessDeniedException이 발생한다")
-      void fail_whenUserNotInGroup() {
+      void fail_whenUserNotInGroup_BiPredicate() {
         // Given
         User user = entityFactory.insertUser("u", "p", "n");
         Group group = entityFactory.insertGroup("g", "d");
@@ -725,23 +706,27 @@ class TodoServiceTest {
                     user.getId(), group.getId(), todo.getId(), (role, t) -> true);
 
         // Then
-        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
+        Assertions.assertThrows(
+            rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
 
       @Test
       @DisplayName("Todo가 존재하지 않으면 TodoNotFoundException이 발생한다")
-      void fail_whenTodoNotFound() {
+      void fail_whenTodoNotFound_BiPredicate() {
         // Given
         var trio = entityFactory.insertUserGroup();
         User user = trio.first();
         Group group = trio.second();
-        long nonExistentTodoId = -1L;
+        Todo todo =
+            entityFactory.insertTodo(
+                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+        th.delete(todo);
 
         // When
         Runnable lambda =
             () ->
                 todoService.assertTodoAuthority(
-                    user.getId(), group.getId(), nonExistentTodoId, (role, t) -> true);
+                    user.getId(), group.getId(), todo.getId(), (role, t) -> true);
 
         // Then
         Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
@@ -780,7 +765,9 @@ class TodoServiceTest {
 
         // When
         Runnable lambda =
-            () -> todoService.assertTodoAuthority(user.getId(), group.getId(), todo.getId(), requiredRole);
+            () ->
+                todoService.assertTodoAuthority(
+                    user.getId(), group.getId(), todo.getId(), requiredRole);
 
         // Then
         Assertions.assertDoesNotThrow(lambda::run);
@@ -801,10 +788,13 @@ class TodoServiceTest {
 
         // When
         Runnable lambda =
-            () -> todoService.assertTodoAuthority(user.getId(), group.getId(), todo.getId(), requiredRole);
+            () ->
+                todoService.assertTodoAuthority(
+                    user.getId(), group.getId(), todo.getId(), requiredRole);
 
         // Then
-        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
+        Assertions.assertThrows(
+            rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
 
       // 실패하는 역할 조합을 제공하는 Stream
@@ -817,7 +807,7 @@ class TodoServiceTest {
 
       @Test
       @DisplayName("유저가 그룹에 속해있지 않으면 UserAccessDeniedException이 발생한다")
-      void fail_whenUserNotInGroup() {
+      void fail_whenUserNotInGroup_Role() {
         // Given
         User user = entityFactory.insertUser("u", "p", "n");
         Group group = entityFactory.insertGroup("g", "d");
@@ -827,26 +817,32 @@ class TodoServiceTest {
 
         // When
         Runnable lambda =
-            () -> todoService.assertTodoAuthority(user.getId(), group.getId(), todo.getId(), GroupRole.VIEWER);
+            () ->
+                todoService.assertTodoAuthority(
+                    user.getId(), group.getId(), todo.getId(), GroupRole.VIEWER);
 
         // Then
-        Assertions.assertThrows(rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
+        Assertions.assertThrows(
+            rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
       }
 
       @Test
       @DisplayName("Todo가 존재하지 않으면 TodoNotFoundException이 발생한다")
-      void fail_whenTodoNotFound() {
+      void fail_whenTodoNotFound_Role() {
         // Given
         var trio = entityFactory.insertUserGroup();
         User user = trio.first();
         Group group = trio.second();
-        long nonExistentTodoId = -1L;
+        Todo todo =
+            entityFactory.insertTodo(
+                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+        th.delete(todo);
 
         // When
         Runnable lambda =
             () ->
                 todoService.assertTodoAuthority(
-                    user.getId(), group.getId(), nonExistentTodoId, GroupRole.VIEWER);
+                    user.getId(), group.getId(), todo.getId(), GroupRole.VIEWER);
 
         // Then
         Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
@@ -855,20 +851,20 @@ class TodoServiceTest {
   }
 
   @Nested
-  @DisplayName("Todo 위치 및 상태 이동")
+  @DisplayName("Todo 위치 및 상태 이동 (moveTodo)")
   class MoveTodo {
 
     @Test
-    @DisplayName("관리자(MANAGER)가 Todo를 다른 상태(column)의 가장 끝으로 이동시킨다")
-    void success_whenManagerMovesTodoToEndOfAnotherStatus() {
+    @DisplayName("성공: Todo를 다른 상태(column)의 가장 끝으로 이동시킨다")
+    void success_whenMovingTodoToEndOfAnotherStatus() {
       // Given
-      User manager = entityFactory.insertUser("manager", "p", "n");
-      Group group = entityFactory.insertGroup("g", "d");
-      entityFactory.insertUserGroup(manager.getId(), group.getId(), GroupRole.MANAGER);
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
       Todo targetTodo =
           entityFactory.insertTodo(
-              manager.getId(),
-              manager.getId(),
+              user.getId(),
+              user.getId(),
               group.getId(),
               "target",
               "d",
@@ -876,8 +872,8 @@ class TodoServiceTest {
               "a",
               false);
       entityFactory.insertTodo(
-          manager.getId(),
-          manager.getId(),
+          user.getId(),
+          user.getId(),
           group.getId(),
           "other",
           "d",
@@ -895,16 +891,16 @@ class TodoServiceTest {
     }
 
     @Test
-    @DisplayName("관리자(MANAGER)가 Todo를 다른 상태(column)의 특정 위치로 이동시킨다")
-    void success_whenManagerMovesTodoToSpecificPositionInAnotherStatus() {
+    @DisplayName("성공: Todo를 다른 상태(column)의 특정 위치로 이동시킨다")
+    void success_whenMovingTodoToSpecificPositionInAnotherStatus() {
       // Given
-      User manager = entityFactory.insertUser("manager", "p", "n");
-      Group group = entityFactory.insertGroup("g", "d");
-      entityFactory.insertUserGroup(manager.getId(), group.getId(), GroupRole.MANAGER);
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
       Todo targetTodo =
           entityFactory.insertTodo(
-              manager.getId(),
-              manager.getId(),
+              user.getId(),
+              user.getId(),
               group.getId(),
               "target",
               "d",
@@ -913,8 +909,8 @@ class TodoServiceTest {
               false);
       Todo destTodo =
           entityFactory.insertTodo(
-              manager.getId(),
-              manager.getId(),
+              user.getId(),
+              user.getId(),
               group.getId(),
               "dest",
               "d",
@@ -932,16 +928,16 @@ class TodoServiceTest {
     }
 
     @Test
-    @DisplayName("멤버(MEMBER)가 자신의 Todo 순서를 같은 상태 내에서 변경한다")
-    void success_whenMemberReordersOwnTodoWithinSameStatus() {
+    @DisplayName("성공: Todo 순서를 같은 상태 내에서 변경한다")
+    void success_whenReorderingTodoWithinSameStatus() {
       // Given
-      User member = entityFactory.insertUser("member", "p", "n");
-      Group group = entityFactory.insertGroup("g", "d");
-      entityFactory.insertUserGroup(member.getId(), group.getId(), GroupRole.MEMBER);
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
       Todo targetTodo =
           entityFactory.insertTodo(
-              member.getId(),
-              member.getId(),
+              user.getId(),
+              user.getId(),
               group.getId(),
               "target",
               "d",
@@ -950,14 +946,7 @@ class TodoServiceTest {
               false);
       Todo destTodo =
           entityFactory.insertTodo(
-              member.getId(),
-              member.getId(),
-              group.getId(),
-              "dest",
-              "d",
-              TodoStatus.TO_DO,
-              "a",
-              false);
+              user.getId(), user.getId(), group.getId(), "dest", "d", TodoStatus.TO_DO, "a", false);
 
       // When
       todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.TO_DO);
@@ -968,79 +957,31 @@ class TodoServiceTest {
       Assertions.assertTrue(movedTodo.getOrder().compareTo("a") < 0);
     }
 
-    @DisplayName("뷰어(VIEWER) 등급은 Todo를 이동시킬 수 없어 UserAccessDeniedException이 발생한다")
-    @ParameterizedTest
-    @EnumSource(
-        value = GroupRole.class,
-        names = {"VIEWER"})
-    void fail_whenRoleIsInsufficient(GroupRole insufficientRole) {
-      // Given
-      User user = entityFactory.insertUser("user", "p", "n");
-      Group group = entityFactory.insertGroup("g", "d");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), insufficientRole);
-      Todo todo =
-          entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
-
-      // When
-      Runnable lambda = () -> todoService.moveTodo(todo.getId(), null, TodoStatus.IN_PROGRESS);
-
-      // Then
-      Assertions.assertDoesNotThrow(lambda::run);
-    }
-
     @Test
-    @DisplayName("멤버(MEMBER)가 다른 사람의 Todo를 이동시키려 하면 UserAccessDeniedException이 발생한다")
-    void fail_whenMemberMovesOthersTodo() {
-      // Given
-      User member = entityFactory.insertUser("member", "p", "n");
-      User author = entityFactory.insertUser("author", "p", "n");
-      Group group = entityFactory.insertGroup("g", "d");
-      entityFactory.insertUserGroup(member.getId(), group.getId(), GroupRole.MEMBER);
-      Todo othersTodo =
-          entityFactory.insertTodo(
-              author.getId(), author.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
-
-      // When
-      Runnable lambda = () -> todoService.moveTodo(othersTodo.getId(), null, TodoStatus.IN_PROGRESS);
-
-      // Then
-      Assertions.assertDoesNotThrow(lambda::run);
-    }
-
-    @Test
-    @DisplayName("그룹에 속하지 않은 유저는 Todo를 이동시킬 수 없어 UserAccessDeniedException이 발생한다")
-    void fail_whenUserIsNotInGroup() {
-      // Given
-      User user = entityFactory.insertUser("user", "p", "n");
-      Group group = entityFactory.insertGroup("g", "d");
-      Todo todo =
-          entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
-
-      // When
-      Runnable lambda = () -> todoService.moveTodo(todo.getId(), null, TodoStatus.IN_PROGRESS);
-
-      // Then
-      Assertions.assertDoesNotThrow(lambda::run);
-    }
-
-    @Test
-    @DisplayName("이동 대상 Todo를 찾을 수 없으면 TodoNotFoundException이 발생한다")
+    @DisplayName("실패: 이동 대상 Todo를 찾을 수 없으면 예외가 발생한다")
     void fail_whenTargetTodoNotFound() {
       // Given
       var trio = entityFactory.insertUserGroup();
-      long nonExistentTodoId = -1L;
+      Todo todo =
+          entityFactory.insertTodo(
+              trio.first().getId(),
+              trio.first().getId(),
+              trio.second().getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              false);
+      th.delete(todo);
 
       // When
-      Runnable lambda = () -> todoService.moveTodo(nonExistentTodoId, null, TodoStatus.IN_PROGRESS);
+      Runnable lambda = () -> todoService.moveTodo(todo.getId(), null, TodoStatus.IN_PROGRESS);
 
       // Then
       Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
     }
 
     @Test
-    @DisplayName("목표 위치(destination) Todo를 찾을 수 없으면 DestinationNotFoundException이 발생한다")
+    @DisplayName("실패: 목표 위치(destination) Todo를 찾을 수 없으면 예외가 발생한다")
     void fail_whenDestinationTodoNotFound() {
       // Given
       var trio = entityFactory.insertUserGroup();
@@ -1049,11 +990,21 @@ class TodoServiceTest {
       Todo targetTodo =
           entityFactory.insertTodo(
               user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
-      long nonExistentDestId = -1L;
+      Todo destTodo =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "t2",
+              "d2",
+              TodoStatus.IN_PROGRESS,
+              "b",
+              false);
+      th.delete(destTodo);
 
       // When
       Runnable lambda =
-          () -> todoService.moveTodo(targetTodo.getId(), nonExistentDestId, TodoStatus.IN_PROGRESS);
+          () -> todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.IN_PROGRESS);
 
       // Then
       Assertions.assertThrows(
@@ -1061,7 +1012,7 @@ class TodoServiceTest {
     }
 
     @Test
-    @DisplayName("대상과 목표 위치의 그룹이 다르면 InvalidDestinationException이 발생한다")
+    @DisplayName("실패: 대상과 목표 위치의 그룹이 다르면 예외가 발생한다")
     void fail_whenTargetAndDestinationInDifferentGroups() {
       // Given
       var trio1 = entityFactory.insertUserGroup();
@@ -1073,13 +1024,28 @@ class TodoServiceTest {
 
       Todo targetTodo =
           entityFactory.insertTodo(
-              user1.getId(), user1.getId(), group1.getId(), "t1", "d1", TodoStatus.TO_DO, "a", false);
+              user1.getId(),
+              user1.getId(),
+              group1.getId(),
+              "t1",
+              "d1",
+              TodoStatus.TO_DO,
+              "a",
+              false);
       Todo destTodo =
           entityFactory.insertTodo(
-              user2.getId(), user2.getId(), group2.getId(), "t2", "d2", TodoStatus.TO_DO, "b", false);
+              user2.getId(),
+              user2.getId(),
+              group2.getId(),
+              "t2",
+              "d2",
+              TodoStatus.TO_DO,
+              "b",
+              false);
 
       // When
-      Runnable lambda = () -> todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.TO_DO);
+      Runnable lambda =
+          () -> todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.TO_DO);
 
       // Then
       Assertions.assertThrows(
@@ -1087,7 +1053,7 @@ class TodoServiceTest {
     }
 
     @Test
-    @DisplayName("목표 위치의 상태가 이동하려는 상태와 다르면 InvalidDestinationException이 발생한다")
+    @DisplayName("실패: 목표 위치의 상태가 이동하려는 상태와 다르면 예외가 발생한다")
     void fail_whenDestinationStatusIsIncorrect() {
       // Given
       var trio = entityFactory.insertUserGroup();
@@ -1110,7 +1076,7 @@ class TodoServiceTest {
     }
 
     @Test
-    @DisplayName("대상과 목표 위치가 동일하면 InvalidDestinationException이 발생한다")
+    @DisplayName("실패: 대상과 목표 위치가 동일하면 예외가 발생한다")
     void fail_whenTargetAndDestinationAreSame() {
       // Given
       var trio = entityFactory.insertUserGroup();
@@ -1129,7 +1095,7 @@ class TodoServiceTest {
     }
 
     @Test
-    @DisplayName("같은 상태 내에서 Todo를 가장 끝으로 이동시킨다")
+    @DisplayName("성공: 같은 상태 내에서 Todo를 가장 끝으로 이동시킨다")
     void success_whenMovingTodoToEndOfSameStatus() {
       // Given
       var trio = entityFactory.insertUserGroup();
@@ -1152,7 +1118,7 @@ class TodoServiceTest {
     }
 
     @Test
-    @DisplayName("삭제된 Todo를 이동하려 할 때 TodoNotFoundException이 발생한다")
+    @DisplayName("실패: 삭제된 Todo를 이동하려 할 때 예외가 발생한다")
     void fail_whenMovingDeletedTodo() {
       // Given
       var trio = entityFactory.insertUserGroup();
@@ -1172,7 +1138,7 @@ class TodoServiceTest {
   }
 
   @Nested
-  @DisplayName("Todo star 표기")
+  @DisplayName("Todo star 표기 (starTodo)")
   class StarTodo {
 
     @Test
@@ -1220,11 +1186,13 @@ class TodoServiceTest {
       // Given
       var trio = entityFactory.insertUserGroup();
       User user = trio.first();
-      Group group = trio.second();
-      long nonExistentTodoId = -1L;
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), trio.second().getId(), "t", "d", TodoStatus.TO_DO, false);
+      th.delete(todo);
 
       // When
-      Runnable lambda = () -> todoService.starTodo(user.getId(), nonExistentTodoId);
+      Runnable lambda = () -> todoService.starTodo(user.getId(), todo.getId());
 
       // Then
       Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
@@ -1240,6 +1208,7 @@ class TodoServiceTest {
       Todo todo =
           entityFactory.insertTodo(
               user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+
       todoService.deleteTodo(todo.getId());
 
       // When
@@ -1251,7 +1220,7 @@ class TodoServiceTest {
   }
 
   @Nested
-  @DisplayName("Todo star 제거")
+  @DisplayName("Todo star 제거 (unstarTodo)")
   class UnstarTodo {
 
     @Test
@@ -1299,10 +1268,9 @@ class TodoServiceTest {
       // Given
       var trio = entityFactory.insertUserGroup();
       User user = trio.first();
-      Group group = trio.second();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+              user.getId(), user.getId(), trio.second().getId(), "t", "d", TodoStatus.TO_DO, false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
       todoService.deleteTodo(todo.getId());
 

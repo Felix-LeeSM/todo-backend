@@ -97,27 +97,25 @@ public class TodoRepository {
     User author = em.getReference(User.class, createTodoDTO.getAuthorId());
     Group group = em.getReference(Group.class, createTodoDTO.getGroupId());
 
-    // TodoStatus defaultTodoStatus = TodoStatus.TO_DO;
+    TodoStatus defaultTodoStatus = TodoStatus.TO_DO;
 
     todo.setAuthor(author);
     todo.setGroup(group);
     todo.setTitle(createTodoDTO.getTitle());
     todo.setDescription(createTodoDTO.getDescription());
-    todo.setOrder(createTodoDTO.getOrder());
-    // todo.setTodoStatus(defaultTodoStatus);
+    todo.setTodoStatus(defaultTodoStatus);
 
-    // String maxOrder =
-    // em.createQuery(
-    //         "SELECT MAX(t.order) FROM Todo t WHERE t.group = :group AND t.todoStatus =
-    // :todoStatus",
-    //         String.class)
-    //     .setParameter("group", group)
-    //     .setParameter("todoStatus", defaultTodoStatus)
-    //     .getSingleResult();
+    String maxOrder =
+        em.createQuery(
+                "SELECT MAX(t.order) FROM Todo t WHERE t.group = :group AND t.todoStatus = :todoStatus",
+                String.class)
+            .setParameter("group", group)
+            .setParameter("todoStatus", defaultTodoStatus)
+            .getSingleResult();
 
-    // String newOrder = OrderGenerator.generate(maxOrder, null);
+    String newOrder = OrderGenerator.generate(maxOrder, null);
 
-    // todo.setOrder(newOrder);
+    todo.setOrder(createTodoDTO.getOrder() != null ? createTodoDTO.getOrder() : newOrder);
 
     em.persist(todo);
 
@@ -144,27 +142,26 @@ public class TodoRepository {
 
   @Transactional
   public TodoDTO updateTodo(UpdateTodoDTO updateTodoDTO) {
-    return em
-        .createQuery(
-            """
+    Todo todo =
+        em
+            .createQuery(
+                """
           SELECT t
           FROM Todo t
           WHERE t.id = :todoId
           """,
-            Todo.class)
-        .setParameter("todoId", updateTodoDTO.getId())
-        .getResultList()
-        .stream()
-        .findFirst()
-        .map(
-            todo -> {
-              todo.setDescription(updateTodoDTO.getDescription());
-              todo.setTitle(updateTodoDTO.getTitle());
-              em.flush();
-              return todo;
-            })
-        .map(TodoDTO::of)
-        .orElseThrow(ResourceNotFoundException::new);
+                Todo.class)
+            .setParameter("todoId", updateTodoDTO.getId())
+            .getResultList()
+            .stream()
+            .findFirst()
+            .orElseThrow(ResourceNotFoundException::new);
+
+    if (updateTodoDTO.getTitle() != null) todo.setTitle(updateTodoDTO.getTitle());
+
+    if (updateTodoDTO.getDescription() != null) todo.setDescription(updateTodoDTO.getDescription());
+
+    return TodoDTO.of(todo);
   }
 
   @Transactional
