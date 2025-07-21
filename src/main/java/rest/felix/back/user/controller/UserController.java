@@ -63,7 +63,7 @@ public class UserController {
 
     UserDTO userDTO =
         userService
-            .getByUsername(givenUsername)
+            .findByUsername(givenUsername)
             .filter(DTO -> passwordService.verifyPassword(givenPassword, DTO.getHashedPassword()))
             .orElseThrow(NoMatchingUserException::new);
 
@@ -108,7 +108,7 @@ public class UserController {
     }
 
     return userService
-        .getByUsername(authUser.getUsername())
+        .findByUsername(authUser.getUsername())
         .map(
             userDTO ->
                 new UserResponseDTO(userDTO.getId(), userDTO.getUsername(), userDTO.getNickname()))

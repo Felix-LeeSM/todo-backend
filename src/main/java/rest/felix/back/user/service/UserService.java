@@ -4,6 +4,7 @@ import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.user.dto.SignupDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
 import rest.felix.back.user.dto.UserDTO;
@@ -17,6 +18,7 @@ import rest.felix.back.user.repository.UserRepository;
 public class UserService {
 
   private final UserRepository userRepository;
+  private final UserGroupRepository userGroupRepository;
 
   @Transactional
   public UserDTO signup(SignupDTO signupDTO) {
@@ -30,28 +32,27 @@ public class UserService {
   public void validateSignupRequestDTO(SignupRequestDTO signupRequestDTO)
       throws ConfirmPasswordMismatchException, UsernameTakenException {
 
-    if (!signupRequestDTO.getPassword().equals(signupRequestDTO.getConfirmPassword())) {
+    if (!signupRequestDTO.getPassword().equals(signupRequestDTO.getConfirmPassword()))
       throw new ConfirmPasswordMismatchException();
-    }
 
-    if (userRepository.getByUsername(signupRequestDTO.getUsername()).isPresent()) {
+    if (userRepository.findByUsername(signupRequestDTO.getUsername()).isPresent())
       throw new UsernameTakenException();
-    }
   }
 
   @Transactional(readOnly = true)
-  public Optional<UserDTO> getByUsername(String username) {
+  public Optional<UserDTO> findByUsername(String username) {
 
-    return userRepository.getByUsername(username).map(UserDTO::of);
+    return userRepository.findByUsername(username);
   }
 
   @Transactional(readOnly = true)
-  public Optional<UserDTO> getById(Long id) {
+  public Optional<UserDTO> findById(Long id) {
 
-    return userRepository.getById(id).map(UserDTO::of);
+    return userRepository.findById(id);
   }
 
+  @Transactional(readOnly = true)
   public boolean existsById(Long userId) {
-    return userRepository.getById(userId).isPresent();
+    return userRepository.findById(userId).isPresent();
   }
 }

@@ -44,7 +44,7 @@ class UserServiceTest {
     // When
 
     UserDTO createdUserDTO = userService.signup(signupDTO);
-    User createdUser = userRepository.getByUsername("username").get();
+    UserDTO createdUser = userRepository.findByUsername("username").get();
 
     // Then
 
@@ -138,7 +138,7 @@ class UserServiceTest {
 
     // When
 
-    UserDTO userDTO = userService.getByUsername("username").get();
+    UserDTO userDTO = userService.findByUsername("username").get();
 
     // Then
 
@@ -154,7 +154,7 @@ class UserServiceTest {
 
     // When
 
-    Optional<UserDTO> userDTO = userService.getByUsername("username");
+    Optional<UserDTO> userDTO = userService.findByUsername("username");
 
     // Then
 

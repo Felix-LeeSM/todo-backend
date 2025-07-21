@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import rest.felix.back.common.exception.ErrorResponseDTO;
 import rest.felix.back.common.exception.throwable.badrequest.BadRequestException;
+import rest.felix.back.common.exception.throwable.conflict.ConflictException;
+import rest.felix.back.common.exception.throwable.gone.GoneException;
 import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
 import rest.felix.back.common.exception.throwable.unauthorized.UnauthorizedException;
 import rest.felix.back.user.exception.UserAccessDeniedException;
@@ -18,6 +20,18 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(BadRequestException.class)
   public ResponseEntity<ErrorResponseDTO> handleBadRequestException(BadRequestException exception) {
+    return ResponseEntity.status(exception.getStatusCode())
+        .body(new ErrorResponseDTO(exception.getMessage()));
+  }
+
+  @ExceptionHandler(GoneException.class)
+  public ResponseEntity<ErrorResponseDTO> handleGoneException(GoneException exception) {
+    return ResponseEntity.status(exception.getStatusCode())
+        .body(new ErrorResponseDTO(exception.getMessage()));
+  }
+
+  @ExceptionHandler(ConflictException.class)
+  public ResponseEntity<ErrorResponseDTO> handleConflictException(ConflictException exception) {
     return ResponseEntity.status(exception.getStatusCode())
         .body(new ErrorResponseDTO(exception.getMessage()));
   }

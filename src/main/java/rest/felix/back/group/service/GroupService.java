@@ -1,5 +1,6 @@
 package rest.felix.back.group.service;
 
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -11,9 +12,12 @@ import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.DetailedGroupDTO;
 import rest.felix.back.group.dto.FullGroupDetailsDTO;
 import rest.felix.back.group.dto.GroupDTO;
+import rest.felix.back.group.dto.GroupInvitationDTO;
+import rest.felix.back.group.dto.GroupInvitationInfoDTO;
 import rest.felix.back.group.dto.MemberDTO;
 import rest.felix.back.group.dto.UserGroupDTO;
 import rest.felix.back.group.entity.enumerated.GroupRole;
+import rest.felix.back.group.repository.GroupInvitationRepository;
 import rest.felix.back.group.repository.GroupRepository;
 import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.dto.TodoCountDTO;
@@ -30,6 +34,7 @@ public class GroupService {
   private final UserGroupRepository userGroupRepository;
   private final TodoRepository todoRepository;
   private final UserRepository userRepository;
+  private final GroupInvitationRepository groupInvitationRepository;
 
   @Transactional
   public GroupDTO createGroup(CreateGroupDTO createGroupDTO) {
@@ -128,7 +133,7 @@ public class GroupService {
         todoDTOs);
   }
 
-  @Transactional
+  @Transactional(readOnly = true)
   public void assertGroupAuthority(long userId, long groupId, GroupRole groupRole) {
 
     userGroupRepository
@@ -136,5 +141,44 @@ public class GroupService {
         .map(dto -> dto.getGroupRole())
         .filter(role -> role.gte(groupRole))
         .orElseThrow(UserAccessDeniedException::new);
+  }
+
+  @Transactional
+  public void registerUserToGroup(long userId, long groupId, GroupRole groupRole) {
+    userGroupRepository.registerUserToGroup(userId, groupId, groupRole);
+  }
+
+  @Transactional(readOnly = true)
+  public GroupInvitationInfoDTO findGroupInvitationInfo(GroupInvitationDTO groupInvitation) {
+    long groupId = groupInvitation.getGroupId();
+    long issuerId = groupInvitation.getIssuerId();
+
+    GroupDTO groupDTO =
+        groupRepository.findById(groupId).orElseThrow(ResourceNotFoundException::new);
+
+    TodoCountDTO todoCount =
+        todoRepository
+            .findTodoCountsByGroupIds(List.of(groupId))
+            .getOrDefault(groupId, new TodoCountDTO(groupId, 0, 0));
+
+    List<MemberDTO> members = userRepository.findMembersByGroupId(groupId);
+
+    MemberDTO issuer =
+        members.stream()
+            .filter(member -> member.getId() == issuerId)
+            .findFirst()
+            .orElseThrow(ResourceNotFoundException::new);
+
+    ZonedDateTime activeUntil = groupInvitation.getExpiresAt();
+
+    return new GroupInvitationInfoDTO(
+        groupDTO.getName(),
+        groupDTO.getDescription(),
+        todoCount.getTodoCount(),
+        todoCount.getCompletedTodoCount(),
+        members.size(),
+        issuer,
+        members,
+        activeUntil);
   }
 }

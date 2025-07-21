@@ -50,6 +50,27 @@ public class TodoRepository {
         .toList();
   }
 
+  @Transactional(readOnly = true)
+  public Optional<TodoCountDTO> findTodoCountsByGroupId(Long groupId) {
+    return em.createQuery(
+            """
+            SELECT new rest.felix.back.todo.dto.TodoCountDTO(
+                g.id,
+                COUNT(t),
+                SUM(CASE WHEN t.todoStatus = TodoStatus.DONE THEN 1 ELSE 0 END)
+            )
+            FROM Group g
+            LEFT JOIN g.todos t
+            WHERE g.id = :groupIds
+            GROUP BY g.id
+            """,
+            TodoCountDTO.class)
+        .setParameter("groupId", groupId)
+        .getResultStream()
+        .findFirst();
+  }
+
+  @Transactional(readOnly = true)
   public Map<Long, TodoCountDTO> findTodoCountsByGroupIds(List<Long> groupIds) {
     return em
         .createQuery(
@@ -71,6 +92,7 @@ public class TodoRepository {
         .collect(Collectors.toMap(TodoCountDTO::getGroupId, dto -> dto));
   }
 
+  @Transactional(readOnly = true)
   public Optional<TodoDTO> findByIdAndGroupId(long groupId, long todoId) {
     return em
         .createQuery(

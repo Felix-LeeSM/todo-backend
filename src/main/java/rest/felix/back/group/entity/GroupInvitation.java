@@ -38,6 +38,9 @@ public class GroupInvitation {
   @Column(nullable = false, unique = true)
   private String token;
 
+  @Column(nullable = false)
+  private ZonedDateTime expiresAt;
+
   @CreationTimestamp
   @Column(nullable = false, updatable = false)
   private ZonedDateTime createdAt;

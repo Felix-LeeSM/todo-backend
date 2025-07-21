@@ -1,8 +1,6 @@
 package rest.felix.back.user.repository;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.NoResultException;
-import jakarta.persistence.TypedQuery;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -10,8 +8,10 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.group.dto.MemberDTO;
 import rest.felix.back.user.dto.SignupDTO;
+import rest.felix.back.user.dto.UserDTO;
 import rest.felix.back.user.entity.User;
 import rest.felix.back.user.exception.UsernameTakenException;
 
@@ -21,6 +21,7 @@ public class UserRepository {
 
   private final EntityManager em;
 
+  @Transactional
   public User createUser(SignupDTO signupDTO) throws UsernameTakenException {
     try {
       User user = new User();
@@ -38,20 +39,17 @@ public class UserRepository {
     }
   }
 
-  public Optional<User> getByUsername(String username) {
-    try {
-      TypedQuery<User> query =
-          em.createQuery("SELECT u FROM User u WHERE u.username = :username", User.class);
-      query.setParameter("username", username);
+  @Transactional(readOnly = true)
+  public Optional<UserDTO> findByUsername(String username) {
 
-      User user = query.getSingleResult();
-      return Optional.of(user);
-
-    } catch (NoResultException e) {
-      return Optional.empty();
-    }
+    return em.createQuery("SELECT u FROM User u WHERE u.username = :username", User.class)
+        .setParameter("username", username)
+        .getResultStream()
+        .findFirst()
+        .map(UserDTO::of);
   }
 
+  @Transactional(readOnly = true)
   public Map<Long, List<MemberDTO>> findMembersByGroupIds(List<Long> groupIds) {
     return em
         .createQuery(
@@ -74,6 +72,7 @@ public class UserRepository {
         .collect(Collectors.groupingBy(MemberDTO::getGroupId));
   }
 
+  @Transactional(readOnly = true)
   public List<MemberDTO> findMembersByGroupId(Long groupId) {
     return em.createQuery(
             """
@@ -93,20 +92,17 @@ public class UserRepository {
         .getResultList();
   }
 
+  @Transactional
   public void save(User user) {
     em.persist(user);
   }
 
-  public Optional<User> getById(Long userId) {
-    try {
-      TypedQuery<User> query = em.createQuery("SELECT u FROM User u WHERE u.id = :id", User.class);
-      query.setParameter("id", userId);
-
-      User user = query.getSingleResult();
-      return Optional.of(user);
-
-    } catch (NoResultException e) {
-      return Optional.empty();
-    }
+  @Transactional(readOnly = true)
+  public Optional<UserDTO> findById(Long userId) {
+    return em.createQuery("SELECT u FROM User u WHERE u.id = :userId", User.class)
+        .setParameter("userId", userId)
+        .getResultStream()
+        .findFirst()
+        .map(UserDTO::of);
   }
 }

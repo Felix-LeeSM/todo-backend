@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.GroupDTO;
 import rest.felix.back.group.entity.Group;
@@ -16,6 +17,7 @@ public class GroupRepository {
 
   private final EntityManager em;
 
+  @Transactional
   public GroupDTO createGroup(CreateGroupDTO createGroupDTO) {
     String groupName = createGroupDTO.getGroupName();
 
@@ -28,6 +30,7 @@ public class GroupRepository {
     return new GroupDTO(group.getId(), group.getName(), group.getDescription());
   }
 
+  @Transactional(readOnly = true)
   public List<GroupDTO> findGroupsByUserId(long userId) {
     String query =
         """
@@ -47,6 +50,7 @@ public class GroupRepository {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public Optional<GroupDTO> findById(long groupId) {
     try {
       String query =
@@ -64,6 +68,7 @@ public class GroupRepository {
     }
   }
 
+  @Transactional
   public void deleteGroupById(long groupId) {
     em.createQuery(
             """

@@ -14,6 +14,7 @@ import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.dto.SignInRequestDTO;
 import rest.felix.back.user.dto.SignupRequestDTO;
+import rest.felix.back.user.dto.UserDTO;
 import rest.felix.back.user.dto.UserResponseDTO;
 import rest.felix.back.user.entity.User;
 import rest.felix.back.user.exception.ConfirmPasswordMismatchException;
@@ -56,7 +57,7 @@ class UserControllerUnitTest {
     Assertions.assertEquals("username", signupResponseDTO.username());
     Assertions.assertEquals("nickname", signupResponseDTO.nickname());
 
-    User user = userRepository.getById(signupResponseDTO.id()).get();
+    UserDTO user = userRepository.findById(signupResponseDTO.id()).get();
     Assertions.assertEquals("username", user.getUsername());
     Assertions.assertEquals("nickname", user.getNickname());
   }

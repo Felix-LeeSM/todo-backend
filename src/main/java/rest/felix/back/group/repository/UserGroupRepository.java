@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.group.dto.UserGroupDTO;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
@@ -20,6 +21,7 @@ public class UserGroupRepository {
 
   private final EntityManager em;
 
+  @Transactional(readOnly = true)
   public Optional<UserGroupDTO> findByUserIdAndGroupId(long userId, long groupId) {
     try {
       return Optional.of(
@@ -44,6 +46,7 @@ public class UserGroupRepository {
     }
   }
 
+  @Transactional(readOnly = true)
   public List<UserGroupDTO> findByGroupId(long groupId) {
 
     return em
@@ -64,6 +67,7 @@ public class UserGroupRepository {
         .toList();
   }
 
+  @Transactional
   public void registerUserToGroup(long userId, long groupId, GroupRole role) {
     User userRef = em.getReference(User.class, userId);
     Group groupRef = em.getReference(Group.class, groupId);
@@ -76,6 +80,7 @@ public class UserGroupRepository {
     em.persist(userGroup);
   }
 
+  @Transactional
   public void deleteByGroupId(long groupId) {
     em.createQuery(
             """
@@ -89,6 +94,7 @@ public class UserGroupRepository {
         .executeUpdate();
   }
 
+  @Transactional(readOnly = true)
   public Map<Long, GroupRole> findUserRolesByGroupIds(Long userId, List<Long> groupIds) {
     return em
         .createQuery(
