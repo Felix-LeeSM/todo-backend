@@ -3,6 +3,7 @@ package rest.felix.back.common.config.security;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -27,11 +28,19 @@ public class SecurityConfig {
             exceptions -> exceptions.authenticationEntryPoint(customAuthenticationEntryPoint))
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers("/api/v1/user")
+                auth.requestMatchers(HttpMethod.POST, "/api/v1/user")
                     .permitAll()
-                    .requestMatchers("/api/v1/user/me")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/user/me")
                     .permitAll()
-                    .requestMatchers("/api/v1/user/token/access-token")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/user/token/access-token")
+                    .permitAll()
+                    .requestMatchers(
+                        request -> {
+                          String ip = request.getRemoteAddr();
+                          return isLocalAddress(ip)
+                              && (request.getRequestURI().startsWith("/swagger-ui")
+                                  || request.getRequestURI().startsWith("/v3/api-docs"));
+                        })
                     .permitAll()
                     .anyRequest()
                     .authenticated())
@@ -42,5 +51,10 @@ public class SecurityConfig {
   @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
+  }
+
+  private boolean isLocalAddress(String ip) {
+    System.out.println(ip);
+    return ip.equals("127.0.0.1") || ip.equals("0:0:0:0:0:0:0:1"); // IPv4 and IPv6 localhost
   }
 }
