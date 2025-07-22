@@ -23,7 +23,7 @@ import rest.felix.back.group.dto.FullGroupDetailsResponseDTO;
 import rest.felix.back.group.dto.GroupDTO;
 import rest.felix.back.group.dto.GroupInvitationInfoDTOResponse;
 import rest.felix.back.group.dto.GroupResponseDTO;
-import rest.felix.back.group.dto.MemberDTO;
+import rest.felix.back.group.dto.MemberResponseDTO;
 import rest.felix.back.group.dto.UserGroupDTO;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
@@ -216,7 +216,7 @@ public class GroupControllerUnitTest {
 
       Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick"),
-          group1DTO.members().stream().map(MemberDTO::getNickname).sorted().toList());
+          group1DTO.members().stream().map(MemberResponseDTO::getNickname).sorted().toList());
 
       DetailedGroupResponseDTO group2DTO = body.get(1);
       Assertions.assertEquals(group2.getId(), group2DTO.id());
@@ -229,7 +229,7 @@ public class GroupControllerUnitTest {
 
       Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick", "otherUser2Nick"),
-          group2DTO.members().stream().map(MemberDTO::getNickname).sorted().toList());
+          group2DTO.members().stream().map(MemberResponseDTO::getNickname).sorted().toList());
     }
 
     @Test
@@ -278,7 +278,7 @@ public class GroupControllerUnitTest {
 
       Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick"),
-          group1DTO.members().stream().map(MemberDTO::getNickname).sorted().toList());
+          group1DTO.members().stream().map(MemberResponseDTO::getNickname).sorted().toList());
     }
 
     @Test
@@ -391,7 +391,7 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(3, body.memberCount());
       Assertions.assertEquals(
           List.of("memberNick1", "memberNick2", "ownerNick"),
-          body.members().stream().map(MemberDTO::getNickname).sorted().toList());
+          body.members().stream().map(MemberResponseDTO::getNickname).sorted().toList());
       Assertions.assertEquals(4, body.todos().size());
       Assertions.assertTrue(
           body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Owner Todo 1")));
@@ -462,7 +462,7 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(3, body.memberCount());
       Assertions.assertEquals(
           List.of("memberNick3", "memberNick4", "ownerNick2"),
-          body.members().stream().map(MemberDTO::getNickname).sorted().toList());
+          body.members().stream().map(MemberResponseDTO::getNickname).sorted().toList());
       Assertions.assertEquals(3, body.todos().size());
       Assertions.assertTrue(
           body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Owner Todo 3")));
@@ -531,7 +531,7 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(3, body.memberCount());
       Assertions.assertEquals(
           List.of("managerNick", "memberNick5", "ownerNick3"),
-          body.members().stream().map(MemberDTO::getNickname).sorted().toList());
+          body.members().stream().map(MemberResponseDTO::getNickname).sorted().toList());
       Assertions.assertEquals(3, body.todos().size());
       Assertions.assertTrue(
           body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Owner Todo 4")));

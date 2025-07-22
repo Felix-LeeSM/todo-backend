@@ -1417,8 +1417,7 @@ public class TodoControllerWebTest {
       Assertions.assertNull(fetchedTodo.getAssigneeId());
     }
 
-
-        @Test
+    @Test
     @DisplayName("성공 - dueDate만 업데이트")
     void HappyPath_4() throws Exception {
       // Given
