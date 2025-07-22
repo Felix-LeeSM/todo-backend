@@ -12,12 +12,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.Cookie;
+import java.time.ZonedDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,10 +30,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
+import rest.felix.back.common.config.GroupConfig;
 import rest.felix.back.common.security.JwtTokenProvider;
 import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.group.dto.CreateGroupRequestDTO;
+import rest.felix.back.group.dto.GroupInvitationInfoDTOResponse;
+import rest.felix.back.group.dto.MemberDTO;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
@@ -49,6 +58,7 @@ public class GroupControllerWebTest {
   @Autowired private GroupRepository groupRepository;
   @Autowired private UserGroupRepository userGroupRepository;
   @Autowired private MockMvc mvc;
+  @Autowired private GroupConfig groupConfig;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private JwtTokenProvider jwtTokenProvider;
   @Autowired private EntityFactory entityFactory;
@@ -829,6 +839,562 @@ public class GroupControllerWebTest {
 
       result.andExpect(status().isForbidden());
       result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 초대 생성 테스트")
+  class CreateGroupInvitation {
+    @ParameterizedTest
+    @EnumSource(
+        value = GroupRole.class,
+        names = {"OWNER", "MANAGER"})
+    @DisplayName("성공")
+    public void HappyPath(GroupRole role) throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username" + role.name(), "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), role);
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/invitation", group.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              post(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isCreated());
+      result.andExpect(jsonPath("$.token").isNotEmpty());
+      result.andExpect(jsonPath("$.expiresAt").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("실패 - 로그인 하지 않은 상태")
+    public void Failure_NoCookie() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      String path = String.format("/api/v1/group/%d/invitation", group.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              post(path)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 유저")
+    public void Failure_NoSuchUser() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      th.delete(userGroup);
+      th.delete(user);
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/invitation", group.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              post(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 그룹")
+    public void Failure_NoGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      th.delete(userGroup);
+      th.delete(group);
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/invitation", group.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              post(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+        value = GroupRole.class,
+        names = {"MEMBER", "VIEWER"})
+    @DisplayName("실패 - 권한 부족")
+    public void Failure_ImproperGroupRole(GroupRole role) throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username" + role.name(), "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), role);
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/invitation", group.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              post(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 초대 횟수 제한 초과")
+    public void Failure_TooManyInvitations() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      // Insert max invitations
+      for (int i = 0; i < groupConfig.getLimit(); i++) {
+        entityFactory.insertGroupInvitation(
+            user.getId(), group.getId(), "token" + i, ZonedDateTime.now().plusDays(1));
+      }
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/invitation", group.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              post(path)
+                  .cookie(cookie)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .accept(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isBadRequest());
+      result.andExpect(jsonPath("$.message", equalTo("Too many invitations.")));
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 초대 정보 테스트")
+  class GetInvitationInfo {
+    @Test
+    @DisplayName("성공")
+    public void HappyPath() throws Exception {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      User member1 = entityFactory.insertUser("member1", "hashedPassword", "memberNick1");
+      User member2 = entityFactory.insertUser("member2", "hashedPassword", "memberNick2");
+      User member3 = entityFactory.insertUser("member3", "hashedPassword", "memberNick3");
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(member1.getId(), group.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(member2.getId(), group.getId(), GroupRole.MANAGER);
+      entityFactory.insertUserGroup(member3.getId(), group.getId(), GroupRole.VIEWER);
+
+      entityFactory.insertTodo(
+          issuer.getId(),
+          issuer.getId(),
+          group.getId(),
+          "Todo A",
+          "Desc A",
+          TodoStatus.IN_PROGRESS,
+          "a",
+          false);
+      entityFactory.insertTodo(
+          member1.getId(),
+          member1.getId(),
+          group.getId(),
+          "Todo B",
+          "Desc B",
+          TodoStatus.DONE,
+          "b",
+          false);
+      entityFactory.insertTodo(
+          member2.getId(),
+          member2.getId(),
+          group.getId(),
+          "Todo C",
+          "Desc C",
+          TodoStatus.IN_PROGRESS,
+          "c",
+          false);
+      entityFactory.insertTodo(
+          member3.getId(),
+          member3.getId(),
+          group.getId(),
+          "Todo D",
+          "Desc D",
+          TodoStatus.DONE,
+          "d",
+          false);
+      entityFactory.insertTodo(
+          issuer.getId(),
+          issuer.getId(),
+          group.getId(),
+          "Todo E",
+          "Desc E",
+          TodoStatus.IN_PROGRESS,
+          "e",
+          false);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/invitation/%s", token);
+
+      // When
+      ResultActions result =
+          mvc.perform(get(path).cookie(cookie)).andDo(MockMvcResultHandlers.print());
+
+      // Then
+      result.andExpect(status().isOk());
+
+      String responseString = result.andReturn().getResponse().getContentAsString();
+      GroupInvitationInfoDTOResponse responseDTO =
+          objectMapper.readValue(responseString, GroupInvitationInfoDTOResponse.class);
+
+      // Verify basic group details
+      Assertions.assertEquals(group.getName(), responseDTO.name());
+      Assertions.assertEquals(group.getDescription(), responseDTO.description());
+      Assertions.assertNotNull(responseDTO.expiresAt());
+
+      // Verify issuer details
+      Assertions.assertEquals(issuer.getId(), responseDTO.issuer().getId());
+      Assertions.assertEquals(issuer.getNickname(), responseDTO.issuer().getNickname());
+      Assertions.assertEquals(GroupRole.OWNER, responseDTO.issuer().getRole());
+
+      // Verify member count
+      Assertions.assertEquals(4, responseDTO.memberCount());
+
+      // Verify members list
+      List<MemberDTO> expectedMembers =
+          List.of(
+                  new MemberDTO(
+                      issuer.getId(), issuer.getNickname(), group.getId(), GroupRole.OWNER),
+                  new MemberDTO(
+                      member1.getId(), member1.getNickname(), group.getId(), GroupRole.MEMBER),
+                  new MemberDTO(
+                      member2.getId(), member2.getNickname(), group.getId(), GroupRole.MANAGER),
+                  new MemberDTO(
+                      member3.getId(), member3.getNickname(), group.getId(), GroupRole.VIEWER))
+              .stream()
+              .sorted(Comparator.comparing(MemberDTO::getId))
+              .toList();
+
+      List<MemberDTO> actualMembers =
+          responseDTO.members().stream()
+              .sorted(Comparator.comparing(MemberDTO::getId))
+              .collect(Collectors.toList());
+
+      org.assertj.core.api.Assertions.assertThat(actualMembers)
+          .usingRecursiveComparison()
+          .isEqualTo(expectedMembers);
+
+      // Verify todo counts
+      long expectedTodoCount = 5;
+      long expectedCompletedTodoCount = 2;
+      Assertions.assertEquals(expectedTodoCount, responseDTO.todoCount());
+      Assertions.assertEquals(expectedCompletedTodoCount, responseDTO.completedTodoCount());
+    }
+
+    @Test
+    @DisplayName("실패 - 로그인 하지 않은 상태")
+    public void Failure_NoCookie() throws Exception {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      String path = String.format("/api/v1/group/invitation/%s", token);
+
+      // When
+      ResultActions result = mvc.perform(get(path));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 유저")
+    public void Failure_NoSuchUser() throws Exception {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      th.delete(user);
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/invitation/%s", token);
+
+      // When
+      ResultActions result = mvc.perform(get(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 초대")
+    public void Failure_NoInvitation() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+
+      String token = "invalidToken";
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/invitation/%s", token);
+
+      // When
+      ResultActions result = mvc.perform(get(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isNotFound());
+      result.andExpect(jsonPath("$.message", equalTo("초대가 존재하지 않습니다.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 만료된 초대")
+    public void Failure_ExpiredInvitation() throws Exception {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "expiredToken";
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().minusDays(1));
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/invitation/%s", token);
+
+      // When
+      ResultActions result = mvc.perform(get(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isGone());
+      result.andExpect(jsonPath("$.message", equalTo("만료된 초대입니다. 더 이상 사용할 수 없습니다.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 이미 그룹 멤버")
+    public void Failure_AlreadyGroupMember() throws Exception {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/invitation/%s", token);
+
+      // When
+      ResultActions result = mvc.perform(get(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isConflict());
+      result.andExpect(jsonPath("$.message", equalTo("User is already a member of the group.")));
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 초대 수락 테스트")
+  class AcceptInvitation {
+    @Test
+    @DisplayName("성공")
+    public void HappyPath() throws Exception {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/invitation/%s/accept", token);
+
+      // When
+      ResultActions result = mvc.perform(post(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isCreated());
+      Assertions.assertTrue(
+          userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).isPresent());
+    }
+
+    @Test
+    @DisplayName("실패 - 로그인 하지 않은 상태")
+    public void Failure_NoCookie() throws Exception {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      String path = String.format("/api/v1/group/invitation/%s/accept", token);
+
+      // When
+      ResultActions result = mvc.perform(post(path));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 유저")
+    public void Failure_NoSuchUser() throws Exception {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      th.delete(user);
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/invitation/%s/accept", token);
+
+      // When
+      ResultActions result = mvc.perform(post(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 초대")
+    public void Failure_NoInvitation() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+
+      String token = "invalidToken";
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/invitation/%s/accept", token);
+
+      // When
+      ResultActions result = mvc.perform(post(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isNotFound());
+      result.andExpect(jsonPath("$.message", equalTo("초대가 존재하지 않습니다.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 만료된 초대")
+    public void Failure_ExpiredInvitation() throws Exception {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "expiredToken";
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().minusDays(1));
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/invitation/%s/accept", token);
+
+      // When
+      ResultActions result = mvc.perform(post(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isGone());
+      result.andExpect(jsonPath("$.message", equalTo("만료된 초대입니다. 더 이상 사용할 수 없습니다.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 이미 그룹 멤버")
+    public void Failure_AlreadyGroupMember() throws Exception {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/invitation/%s/accept", token);
+
+      // When
+      ResultActions result = mvc.perform(post(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isConflict());
+      result.andExpect(jsonPath("$.message", equalTo("User is already a member of the group.")));
     }
   }
 }

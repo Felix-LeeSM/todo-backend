@@ -8,15 +8,15 @@ import rest.felix.back.group.entity.GroupInvitation;
 @Getter
 @AllArgsConstructor
 public class GroupInvitationDTO {
-  private long groupId;
   private long issuerId;
+  private long groupId;
   private String token;
   private ZonedDateTime expiresAt;
 
   public static GroupInvitationDTO of(GroupInvitation groupInvitation) {
     return new GroupInvitationDTO(
-        groupInvitation.getGroup().getId(),
         groupInvitation.getIssuer().getId(),
+        groupInvitation.getGroup().getId(),
         groupInvitation.getToken(),
         groupInvitation.getExpiresAt());
   }

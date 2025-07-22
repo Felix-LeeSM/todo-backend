@@ -1,5 +1,6 @@
 package rest.felix.back.group.controller;
 
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
@@ -11,19 +12,27 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+
+import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
 import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.Pair;
 import rest.felix.back.common.util.TestHelper;
+import rest.felix.back.group.dto.CreateGroupInvitationResponseDTO;
 import rest.felix.back.group.dto.CreateGroupRequestDTO;
 import rest.felix.back.group.dto.DetailedGroupResponseDTO;
 import rest.felix.back.group.dto.FullGroupDetailsResponseDTO;
 import rest.felix.back.group.dto.GroupDTO;
+import rest.felix.back.group.dto.GroupInvitationInfoDTOResponse;
 import rest.felix.back.group.dto.GroupResponseDTO;
 import rest.felix.back.group.dto.MemberDTO;
 import rest.felix.back.group.dto.UserGroupDTO;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
+import rest.felix.back.group.exception.AlreadyGroupMemberException;
+import rest.felix.back.group.exception.ExpiredInvitationException;
+import rest.felix.back.group.exception.NoInvitationException;
+import rest.felix.back.group.exception.TooManyInvitationsException;
 import rest.felix.back.group.repository.GroupRepository;
 import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
@@ -749,6 +758,331 @@ public class GroupControllerUnitTest {
       // Then
 
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+  }
+
+  @SpringBootTest
+  @DisplayName("그룹 초대 생성 테스트")
+  class CreateGroupInvitationTest {
+
+    @Test
+    @DisplayName("성공")
+    public void HappyPath() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      ResponseEntity<CreateGroupInvitationResponseDTO> responseEntity =
+          groupController.createGroupInvitation(authUserDTO, group.getId());
+
+      // Then
+      Assertions.assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+      Assertions.assertNotNull(responseEntity.getBody());
+      Assertions.assertNotNull(responseEntity.getBody().token());
+      Assertions.assertNotNull(responseEntity.getBody().expiresAt());
+    }
+
+    @Test
+    @DisplayName("실패 - 권한 부족")
+    public void Failure_ImproperGroupRole() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER); // Not MANAGER or OWNER
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.createGroupInvitation(authUserDTO, group.getId());
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 유저")
+    public void Failure_NoSuchUser() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      th.delete(user);
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.createGroupInvitation(authUserDTO, group.getId());
+
+      // Then
+      Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 그룹")
+    public void Failure_NoGroup() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      th.delete(group);
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.createGroupInvitation(authUserDTO, group.getId());
+
+      // Then
+      Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 초대 횟수 제한 초과")
+    public void Failure_TooManyInvitations() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      // Fill up invitations to hit the limit
+      for (int i = 0; i < 5; i++) { // Assuming groupConfig.getLimit() is 5
+        entityFactory.insertGroupInvitation(user.getId(), group.getId(), "token" + i, ZonedDateTime.now().plusDays(1));
+      }
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.createGroupInvitation(authUserDTO, group.getId());
+
+      // Then
+      Assertions.assertThrows(TooManyInvitationsException.class, lambda::run);
+    }
+  }
+
+  @SpringBootTest
+  @DisplayName("그룹 초대 정보 테스트")
+  class GetInvitationInfoTest {
+
+    @Test
+    @DisplayName("성공")
+    public void HappyPath() {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      ResponseEntity<GroupInvitationInfoDTOResponse> responseEntity =
+          groupController.getInvitationInfo(authUserDTO, token);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+      Assertions.assertNotNull(responseEntity.getBody());
+      Assertions.assertEquals(group.getName(), responseEntity.getBody().name());
+      Assertions.assertEquals(group.getDescription(), responseEntity.getBody().description());
+      Assertions.assertNotNull(responseEntity.getBody().expiresAt());
+      Assertions.assertEquals(issuer.getId(), responseEntity.getBody().issuer().getId());
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 유저")
+    public void Failure_NoSuchUser() {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      th.delete(user);
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.getInvitationInfo(authUserDTO, token);
+
+      // Then
+      Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 초대")
+    public void Failure_NoInvitation() {
+      // Given
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      String invalidToken = "nonExistentToken";
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.getInvitationInfo(authUserDTO, invalidToken);
+
+      // Then
+      Assertions.assertThrows(NoInvitationException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 만료된 초대")
+    public void Failure_ExpiredInvitation() {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "expiredToken";
+      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().minusDays(1));
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.getInvitationInfo(authUserDTO, token);
+
+      // Then
+      Assertions.assertThrows(ExpiredInvitationException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 이미 그룹 멤버")
+    public void Failure_AlreadyGroupMember() {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.getInvitationInfo(authUserDTO, token);
+
+      // Then
+      Assertions.assertThrows(AlreadyGroupMemberException.class, lambda::run);
+    }
+  }
+
+  @SpringBootTest
+  @DisplayName("그룹 초대 수락 테스트")
+  class AcceptInvitationTest {
+
+    @Test
+    @DisplayName("성공")
+    public void HappyPath() {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      ResponseEntity<Void> responseEntity =
+          groupController.acceptInvitation(authUserDTO, token);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+      Assertions.assertTrue(userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).isPresent());
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 유저")
+    public void Failure_NoSuchUser() {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      th.delete(user);
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.acceptInvitation(authUserDTO, token);
+
+      // Then
+      Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 초대")
+    public void Failure_NoInvitation() {
+      // Given
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      String invalidToken = "nonExistentToken";
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.acceptInvitation(authUserDTO, invalidToken);
+
+      // Then
+      Assertions.assertThrows(NoInvitationException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 만료된 초대")
+    public void Failure_ExpiredInvitation() {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "expiredToken";
+      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().minusDays(1));
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.acceptInvitation(authUserDTO, token);
+
+      // Then
+      Assertions.assertThrows(ExpiredInvitationException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 이미 그룹 멤버")
+    public void Failure_AlreadyGroupMember() {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      String token = "validToken";
+      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.acceptInvitation(authUserDTO, token);
+
+      // Then
+      Assertions.assertThrows(AlreadyGroupMemberException.class, lambda::run);
     }
   }
 }

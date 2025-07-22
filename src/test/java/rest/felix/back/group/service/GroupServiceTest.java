@@ -1,14 +1,21 @@
 package rest.felix.back.group.service;
 
 import jakarta.persistence.EntityManager;
+
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -19,21 +26,27 @@ import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.DetailedGroupDTO;
 import rest.felix.back.group.dto.GroupDTO;
+import rest.felix.back.group.dto.GroupInvitationDTO;
+import rest.felix.back.group.dto.GroupInvitationInfoDTO;
 import rest.felix.back.group.dto.MemberDTO;
+import rest.felix.back.group.dto.UserGroupDTO;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
+import rest.felix.back.group.exception.GroupNotFoundException;
 import rest.felix.back.group.repository.GroupRepository;
+import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.user.entity.User;
+import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @SpringBootTest
 @ActiveProfiles("test")
 class GroupServiceTest {
 
-  @Autowired private EntityManager em;
   @Autowired private GroupService groupService;
   @Autowired private GroupRepository groupRepository;
+  @Autowired private UserGroupRepository userGroupRepository;
   @Autowired private EntityFactory entityFactory;
   @Autowired private TestHelper th;
 
@@ -62,16 +75,7 @@ class GroupServiceTest {
 
       Assertions.assertEquals("groupName", groupDTO.getName());
 
-      Group createdGroup =
-          em.createQuery(
-                  """
-            SELECT g
-            FROM Group g
-            WHERE g.name = :groupName
-            """,
-                  Group.class)
-              .setParameter("groupName", "groupName")
-              .getSingleResult();
+      GroupDTO createdGroup = groupRepository.findById(groupDTO.getId()).get();
 
       Assertions.assertEquals(createdGroup.getId(), groupDTO.getId());
       Assertions.assertEquals("group description", createdGroup.getDescription());
@@ -579,6 +583,270 @@ class GroupServiceTest {
       // Then
 
       Assertions.assertTrue(groupRepository.findById(group.getId()).isEmpty());
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 권한 확인 테스트")
+  class AssertGroupAuthority {
+
+    private static Stream<Arguments> sufficientAuthorityTestCases() {
+      return Stream.of(
+          Arguments.of(GroupRole.OWNER, GroupRole.OWNER),
+          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.OWNER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.OWNER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.MEMBER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.MEMBER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.VIEWER, GroupRole.VIEWER));
+    }
+
+    @ParameterizedTest(name = "성공 - 유저 역할: {0}, 요구 역할: {1}")
+    @MethodSource("sufficientAuthorityTestCases")
+    void HappyPath_SufficientAuthority(GroupRole userRole, GroupRole requiredRole) {
+      // Given
+      User user = entityFactory.insertUser("user" + userRole.name(), "password", "userNick");
+      Group group = entityFactory.insertGroup("group" + userRole.name(), "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
+
+      // When & Then
+      Assertions.assertDoesNotThrow(
+          () -> groupService.assertGroupAuthority(user.getId(), group.getId(), requiredRole));
+    }
+
+    private static Stream<Arguments> insufficientAuthorityTestCases() {
+      return Stream.of(
+          Arguments.of(GroupRole.MANAGER, GroupRole.OWNER),
+          Arguments.of(GroupRole.MEMBER, GroupRole.OWNER),
+          Arguments.of(GroupRole.MEMBER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.VIEWER, GroupRole.OWNER),
+          Arguments.of(GroupRole.VIEWER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.VIEWER, GroupRole.MEMBER));
+    }
+
+    @ParameterizedTest(name = "실패 - 유저 역할: {0}, 요구 역할: {1}")
+    @MethodSource("insufficientAuthorityTestCases")
+    void Failure_InsufficientAuthority(GroupRole userRole, GroupRole requiredRole) {
+      // Given
+      User user = entityFactory.insertUser("user" + userRole.name(), "password", "userNick");
+      Group group = entityFactory.insertGroup("group" + userRole.name(), "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
+
+      // When
+      Runnable lambda = () -> groupService.assertGroupAuthority(user.getId(), group.getId(), requiredRole);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 유저")
+    void Failure_NoSuchUser() {
+      // Given
+      User user = entityFactory.insertUser("user", "password", "userNick");
+      Group group = entityFactory.insertGroup("group", "description");
+      UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      th.delete(userGroup);
+      th.delete(user);
+
+      // When
+      Runnable lambda = () -> groupService.assertGroupAuthority(user.getId(), group.getId(), GroupRole.OWNER);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 그룹")
+    void Failure_NoSuchGroup() {
+      // Given
+      User user = entityFactory.insertUser("user", "password", "userNick");
+      Group group = entityFactory.insertGroup("group", "description");
+      UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      th.delete(userGroup);
+      th.delete(group);
+
+      // When
+      Runnable lambda = () -> groupService.assertGroupAuthority(user.getId(), group.getId(), GroupRole.OWNER);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 유저가 그룹에 속해있지 않음")
+    void Failure_UserNotInGroup() {
+      // Given
+      User user = entityFactory.insertUser("user", "password", "userNick");
+      Group group = entityFactory.insertGroup("group", "description");
+      // User is not associated with the group
+
+      // When
+      Runnable lambda = () -> groupService.assertGroupAuthority(user.getId(), group.getId(), GroupRole.OWNER);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 초대 정보 조회 테스트")
+  class FindGroupInvitationInfo {
+
+    @Test
+    @DisplayName("성공")
+    void HappyPath() {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "password", "issuerNick");
+      User member1 = entityFactory.insertUser("member1", "password", "memberNick1");
+      User member2 = entityFactory.insertUser("member2", "password", "memberNick2");
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(member1.getId(), group.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(member2.getId(), group.getId(), GroupRole.VIEWER);
+
+      entityFactory.insertTodo(issuer.getId(), issuer.getId(), group.getId(), "Todo 1", "Desc 1", TodoStatus.IN_PROGRESS, "a", false);
+      entityFactory.insertTodo(member1.getId(), member1.getId(), group.getId(), "Todo 2", "Desc 2", TodoStatus.DONE, "b", false);
+
+      String token = "testToken";
+      ZonedDateTime expiresAt = ZonedDateTime.now().plusDays(1);
+      GroupInvitationDTO groupInvitationDTO = new GroupInvitationDTO(issuer.getId(), group.getId(), token, expiresAt);
+
+      // When
+      GroupInvitationInfoDTO info = groupService.findGroupInvitationInfo(groupInvitationDTO);
+
+      // Then
+      Assertions.assertNotNull(info);
+      Assertions.assertEquals(group.getName(), info.getName());
+      Assertions.assertEquals(group.getDescription(), info.getDescription());
+      Assertions.assertEquals(2, info.getTodoCount());
+      Assertions.assertEquals(1, info.getCompletedTodoCount());
+      Assertions.assertEquals(3, info.getMemberCount());
+      Assertions.assertEquals(issuer.getId(), info.getIssuer().getId());
+      Assertions.assertEquals(issuer.getNickname(), info.getIssuer().getNickname());
+      Assertions.assertEquals(expiresAt.toEpochSecond(), info.getExpiresAt().toEpochSecond());
+
+      // Verify members
+      Assertions.assertEquals(3, info.getMembers().size());
+      Assertions.assertTrue(info.getMembers().stream().anyMatch(m -> m.getId() == issuer.getId()));
+      Assertions.assertTrue(info.getMembers().stream().anyMatch(m -> m.getId() == member1.getId()));
+      Assertions.assertTrue(info.getMembers().stream().anyMatch(m -> m.getId() == member2.getId()));
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 그룹")
+    void Failure_NoSuchGroup() {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "password", "issuerNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      UserGroup userGroup = entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+      th.delete(userGroup);
+      th.delete(group);
+
+      String token = "testToken";
+      ZonedDateTime expiresAt = ZonedDateTime.now().plusDays(1);
+      GroupInvitationDTO groupInvitationDTO = new GroupInvitationDTO(issuer.getId(), group.getId(), token, expiresAt);
+
+      // When
+      Runnable lambda = () -> groupService.findGroupInvitationInfo(groupInvitationDTO);
+
+      // Then
+      Assertions.assertThrows(GroupNotFoundException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 발행자")
+    void Failure_NoSuchIssuer() {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "password", "issuerNick");
+      User member1 = entityFactory.insertUser("member1", "password", "memberNick1");
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      UserGroup userGroup = entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(member1.getId(), group.getId(), GroupRole.MEMBER);
+
+      th.delete(userGroup);
+      th.delete(issuer);
+
+      String token = "testToken";
+      ZonedDateTime expiresAt = ZonedDateTime.now().plusDays(1);
+      GroupInvitationDTO groupInvitationDTO = new GroupInvitationDTO(issuer.getId(), group.getId(), token, expiresAt);
+
+      // When
+      Runnable lambda = () -> groupService.findGroupInvitationInfo(groupInvitationDTO);
+
+      // Then
+      Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
+    }
+  }
+
+  @Nested
+  @DisplayName("유저 그룹 등록 테스트")
+  class RegisterUserToGroup {
+
+    @Test
+    @DisplayName("성공")
+    void HappyPath() {
+      // Given
+      User user = entityFactory.insertUser("user", "password", "userNick");
+      Group group = entityFactory.insertGroup("group", "description");
+
+      // When
+      groupService.registerUserToGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      // Then
+      UserGroupDTO userGroup = userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).get();
+      
+      Assertions.assertEquals(GroupRole.MEMBER, userGroup.getGroupRole());
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 유저")
+    void Failure_NoSuchUser() {
+      // Given
+      User user = entityFactory.insertUser("user", "password", "userNick");
+      Group group = entityFactory.insertGroup("group", "description");
+      th.delete(user);
+
+      // When
+      Runnable lambda = () -> groupService.registerUserToGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      // Then
+      Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 없는 그룹")
+    void Failure_NoSuchGroup() {
+      // Given
+      User user = entityFactory.insertUser("user", "password", "userNick");
+      Group group = entityFactory.insertGroup("group", "description");
+      th.delete(group);
+
+      // When
+      Runnable lambda = () -> groupService.registerUserToGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      // Then
+      Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 이미 그룹 멤버")
+    void Failure_AlreadyGroupMember() {
+      // Given
+      User user = entityFactory.insertUser("user", "password", "userNick");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      // When
+      Runnable lambda = () -> groupService.registerUserToGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      // Then
+      Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
     }
   }
 }
