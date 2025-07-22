@@ -2,6 +2,7 @@ package rest.felix.back.todo.repository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -9,12 +10,12 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.todo.dto.CreateTodoDTO;
 import rest.felix.back.todo.dto.TodoCountDTO;
 import rest.felix.back.todo.dto.TodoDTO;
 import rest.felix.back.todo.dto.UpdateTodoDTO;
+import rest.felix.back.todo.dto.UpdateTodoMetadataDTO;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.UserTodoStar;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
@@ -169,20 +170,7 @@ public class TodoRepository {
 
   @Transactional
   public TodoDTO updateTodo(UpdateTodoDTO updateTodoDTO) {
-    Todo todo =
-        em
-            .createQuery(
-                """
-          SELECT t
-          FROM Todo t
-          WHERE t.id = :todoId
-          """,
-                Todo.class)
-            .setParameter("todoId", updateTodoDTO.getId())
-            .getResultList()
-            .stream()
-            .findFirst()
-            .orElseThrow(ResourceNotFoundException::new);
+    Todo todo = findEntityById(updateTodoDTO.getId()).orElseThrow(TodoNotFoundException::new);
 
     if (updateTodoDTO.getTitle() != null) todo.setTitle(updateTodoDTO.getTitle());
 
@@ -216,7 +204,7 @@ public class TodoRepository {
   }
 
   @Transactional(readOnly = true)
-  public Optional<Todo> findEntityById(long todoId) {
+  private Optional<Todo> findEntityById(long todoId) {
     try {
       Todo todo =
           em.createQuery("SELECT t FROM Todo t WHERE t.id = :todoId", Todo.class)
@@ -349,5 +337,23 @@ public class TodoRepository {
         .setMaxResults(1)
         .getResultList()
         .isEmpty();
+  }
+
+  @Transactional
+  public TodoDTO updateTodoMetadata(UpdateTodoMetadataDTO updateTodoMetadataDTO) {
+    long todoId = updateTodoMetadataDTO.getTodoId();
+    Long assigneeId = updateTodoMetadataDTO.getAssigneeId();
+    LocalDate dueDate = updateTodoMetadataDTO.getDueDate();
+    boolean isImportant = updateTodoMetadataDTO.isImportant();
+
+    User assignee = assigneeId != null ? em.getReference(User.class, assigneeId) : null;
+
+    Todo todo = findEntityById(todoId).orElseThrow(TodoNotFoundException::new);
+
+    todo.setAssignee(assignee);
+    todo.setDueDate(dueDate);
+    todo.setImportant(isImportant);
+
+    return TodoDTO.of(todo);
   }
 }

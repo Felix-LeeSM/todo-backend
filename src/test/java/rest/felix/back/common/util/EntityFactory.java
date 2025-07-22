@@ -1,6 +1,7 @@
 package rest.felix.back.common.util;
 
 import jakarta.persistence.EntityManager;
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -132,6 +133,36 @@ public class EntityFactory {
     todo.setTodoStatus(todoStatus);
     todo.setOrder(UUID.randomUUID().toString());
     todo.setImportant(isImportant);
+
+    entityManager.persist(todo);
+
+    return todo;
+  }
+
+  public Todo insertTodo(
+      Long authorId,
+      Long assigneeId,
+      Long groupId,
+      String title,
+      String description,
+      TodoStatus todoStatus,
+      LocalDate dueDate,
+      boolean isImportant) {
+    User author = entityManager.getReference(User.class, authorId);
+    User assignee = assigneeId != null ? entityManager.getReference(User.class, assigneeId) : null;
+    Group group = entityManager.getReference(Group.class, groupId);
+
+    Todo todo = new Todo();
+
+    todo.setAuthor(author);
+    todo.setAssignee(assignee);
+    todo.setGroup(group);
+    todo.setTitle(title);
+    todo.setDescription(description);
+    todo.setTodoStatus(todoStatus);
+    todo.setOrder(UUID.randomUUID().toString());
+    todo.setImportant(isImportant);
+    todo.setDueDate(dueDate);
 
     entityManager.persist(todo);
 

@@ -12,10 +12,12 @@ import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.dto.CreateTodoDTO;
 import rest.felix.back.todo.dto.TodoDTO;
 import rest.felix.back.todo.dto.UpdateTodoDTO;
+import rest.felix.back.todo.dto.UpdateTodoMetadataDTO;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.todo.exception.TodoNotFoundException;
 import rest.felix.back.todo.repository.TodoRepository;
 import rest.felix.back.user.exception.UserAccessDeniedException;
+import rest.felix.back.user.repository.UserRepository;
 
 @Service
 @AllArgsConstructor
@@ -23,6 +25,7 @@ public class TodoService {
 
   private final TodoRepository todoRepository;
   private final UserGroupRepository userGroupRepository;
+  private final UserRepository userRepository;
 
   @Transactional(readOnly = true)
   public List<TodoDTO> getTodosInGroup(long groupId) {
@@ -57,6 +60,12 @@ public class TodoService {
   }
 
   @Transactional
+  public TodoDTO updateTodoMetadata(UpdateTodoMetadataDTO updateTodoMetadataDTO) {
+
+    return todoRepository.updateTodoMetadata(updateTodoMetadataDTO);
+  }
+
+  @Transactional(readOnly = true)
   public void assertTodoAuthority(
       long userId, long groupId, long todoId, Predicate<TodoDTO> authorityChecker) {
 

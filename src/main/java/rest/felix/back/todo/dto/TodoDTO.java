@@ -1,5 +1,6 @@
 package rest.felix.back.todo.dto;
 
+import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,8 +16,11 @@ public class TodoDTO {
   private final String description;
   private final String order;
   private final TodoStatus status;
+  private final boolean isImportant;
+  private final LocalDate dueDate;
   private final long authorId;
   private final long groupId;
+  private final Long assigneeId;
 
   public static TodoDTO of(Todo todo) {
     return new TodoDTO(
@@ -25,7 +29,10 @@ public class TodoDTO {
         todo.getDescription(),
         todo.getOrder(),
         todo.getTodoStatus(),
+        todo.isImportant(),
+        todo.getDueDate(),
         todo.getAuthor().getId(),
-        todo.getGroup().getId());
+        todo.getGroup().getId(),
+        todo.getAssignee() != null ? todo.getAssignee().getId() : null);
   }
 }

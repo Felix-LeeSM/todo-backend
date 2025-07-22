@@ -1,5 +1,6 @@
 package rest.felix.back.todo.controller;
 
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,9 +22,12 @@ import rest.felix.back.todo.dto.MoveTodoRequestDTO;
 import rest.felix.back.todo.dto.TodoDTO;
 import rest.felix.back.todo.dto.TodoResponseDTO;
 import rest.felix.back.todo.dto.UpdateTodoDTO;
+import rest.felix.back.todo.dto.UpdateTodoMetadataDTO;
+import rest.felix.back.todo.dto.UpdateTodoMetadataRequestDTO;
 import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
 import rest.felix.back.todo.service.TodoService;
 import rest.felix.back.user.dto.AuthUserDTO;
+import rest.felix.back.user.exception.UserNotFoundException;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -112,6 +116,33 @@ public class TodoController {
             todoId, updateTodoRequestDTO.getTitle(), updateTodoRequestDTO.getDescription());
 
     TodoDTO updatedTodoDTO = todoService.updateTodo(updateTodoDTO);
+
+    return ResponseEntity.ok().body(updatedTodoDTO);
+  }
+
+  @PutMapping("/group/{groupId}/todo/{todoId}/metadata")
+  public ResponseEntity<TodoDTO> updateTodoMetadata(
+      @AuthenticationPrincipal AuthUserDTO authUser,
+      @PathVariable(name = "groupId") long groupId,
+      @PathVariable(name = "todoId") long todoId,
+      @RequestBody @Valid UpdateTodoMetadataRequestDTO updateTodoMetadataRequestDTO) {
+
+    long userId = authUser.getUserId();
+
+    groupService.assertGroupAuthority(userId, groupId, GroupRole.MANAGER);
+    if (updateTodoMetadataRequestDTO.getAssigneeId() != null)
+      groupService
+          .findUserRole(updateTodoMetadataRequestDTO.getAssigneeId(), groupId)
+          .orElseThrow(UserNotFoundException::new);
+
+    UpdateTodoMetadataDTO updateTodoMetadataDTO =
+        new UpdateTodoMetadataDTO(
+            todoId,
+            updateTodoMetadataRequestDTO.getIsImportant(),
+            updateTodoMetadataRequestDTO.getDueDate(),
+            updateTodoMetadataRequestDTO.getAssigneeId());
+
+    TodoDTO updatedTodoDTO = todoService.updateTodoMetadata(updateTodoMetadataDTO);
 
     return ResponseEntity.ok().body(updatedTodoDTO);
   }
