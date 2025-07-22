@@ -21,7 +21,7 @@ import rest.felix.back.group.exception.GroupNotFoundException;
 import rest.felix.back.group.repository.GroupRepository;
 import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.dto.TodoCountDTO;
-import rest.felix.back.todo.dto.TodoDTO;
+import rest.felix.back.todo.dto.TodoWithStarredStatusDTO;
 import rest.felix.back.todo.repository.TodoRepository;
 import rest.felix.back.user.exception.UserAccessDeniedException;
 import rest.felix.back.user.repository.UserRepository;
@@ -120,7 +120,8 @@ public class GroupService {
 
     List<MemberDTO> memberDTOs = userRepository.findMembersByGroupId(groupId);
 
-    List<TodoDTO> todoDTOs = todoRepository.findByGroupId(groupId);
+    List<TodoWithStarredStatusDTO> todoDTOs =
+        todoRepository.findByGroupIdWithStars(userId, groupId);
 
     return new FullGroupDetailsDTO(
         groupId,

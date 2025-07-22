@@ -9,8 +9,8 @@ public record GroupInvitationInfoDTOResponse(
     long todoCount,
     long completedTodoCount,
     long memberCount,
-    MemberDTO issuer,
-    List<MemberDTO> members,
+    MemberResponseDTO issuer,
+    List<MemberResponseDTO> members,
     ZonedDateTime expiresAt) {
 
   public static GroupInvitationInfoDTOResponse of(
@@ -21,8 +21,8 @@ public record GroupInvitationInfoDTOResponse(
         groupInvitationInfoDetails.getTodoCount(),
         groupInvitationInfoDetails.getCompletedTodoCount(),
         groupInvitationInfoDetails.getMemberCount(),
-        groupInvitationInfoDetails.getIssuer(),
-        groupInvitationInfoDetails.getMembers(),
+        MemberResponseDTO.of(groupInvitationInfoDetails.getIssuer()),
+        groupInvitationInfoDetails.getMembers().stream().map(MemberResponseDTO::of).toList(),
         groupInvitationInfoDetails.getExpiresAt());
   }
 }

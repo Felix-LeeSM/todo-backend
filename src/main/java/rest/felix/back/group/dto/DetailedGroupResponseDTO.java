@@ -9,7 +9,7 @@ public record DetailedGroupResponseDTO(
     String description,
     long todoCount,
     long completedTodoCount,
-    List<MemberDTO> members,
+    List<MemberResponseDTO> members,
     long memberCount,
     GroupRole myRole) {
 
@@ -20,7 +20,7 @@ public record DetailedGroupResponseDTO(
         dto.getDescription(),
         dto.getTodoCount(),
         dto.getCompletedTodoCount(),
-        dto.getMembers(),
+        dto.getMembers().stream().map(MemberResponseDTO::of).toList(),
         dto.getMemberCount(),
         dto.getMyRole());
   }

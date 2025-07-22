@@ -59,12 +59,12 @@ public class TodoController {
 
     groupService.assertGroupAuthority(userId, groupId, GroupRole.MEMBER);
 
-    CreateTodoDTO createTodoDTO =
-        new CreateTodoDTO(
-            createTodoRequestDTO.getTitle(),
-            createTodoRequestDTO.getDescription(),
-            userId,
-            groupId);
+    if (createTodoRequestDTO.getAssigneeId() != null)
+      groupService
+          .findUserRole(createTodoRequestDTO.getAssigneeId(), groupId)
+          .orElseThrow(UserNotFoundException::new);
+
+    CreateTodoDTO createTodoDTO = CreateTodoDTO.of(createTodoRequestDTO, userId, groupId);
 
     TodoDTO todoDTO = todoService.createTodo(createTodoDTO);
 

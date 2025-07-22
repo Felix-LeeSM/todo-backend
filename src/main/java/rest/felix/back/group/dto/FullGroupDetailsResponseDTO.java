@@ -2,25 +2,25 @@ package rest.felix.back.group.dto;
 
 import java.util.List;
 import rest.felix.back.group.entity.enumerated.GroupRole;
-import rest.felix.back.todo.dto.TodoDTO;
+import rest.felix.back.todo.dto.TodoWithStarredStatusResponseDTO;
 
 public record FullGroupDetailsResponseDTO(
     long id,
     String name,
     String description,
-    List<MemberDTO> members,
+    List<MemberResponseDTO> members,
     long memberCount,
     GroupRole myRole,
-    List<TodoDTO> todos) {
+    List<TodoWithStarredStatusResponseDTO> todos) {
 
   public static FullGroupDetailsResponseDTO of(FullGroupDetailsDTO dto) {
     return new FullGroupDetailsResponseDTO(
         dto.getId(),
         dto.getName(),
         dto.getDescription(),
-        dto.getMembers(),
+        dto.getMembers().stream().map(MemberResponseDTO::of).toList(),
         dto.getMemberCount(),
         dto.getMyRole(),
-        dto.getTodos());
+        dto.getTodos().stream().map(TodoWithStarredStatusResponseDTO::of).toList());
   }
 }

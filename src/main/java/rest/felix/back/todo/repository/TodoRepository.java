@@ -14,6 +14,7 @@ import rest.felix.back.group.entity.Group;
 import rest.felix.back.todo.dto.CreateTodoDTO;
 import rest.felix.back.todo.dto.TodoCountDTO;
 import rest.felix.back.todo.dto.TodoDTO;
+import rest.felix.back.todo.dto.TodoWithStarredStatusDTO;
 import rest.felix.back.todo.dto.UpdateTodoDTO;
 import rest.felix.back.todo.dto.UpdateTodoMetadataDTO;
 import rest.felix.back.todo.entity.Todo;
@@ -49,6 +50,36 @@ public class TodoRepository {
         .stream()
         .map(TodoDTO::of)
         .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<TodoWithStarredStatusDTO> findByGroupIdWithStars(long userId, long groupId) {
+    return em.createQuery(
+            """
+            SELECT new rest.felix.back.todo.dto.TodoWithStarredStatusDTO(
+              t.id,
+              t.title,
+              t.description,
+              t.order,
+              t.todoStatus,
+              t.isImportant,
+              t.dueDate,
+              CASE WHEN uts.id IS NOT NULL THEN TRUE ELSE FALSE END,
+              au.id,
+              t.group.id,
+              asi.id
+            )
+            FROM Todo t
+            JOIN t.author au
+            LEFT JOIN t.assignee asi
+            LEFT JOIN UserTodoStar uts ON uts.todo.id = t.id AND uts.user.id = :userId
+            WHERE t.group.id = :groupId
+            ORDER BY t.order ASC
+                """,
+            TodoWithStarredStatusDTO.class)
+        .setParameter("groupId", groupId)
+        .setParameter("userId", userId)
+        .getResultList();
   }
 
   @Transactional(readOnly = true)
@@ -124,11 +155,17 @@ public class TodoRepository {
 
     User author = em.getReference(User.class, createTodoDTO.getAuthorId());
     Group group = em.getReference(Group.class, createTodoDTO.getGroupId());
+    User assignee =
+        createTodoDTO.getAssigneeId() != null
+            ? em.getReference(User.class, createTodoDTO.getAssigneeId())
+            : null;
 
     TodoStatus defaultTodoStatus = TodoStatus.TO_DO;
 
     todo.setAuthor(author);
     todo.setGroup(group);
+    todo.setAssignee(assignee);
+    todo.setDueDate(createTodoDTO.getDueDate());
     todo.setTitle(createTodoDTO.getTitle());
     todo.setDescription(createTodoDTO.getDescription());
     todo.setTodoStatus(defaultTodoStatus);

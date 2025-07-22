@@ -4,7 +4,7 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import rest.felix.back.group.entity.enumerated.GroupRole;
-import rest.felix.back.todo.dto.TodoDTO;
+import rest.felix.back.todo.dto.TodoWithStarredStatusDTO;
 
 @Getter
 @AllArgsConstructor
@@ -15,5 +15,5 @@ public class FullGroupDetailsDTO {
   private final List<MemberDTO> members;
   private final long memberCount;
   private final GroupRole myRole;
-  private final List<TodoDTO> todos;
+  private final List<TodoWithStarredStatusDTO> todos;
 }
