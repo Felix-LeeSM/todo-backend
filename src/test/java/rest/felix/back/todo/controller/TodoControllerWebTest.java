@@ -15,6 +15,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.Cookie;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -43,6 +44,7 @@ import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.todo.dto.CreateTodoRequestDTO;
 import rest.felix.back.todo.dto.MoveTodoRequestDTO;
 import rest.felix.back.todo.dto.TodoDTO;
+import rest.felix.back.todo.dto.UpdateTodoMetadataRequestDTO;
 import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
@@ -556,9 +558,9 @@ public class TodoControllerWebTest {
 
       result.andExpect(status().isNoContent());
 
-      Assertions.assertTrue(todoRepository.findById(todo.getId()).isEmpty());
+      Assertions.assertEquals(true, todoRepository.findById(todo.getId()).isEmpty());
 
-      Assertions.assertTrue(!todoRepository.starExistsById(todo.getId()));
+      Assertions.assertEquals(false, todoRepository.starExistsById(todo.getId()));
     }
 
     @Test
@@ -601,9 +603,9 @@ public class TodoControllerWebTest {
 
       result.andExpect(status().isNoContent());
 
-      Assertions.assertTrue(todoRepository.findById(todo.getId()).isEmpty());
+      Assertions.assertEquals(true, todoRepository.findById(todo.getId()).isEmpty());
 
-      Assertions.assertTrue(!todoRepository.starExistsById(todo.getId()));
+      Assertions.assertEquals(false, todoRepository.starExistsById(todo.getId()));
     }
 
     @Test
@@ -1272,6 +1274,557 @@ public class TodoControllerWebTest {
 
       result.andExpect(status().isForbidden());
       result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    }
+  }
+
+  @Nested
+  @DisplayName("투두 메타데이터 업데이트 테스트")
+  class UpdateTodoMetadata {
+    @Test
+    @DisplayName("성공 - 모든 필드 업데이트")
+    void HappyPath_1() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      Cookie cookie = userCookie(user);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(true, LocalDate.now().plusDays(1), assignee.getId());
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      result.andExpect(status().isOk());
+      result.andExpect(jsonPath("$.important", equalTo(true)));
+      result.andExpect(jsonPath("$.dueDate", equalTo(LocalDate.now().plusDays(1).toString())));
+      result.andExpect(jsonPath("$.assigneeId", equalTo(assignee.getId().intValue())));
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertEquals(true, fetchedTodo.isImportant());
+      Assertions.assertEquals(LocalDate.now().plusDays(1), fetchedTodo.getDueDate());
+      Assertions.assertEquals(assignee.getId(), fetchedTodo.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("성공 - isImportant만 업데이트")
+    void HappyPath_2() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      Cookie cookie = userCookie(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      // Then
+      result.andExpect(status().isOk());
+      result.andExpect(jsonPath("$.important", equalTo(true)));
+      result.andExpect(jsonPath("$.dueDate").doesNotExist());
+      result.andExpect(jsonPath("$.assigneeId").doesNotExist());
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertEquals(true, fetchedTodo.isImportant());
+      Assertions.assertNull(fetchedTodo.getDueDate());
+      Assertions.assertNull(fetchedTodo.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("성공 - dueDate만 업데이트")
+    void HappyPath_3() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      Cookie cookie = userCookie(user);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(true, LocalDate.now().plusDays(2), null);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      result.andExpect(status().isOk());
+      result.andExpect(jsonPath("$.important").value(true));
+      result.andExpect(jsonPath("$.dueDate", equalTo(LocalDate.now().plusDays(2).toString())));
+      result.andExpect(jsonPath("$.assigneeId").doesNotExist());
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertEquals(true, fetchedTodo.isImportant());
+      Assertions.assertEquals(LocalDate.now().plusDays(2), fetchedTodo.getDueDate());
+      Assertions.assertNull(fetchedTodo.getAssigneeId());
+    }
+
+
+        @Test
+    @DisplayName("성공 - dueDate만 업데이트")
+    void HappyPath_4() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      Cookie cookie = userCookie(user);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(true, LocalDate.now().minusDays(2), null);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      result.andExpect(status().isOk());
+      result.andExpect(jsonPath("$.important").value(true));
+      result.andExpect(jsonPath("$.dueDate", equalTo(LocalDate.now().minusDays(2).toString())));
+      result.andExpect(jsonPath("$.assigneeId").doesNotExist());
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertEquals(true, fetchedTodo.isImportant());
+      Assertions.assertEquals(LocalDate.now().minusDays(2), fetchedTodo.getDueDate());
+      Assertions.assertNull(fetchedTodo.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("성공 - assigneeId만 업데이트")
+    void HappyPath_5() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      Cookie cookie = userCookie(user);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(false, null, assignee.getId());
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      result.andExpect(status().isOk());
+      result.andExpect(jsonPath("$.important").value(false));
+      result.andExpect(jsonPath("$.dueDate").doesNotExist());
+      result.andExpect(jsonPath("$.assigneeId", equalTo(assignee.getId().intValue())));
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertEquals(false, fetchedTodo.isImportant());
+      Assertions.assertNull(fetchedTodo.getDueDate());
+      Assertions.assertEquals(assignee.getId(), fetchedTodo.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("성공 - assigneeId를 null로 설정하여 담당자 해제")
+    void HappyPath_6() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              assignee.getId(),
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      Cookie cookie = userCookie(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      result.andExpect(status().isOk());
+      result.andExpect(jsonPath("$.assigneeId").doesNotExist());
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertNull(fetchedTodo.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("실패 - 토큰 없음")
+    void Failure_NoToken() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 유저 없음")
+    void Failure_NoUser() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      th.delete(todo);
+      th.delete(userGroup);
+      th.delete(user);
+
+      Cookie cookie = userCookie(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("허가되지 않은 접근입니다.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 유저-그룹 관계 없음")
+    void Failure_NoUserGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      th.delete(userGroup);
+
+      Cookie cookie = userCookie(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 부적절한 그룹 역할")
+    void Failure_ImproperGroupRole() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER); // Not MANAGER
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      Cookie cookie = userCookie(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 그룹 없음")
+    void Failure_NoGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      th.delete(todo);
+      th.delete(userGroup);
+      th.delete(group);
+
+      Cookie cookie = userCookie(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      result.andExpect(status().isForbidden());
+      result.andExpect(jsonPath("$.message", equalTo("No permission to perform this action.")));
+    }
+
+    @Test
+    @DisplayName("실패 - Todo 없음")
+    void Failure_NoTodo() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      th.delete(todo);
+
+      Cookie cookie = userCookie(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      result.andExpect(status().isNotFound());
+      result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
+    }
+
+    @Test
+    @DisplayName("실패 - 할당된 유저가 그룹에 없음")
+    void Failure_AssigneeNotInGroup() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      // assignee는 그룹에 추가하지 않음
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      Cookie cookie = userCookie(user);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(true, null, assignee.getId());
+      String body = objectMapper.writeValueAsString(requestDTO);
+      String path = String.format("/api/v1/group/%d/todo/%d/metadata", group.getId(), todo.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+      result.andExpect(status().isNotFound());
+      result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
     }
   }
 

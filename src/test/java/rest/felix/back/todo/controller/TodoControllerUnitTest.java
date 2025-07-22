@@ -1,6 +1,7 @@
 package rest.felix.back.todo.controller;
 
 import jakarta.persistence.EntityManager;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -26,6 +27,7 @@ import rest.felix.back.todo.dto.CreateTodoRequestDTO;
 import rest.felix.back.todo.dto.MoveTodoRequestDTO;
 import rest.felix.back.todo.dto.TodoDTO;
 import rest.felix.back.todo.dto.TodoResponseDTO;
+import rest.felix.back.todo.dto.UpdateTodoMetadataRequestDTO;
 import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
@@ -34,6 +36,7 @@ import rest.felix.back.todo.repository.TodoRepository;
 import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.entity.User;
 import rest.felix.back.user.exception.UserAccessDeniedException;
+import rest.felix.back.user.exception.UserNotFoundException;
 
 @SpringBootTest
 public class TodoControllerUnitTest {
@@ -1214,6 +1217,413 @@ public class TodoControllerUnitTest {
 
       // Then
       Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
+    }
+  }
+
+  @Nested
+  @DisplayName("투두 메타데이터 업데이트 테스트")
+  class UpdateTodoMetadata {
+    @Test
+    @DisplayName("성공 - 모든 필드 업데이트")
+    void HappyPath_1() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(true, LocalDate.now().plusDays(1), assignee.getId());
+
+      // When
+      ResponseEntity<TodoDTO> responseEntity =
+          todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+      TodoDTO updatedTodo = responseEntity.getBody();
+      Assertions.assertNotNull(updatedTodo);
+      Assertions.assertTrue(updatedTodo.isImportant());
+      Assertions.assertEquals(
+          LocalDate.now().plusDays(1).toString(), updatedTodo.getDueDate().toString());
+      Assertions.assertEquals(assignee.getId(), updatedTodo.getAssigneeId());
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertTrue(fetchedTodo.isImportant());
+      Assertions.assertEquals(
+          LocalDate.now().plusDays(1).toString(), fetchedTodo.getDueDate().toString());
+      Assertions.assertEquals(assignee.getId(), fetchedTodo.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("성공 - isImportant만 업데이트")
+    void HappyPath_2() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+
+      // When
+      ResponseEntity<TodoDTO> responseEntity =
+          todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+      TodoDTO updatedTodo = responseEntity.getBody();
+      Assertions.assertNotNull(updatedTodo);
+      Assertions.assertTrue(updatedTodo.isImportant());
+      Assertions.assertNull(updatedTodo.getDueDate());
+      Assertions.assertNull(updatedTodo.getAssigneeId());
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertTrue(fetchedTodo.isImportant());
+      Assertions.assertNull(fetchedTodo.getDueDate());
+      Assertions.assertNull(fetchedTodo.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("성공 - dueDate만 업데이트")
+    void HappyPath_3() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              true);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(true, LocalDate.now().plusDays(2), null);
+
+      // When
+      ResponseEntity<TodoDTO> responseEntity =
+          todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+      TodoDTO updatedTodo = responseEntity.getBody();
+      Assertions.assertNotNull(updatedTodo);
+      Assertions.assertTrue(updatedTodo.isImportant());
+      Assertions.assertEquals(
+          LocalDate.now().plusDays(2).toString(), updatedTodo.getDueDate().toString());
+      Assertions.assertNull(updatedTodo.getAssigneeId());
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertTrue(fetchedTodo.isImportant());
+      Assertions.assertEquals(
+          LocalDate.now().plusDays(2).toString(), fetchedTodo.getDueDate().toString());
+      Assertions.assertNull(fetchedTodo.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("성공 - assigneeId만 업데이트")
+    void HappyPath_4() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(false, null, assignee.getId());
+
+      // When
+      ResponseEntity<TodoDTO> responseEntity =
+          todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+
+      TodoDTO updatedTodo = responseEntity.getBody();
+      Assertions.assertNotNull(updatedTodo);
+      Assertions.assertEquals(false, updatedTodo.isImportant());
+      Assertions.assertNull(updatedTodo.getDueDate());
+      Assertions.assertEquals(assignee.getId(), updatedTodo.getAssigneeId());
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertEquals(false, fetchedTodo.isImportant());
+      Assertions.assertNull(fetchedTodo.getDueDate());
+      Assertions.assertEquals(assignee.getId(), fetchedTodo.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("성공 - assigneeId를 null로 설정하여 담당자 해제")
+    void HappyPath_5() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              assignee.getId(),
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(false, null, null);
+
+      // When
+      ResponseEntity<TodoDTO> responseEntity =
+          todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+      TodoDTO updatedTodo = responseEntity.getBody();
+      Assertions.assertNotNull(updatedTodo);
+      Assertions.assertNull(updatedTodo.getAssigneeId());
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertNull(fetchedTodo.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("실패 - 유저 없음")
+    void Failure_NoUser() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      th.delete(todo);
+      th.delete(userGroup);
+      th.delete(user);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+
+      // When
+      Runnable lambda =
+          () ->
+              todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 유저-그룹 관계 없음")
+    void Failure_NoUserGroup() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      th.delete(userGroup);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+
+      // When
+      Runnable lambda =
+          () ->
+              todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 부적절한 그룹 역할")
+    void Failure_ImproperGroupRole() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER); // Not MANAGER
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+
+      // When
+      Runnable lambda =
+          () ->
+              todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 그룹 없음")
+    void Failure_NoGroup() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      th.delete(todo);
+      th.delete(userGroup);
+      th.delete(group);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+
+      // When
+      Runnable lambda =
+          () ->
+              todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - Todo 없음")
+    void Failure_NoTodo() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      th.delete(todo);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+
+      // When
+      Runnable lambda =
+          () ->
+              todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 할당된 유저가 그룹에 없음")
+    void Failure_AssigneeNotInGroup() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      // assignee는 그룹에 추가하지 않음
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              null,
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(true, null, assignee.getId());
+
+      // When
+      Runnable lambda =
+          () ->
+              todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertThrows(UserNotFoundException.class, lambda::run);
     }
   }
 
