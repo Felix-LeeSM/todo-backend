@@ -243,7 +243,7 @@ public class TodoControllerUnitTest {
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
-        new CreateTodoRequestDTO("todo title", "todo description");
+        new CreateTodoRequestDTO("todo title", "todo description", null, null);
 
     // When
 
@@ -262,6 +262,154 @@ public class TodoControllerUnitTest {
     Assertions.assertEquals(user.getId(), todoResponseDTO.authorId());
     Assertions.assertEquals(group.getId(), todoResponseDTO.groupId());
     Assertions.assertNotNull(todoResponseDTO.order());
+    Assertions.assertEquals(false, todoResponseDTO.isImportant());
+    Assertions.assertNull(todoResponseDTO.dueDate());
+    Assertions.assertNull(todoResponseDTO.assigneeId());
+  }
+
+  @Test
+  void createTodo_HappyPath_WithDueDateAndAssignee() {
+    // Given
+
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+    User assignee = entityFactory.insertUser("assigneeUser", "hashedPassword", "assigneeNickname");
+
+    Group group = entityFactory.insertGroup("group", "description");
+
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+    entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+
+    AuthUserDTO authUser = AuthUserDTO.of(user);
+
+    LocalDate dueDate = LocalDate.now().plusDays(7);
+    CreateTodoRequestDTO createTodoRequestDTO =
+        new CreateTodoRequestDTO("todo title", "todo description", dueDate, assignee.getId());
+
+    // When
+
+    ResponseEntity<TodoResponseDTO> responseEntity =
+        todoController.createTodo(authUser, group.getId(), createTodoRequestDTO);
+
+    // Then
+
+    Assertions.assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+
+    TodoResponseDTO todoResponseDTO = responseEntity.getBody();
+
+    Assertions.assertEquals("todo title", todoResponseDTO.title());
+    Assertions.assertEquals("todo description", todoResponseDTO.description());
+    Assertions.assertEquals(TodoStatus.TO_DO, todoResponseDTO.status());
+    Assertions.assertEquals(user.getId(), todoResponseDTO.authorId());
+    Assertions.assertEquals(group.getId(), todoResponseDTO.groupId());
+    Assertions.assertNotNull(todoResponseDTO.order());
+    Assertions.assertEquals(false, todoResponseDTO.isImportant());
+    Assertions.assertEquals(dueDate, todoResponseDTO.dueDate());
+    Assertions.assertEquals(assignee.getId(), todoResponseDTO.assigneeId());
+  }
+
+  @Test
+  void createTodo_HappyPath_WithDueDateOnly() {
+    // Given
+
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+
+    Group group = entityFactory.insertGroup("group", "description");
+
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+    AuthUserDTO authUser = AuthUserDTO.of(user);
+
+    LocalDate dueDate = LocalDate.now().plusDays(7);
+    CreateTodoRequestDTO createTodoRequestDTO =
+        new CreateTodoRequestDTO("todo title", "todo description", dueDate, null);
+
+    // When
+
+    ResponseEntity<TodoResponseDTO> responseEntity =
+        todoController.createTodo(authUser, group.getId(), createTodoRequestDTO);
+
+    // Then
+
+    Assertions.assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+
+    TodoResponseDTO todoResponseDTO = responseEntity.getBody();
+
+    Assertions.assertEquals("todo title", todoResponseDTO.title());
+    Assertions.assertEquals("todo description", todoResponseDTO.description());
+    Assertions.assertEquals(TodoStatus.TO_DO, todoResponseDTO.status());
+    Assertions.assertEquals(user.getId(), todoResponseDTO.authorId());
+    Assertions.assertEquals(group.getId(), todoResponseDTO.groupId());
+    Assertions.assertNotNull(todoResponseDTO.order());
+    Assertions.assertEquals(false, todoResponseDTO.isImportant());
+    Assertions.assertEquals(dueDate, todoResponseDTO.dueDate());
+    Assertions.assertNull(todoResponseDTO.assigneeId());
+  }
+
+  @Test
+  void createTodo_HappyPath_WithAssigneeOnly() {
+    // Given
+
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+    User assignee = entityFactory.insertUser("assigneeUser", "hashedPassword", "assigneeNickname");
+
+    Group group = entityFactory.insertGroup("group", "description");
+
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+    entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+
+    AuthUserDTO authUser = AuthUserDTO.of(user);
+
+    CreateTodoRequestDTO createTodoRequestDTO =
+        new CreateTodoRequestDTO("todo title", "todo description", null, assignee.getId());
+
+    // When
+
+    ResponseEntity<TodoResponseDTO> responseEntity =
+        todoController.createTodo(authUser, group.getId(), createTodoRequestDTO);
+
+    // Then
+
+    Assertions.assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+
+    TodoResponseDTO todoResponseDTO = responseEntity.getBody();
+
+    Assertions.assertEquals("todo title", todoResponseDTO.title());
+    Assertions.assertEquals("todo description", todoResponseDTO.description());
+    Assertions.assertEquals(TodoStatus.TO_DO, todoResponseDTO.status());
+    Assertions.assertEquals(user.getId(), todoResponseDTO.authorId());
+    Assertions.assertEquals(group.getId(), todoResponseDTO.groupId());
+    Assertions.assertNotNull(todoResponseDTO.order());
+    Assertions.assertEquals(false, todoResponseDTO.isImportant());
+    Assertions.assertNull(todoResponseDTO.dueDate());
+    Assertions.assertEquals(assignee.getId(), todoResponseDTO.assigneeId());
+  }
+
+  @Test
+  void createTodo_Failure_InvalidAssignee() {
+    // Given
+
+    User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+    User invalidUser = entityFactory.insertUser("invalidUser", "hashedPassword", "invalidUserNick");
+
+    Group group = entityFactory.insertGroup("group", "description");
+
+    entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+    th.delete(invalidUser);
+
+    AuthUserDTO authUser = AuthUserDTO.of(user);
+
+    // 존재하지 않는 assigneeId
+
+    CreateTodoRequestDTO createTodoRequestDTO =
+        new CreateTodoRequestDTO("todo title", "todo description", null, invalidUser.getId());
+
+    // When
+    Runnable lambda =
+        () -> todoController.createTodo(authUser, group.getId(), createTodoRequestDTO);
+
+    // Then
+    Assertions.assertThrows(UserNotFoundException.class, lambda::run);
   }
 
   @Test
@@ -277,7 +425,7 @@ public class TodoControllerUnitTest {
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
-        new CreateTodoRequestDTO("todo title", "todo description");
+        new CreateTodoRequestDTO("todo title", "todo description", null, null);
 
     // When
 
@@ -306,7 +454,7 @@ public class TodoControllerUnitTest {
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
-        new CreateTodoRequestDTO("todo title", "todo description");
+        new CreateTodoRequestDTO("todo title", "todo description", null, null);
 
     // When
 
@@ -335,7 +483,7 @@ public class TodoControllerUnitTest {
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
-        new CreateTodoRequestDTO("todo title", "todo description");
+        new CreateTodoRequestDTO("todo title", "todo description", null, null);
 
     // When
 
@@ -363,7 +511,7 @@ public class TodoControllerUnitTest {
     AuthUserDTO authUser = AuthUserDTO.of(user);
 
     CreateTodoRequestDTO createTodoRequestDTO =
-        new CreateTodoRequestDTO("todo title", "todo description");
+        new CreateTodoRequestDTO("todo title", "todo description", null, null);
 
     // When
 

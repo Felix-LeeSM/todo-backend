@@ -131,7 +131,8 @@ class TodoServiceTest {
       User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group name", "group description");
       CreateTodoDTO createTodoDTO =
-          new CreateTodoDTO("todo title", "todo description", user.getId(), group.getId());
+          new CreateTodoDTO(
+              "todo title", "todo description", null, user.getId(), group.getId(), null);
 
       // When
       TodoDTO todoDTO = todoService.createTodo(createTodoDTO);
@@ -143,6 +144,101 @@ class TodoServiceTest {
       Assertions.assertEquals(user.getId(), todoDTO.getAuthorId());
       Assertions.assertEquals(group.getId(), todoDTO.getGroupId());
       Assertions.assertNotNull(todoDTO.getOrder());
+      Assertions.assertNull(todoDTO.getDueDate());
+      Assertions.assertNull(todoDTO.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("성공: dueDate와 assigneeId를 포함하여 새로운 Todo를 생성한다")
+    void success_whenCreatingNewTodoWithDueDateAndAssignee() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User assignee =
+          entityFactory.insertUser("assigneeUser", "hashedPassword", "assigneeNickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+
+      LocalDate dueDate = LocalDate.now().plusDays(7);
+      CreateTodoDTO createTodoDTO =
+          new CreateTodoDTO(
+              "todo title",
+              "todo description",
+              dueDate,
+              user.getId(),
+              group.getId(),
+              assignee.getId());
+
+      // When
+      TodoDTO todoDTO = todoService.createTodo(createTodoDTO);
+
+      // Then
+      Assertions.assertEquals("todo title", todoDTO.getTitle());
+      Assertions.assertEquals("todo description", todoDTO.getDescription());
+      Assertions.assertEquals(TodoStatus.TO_DO, todoDTO.getStatus());
+      Assertions.assertEquals(user.getId(), todoDTO.getAuthorId());
+      Assertions.assertEquals(group.getId(), todoDTO.getGroupId());
+      Assertions.assertNotNull(todoDTO.getOrder());
+      Assertions.assertEquals(dueDate, todoDTO.getDueDate());
+      Assertions.assertEquals(assignee.getId(), todoDTO.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("성공: dueDate만 포함하여 새로운 Todo를 생성한다")
+    void success_whenCreatingNewTodoWithDueDateOnly() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      LocalDate dueDate = LocalDate.now().plusDays(7);
+      CreateTodoDTO createTodoDTO =
+          new CreateTodoDTO(
+              "todo title", "todo description", dueDate, user.getId(), group.getId(), null);
+
+      // When
+      TodoDTO todoDTO = todoService.createTodo(createTodoDTO);
+
+      // Then
+      Assertions.assertEquals("todo title", todoDTO.getTitle());
+      Assertions.assertEquals("todo description", todoDTO.getDescription());
+      Assertions.assertEquals(TodoStatus.TO_DO, todoDTO.getStatus());
+      Assertions.assertEquals(user.getId(), todoDTO.getAuthorId());
+      Assertions.assertEquals(group.getId(), todoDTO.getGroupId());
+      Assertions.assertNotNull(todoDTO.getOrder());
+      Assertions.assertEquals(dueDate, todoDTO.getDueDate());
+      Assertions.assertNull(todoDTO.getAssigneeId());
+    }
+
+    @Test
+    @DisplayName("성공: assigneeId만 포함하여 새로운 Todo를 생성한다")
+    void success_whenCreatingNewTodoWithAssigneeOnly() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User assignee =
+          entityFactory.insertUser("assigneeUser", "hashedPassword", "assigneeNickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+
+      CreateTodoDTO createTodoDTO =
+          new CreateTodoDTO(
+              "todo title",
+              "todo description",
+              null,
+              user.getId(),
+              group.getId(),
+              assignee.getId());
+
+      // When
+      TodoDTO todoDTO = todoService.createTodo(createTodoDTO);
+
+      // Then
+      Assertions.assertEquals("todo title", todoDTO.getTitle());
+      Assertions.assertEquals("todo description", todoDTO.getDescription());
+      Assertions.assertEquals(TodoStatus.TO_DO, todoDTO.getStatus());
+      Assertions.assertEquals(user.getId(), todoDTO.getAuthorId());
+      Assertions.assertEquals(group.getId(), todoDTO.getGroupId());
+      Assertions.assertNotNull(todoDTO.getOrder());
+      Assertions.assertNull(todoDTO.getDueDate());
+      Assertions.assertEquals(assignee.getId(), todoDTO.getAssigneeId());
     }
 
     @Test
@@ -153,7 +249,8 @@ class TodoServiceTest {
       Group group = entityFactory.insertGroup("group name", "group description");
       th.delete(user);
       CreateTodoDTO createTodoDTO =
-          new CreateTodoDTO("todo title", "todo description", user.getId(), group.getId());
+          new CreateTodoDTO(
+              "todo title", "todo description", null, user.getId(), group.getId(), null);
 
       // When
       Runnable lambda = () -> todoService.createTodo(createTodoDTO);
@@ -170,7 +267,33 @@ class TodoServiceTest {
       Group group = entityFactory.insertGroup("group name", "group description");
       th.delete(group);
       CreateTodoDTO createTodoDTO =
-          new CreateTodoDTO("todo title", "todo description", user.getId(), group.getId());
+          new CreateTodoDTO(
+              "todo title", "todo description", null, user.getId(), group.getId(), null);
+
+      // When
+      Runnable lambda = () -> todoService.createTodo(createTodoDTO);
+
+      // Then
+      Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패: 존재하지 않는 assigneeId로 생성 시 예외가 발생한다")
+    void fail_whenAssigneeNotFound() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      long invalidAssigneeId = 9999L;
+      CreateTodoDTO createTodoDTO =
+          new CreateTodoDTO(
+              "todo title",
+              "todo description",
+              null,
+              user.getId(),
+              group.getId(),
+              invalidAssigneeId);
 
       // When
       Runnable lambda = () -> todoService.createTodo(createTodoDTO);
@@ -186,7 +309,8 @@ class TodoServiceTest {
       User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group name", "group description");
       CreateTodoDTO createTodoDTO =
-          new CreateTodoDTO("todo title", "todo description", user.getId(), group.getId());
+          new CreateTodoDTO(
+              "todo title", "todo description", null, user.getId(), group.getId(), null);
 
       // When
       TodoDTO todoDTO = todoService.createTodo(createTodoDTO);

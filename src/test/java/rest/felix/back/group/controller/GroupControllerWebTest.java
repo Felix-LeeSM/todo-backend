@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.Cookie;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
@@ -38,6 +37,7 @@ import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.group.dto.CreateGroupRequestDTO;
 import rest.felix.back.group.dto.GroupInvitationInfoDTOResponse;
 import rest.felix.back.group.dto.MemberDTO;
+import rest.felix.back.group.dto.MemberResponseDTO;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
@@ -53,7 +53,6 @@ import rest.felix.back.user.entity.User;
 @ActiveProfiles("test")
 public class GroupControllerWebTest {
 
-  @Autowired private EntityManager em;
   @Autowired private TodoRepository todoRepository;
   @Autowired private GroupRepository groupRepository;
   @Autowired private UserGroupRepository userGroupRepository;
@@ -1098,31 +1097,38 @@ public class GroupControllerWebTest {
       Assertions.assertNotNull(responseDTO.expiresAt());
 
       // Verify issuer details
-      Assertions.assertEquals(issuer.getId(), responseDTO.issuer().getId());
-      Assertions.assertEquals(issuer.getNickname(), responseDTO.issuer().getNickname());
-      Assertions.assertEquals(GroupRole.OWNER, responseDTO.issuer().getRole());
+      Assertions.assertEquals(issuer.getId(), responseDTO.issuer().id());
+      Assertions.assertEquals(issuer.getNickname(), responseDTO.issuer().nickname());
+      Assertions.assertEquals(GroupRole.OWNER, responseDTO.issuer().role());
 
       // Verify member count
       Assertions.assertEquals(4, responseDTO.memberCount());
 
       // Verify members list
-      List<MemberDTO> expectedMembers =
+      List<MemberResponseDTO> expectedMembers =
           List.of(
-                  new MemberDTO(
-                      issuer.getId(), issuer.getNickname(), group.getId(), GroupRole.OWNER),
-                  new MemberDTO(
-                      member1.getId(), member1.getNickname(), group.getId(), GroupRole.MEMBER),
-                  new MemberDTO(
-                      member2.getId(), member2.getNickname(), group.getId(), GroupRole.MANAGER),
-                  new MemberDTO(
-                      member3.getId(), member3.getNickname(), group.getId(), GroupRole.VIEWER))
+                  MemberResponseDTO.of(
+                      new MemberDTO(
+                          issuer.getId(), issuer.getNickname(), group.getId(), GroupRole.OWNER)),
+                  MemberResponseDTO.of(
+                      new MemberDTO(
+                          member1.getId(), member1.getNickname(), group.getId(), GroupRole.MEMBER)),
+                  MemberResponseDTO.of(
+                      new MemberDTO(
+                          member2.getId(),
+                          member2.getNickname(),
+                          group.getId(),
+                          GroupRole.MANAGER)),
+                  MemberResponseDTO.of(
+                      new MemberDTO(
+                          member3.getId(), member3.getNickname(), group.getId(), GroupRole.VIEWER)))
               .stream()
-              .sorted(Comparator.comparing(MemberDTO::getId))
+              .sorted(Comparator.comparing(MemberResponseDTO::id))
               .toList();
 
-      List<MemberDTO> actualMembers =
+      List<MemberResponseDTO> actualMembers =
           responseDTO.members().stream()
-              .sorted(Comparator.comparing(MemberDTO::getId))
+              .sorted(Comparator.comparing(MemberResponseDTO::id))
               .collect(Collectors.toList());
 
       org.assertj.core.api.Assertions.assertThat(actualMembers)

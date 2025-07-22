@@ -297,7 +297,7 @@ public class TodoControllerWebTest {
       Cookie cookie = userCookie(user);
 
       CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description");
+          new CreateTodoRequestDTO("todo title", "todo description", null, null);
 
       String body = objectMapper.writeValueAsString(createTodoRequestDTO);
 
@@ -323,6 +323,190 @@ public class TodoControllerWebTest {
       result.andExpect(jsonPath("$.description", equalTo("todo description")));
       result.andExpect(jsonPath("$.status", equalTo("TO_DO")));
       result.andExpect(jsonPath("$.order", notNullValue()));
+      result.andExpect(jsonPath("$.isImportant", equalTo(false)));
+      result.andExpect(jsonPath("$.dueDate").doesNotExist());
+      result.andExpect(jsonPath("$.assigneeId").doesNotExist());
+    }
+
+    @Test
+    void HappyPath_WithDueDateAndAssignee() throws Exception {
+
+      // Given
+
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      User assignee =
+          entityFactory.insertUser("assigneeUser", "hashedPassword", "assigneeNickname");
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+
+      Cookie cookie = userCookie(user);
+
+      LocalDate dueDate = LocalDate.now().plusDays(7);
+      CreateTodoRequestDTO createTodoRequestDTO =
+          new CreateTodoRequestDTO("todo title", "todo description", dueDate, assignee.getId());
+
+      String body = objectMapper.writeValueAsString(createTodoRequestDTO);
+
+      String path = String.format("/api/v1/group/%d/todo", group.getId());
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              post(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+
+      result.andExpect(status().isCreated());
+      result.andExpect(jsonPath("$.id", notNullValue()));
+      result.andExpect(jsonPath("$.authorId", equalTo(user.getId().intValue())));
+      result.andExpect(jsonPath("$.groupId", equalTo(group.getId().intValue())));
+      result.andExpect(jsonPath("$.title", equalTo("todo title")));
+      result.andExpect(jsonPath("$.description", equalTo("todo description")));
+      result.andExpect(jsonPath("$.status", equalTo("TO_DO")));
+      result.andExpect(jsonPath("$.order", notNullValue()));
+      result.andExpect(jsonPath("$.isImportant", equalTo(false)));
+      result.andExpect(jsonPath("$.dueDate", equalTo(dueDate.toString())));
+      result.andExpect(jsonPath("$.assigneeId", equalTo(assignee.getId().intValue())));
+    }
+
+    @Test
+    void HappyPath_WithDueDateOnly() throws Exception {
+
+      // Given
+
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Cookie cookie = userCookie(user);
+
+      LocalDate dueDate = LocalDate.now().plusDays(7);
+      CreateTodoRequestDTO createTodoRequestDTO =
+          new CreateTodoRequestDTO("todo title", "todo description", dueDate, null);
+
+      String body = objectMapper.writeValueAsString(createTodoRequestDTO);
+
+      String path = String.format("/api/v1/group/%d/todo", group.getId());
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              post(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+
+      result.andExpect(status().isCreated());
+      result.andExpect(jsonPath("$.id", notNullValue()));
+      result.andExpect(jsonPath("$.authorId", equalTo(user.getId().intValue())));
+      result.andExpect(jsonPath("$.groupId", equalTo(group.getId().intValue())));
+      result.andExpect(jsonPath("$.title", equalTo("todo title")));
+      result.andExpect(jsonPath("$.description", equalTo("todo description")));
+      result.andExpect(jsonPath("$.status", equalTo("TO_DO")));
+      result.andExpect(jsonPath("$.order", notNullValue()));
+      result.andExpect(jsonPath("$.isImportant", equalTo(false)));
+      result.andExpect(jsonPath("$.dueDate", equalTo(dueDate.toString())));
+      result.andExpect(jsonPath("$.assigneeId").doesNotExist());
+    }
+
+    @Test
+    void HappyPath_WithAssigneeOnly() throws Exception {
+
+      // Given
+
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+      User assignee =
+          entityFactory.insertUser("assigneeUser", "hashedPassword", "assigneeNickname");
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+
+      Cookie cookie = userCookie(user);
+
+      CreateTodoRequestDTO createTodoRequestDTO =
+          new CreateTodoRequestDTO("todo title", "todo description", null, assignee.getId());
+
+      String body = objectMapper.writeValueAsString(createTodoRequestDTO);
+
+      String path = String.format("/api/v1/group/%d/todo", group.getId());
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              post(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+
+      result.andExpect(status().isCreated());
+      result.andExpect(jsonPath("$.id", notNullValue()));
+      result.andExpect(jsonPath("$.authorId", equalTo(user.getId().intValue())));
+      result.andExpect(jsonPath("$.groupId", equalTo(group.getId().intValue())));
+      result.andExpect(jsonPath("$.title", equalTo("todo title")));
+      result.andExpect(jsonPath("$.description", equalTo("todo description")));
+      result.andExpect(jsonPath("$.status", equalTo("TO_DO")));
+      result.andExpect(jsonPath("$.order", notNullValue()));
+      result.andExpect(jsonPath("$.isImportant", equalTo(false)));
+      result.andExpect(jsonPath("$.dueDate").doesNotExist());
+      result.andExpect(jsonPath("$.assigneeId", equalTo(assignee.getId().intValue())));
+    }
+
+    @Test
+    void Failure_InvalidAssignee() throws Exception {
+
+      // Given
+
+      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
+
+      Group group = entityFactory.insertGroup("group name", "group description");
+
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      Cookie cookie = userCookie(user);
+
+      // 존재하지 않는 assigneeId
+      long invalidAssigneeId = 9999L;
+      CreateTodoRequestDTO createTodoRequestDTO =
+          new CreateTodoRequestDTO("todo title", "todo description", null, invalidAssigneeId);
+
+      String body = objectMapper.writeValueAsString(createTodoRequestDTO);
+
+      String path = String.format("/api/v1/group/%d/todo", group.getId());
+
+      // When
+
+      ResultActions result =
+          mvc.perform(
+              post(path)
+                  .cookie(cookie)
+                  .accept(MediaType.APPLICATION_JSON)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body));
+
+      // Then
+
+      result.andExpect(status().isNotFound());
+      result.andExpect(jsonPath("$.message", equalTo("Resource Not Found.")));
     }
 
     @Test
@@ -337,7 +521,7 @@ public class TodoControllerWebTest {
       entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
       CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description");
+          new CreateTodoRequestDTO("todo title", "todo description", null, null);
 
       String body = objectMapper.writeValueAsString(createTodoRequestDTO);
 
@@ -375,7 +559,7 @@ public class TodoControllerWebTest {
       Cookie cookie = userCookie(user);
 
       CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description");
+          new CreateTodoRequestDTO("todo title", "todo description", null, null);
 
       String body = objectMapper.writeValueAsString(createTodoRequestDTO);
 
@@ -415,7 +599,7 @@ public class TodoControllerWebTest {
       Cookie cookie = userCookie(user);
 
       CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description");
+          new CreateTodoRequestDTO("todo title", "todo description", null, null);
 
       String body = objectMapper.writeValueAsString(createTodoRequestDTO);
 
@@ -454,7 +638,7 @@ public class TodoControllerWebTest {
       Cookie cookie = userCookie(user);
 
       CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description");
+          new CreateTodoRequestDTO("todo title", "todo description", null, null);
 
       String body = objectMapper.writeValueAsString(createTodoRequestDTO);
 
@@ -494,7 +678,7 @@ public class TodoControllerWebTest {
       Cookie cookie = userCookie(user);
 
       CreateTodoRequestDTO createTodoRequestDTO =
-          new CreateTodoRequestDTO("todo title", "todo description");
+          new CreateTodoRequestDTO("todo title", "todo description", null, null);
 
       String body = objectMapper.writeValueAsString(createTodoRequestDTO);
 

@@ -1,18 +1,22 @@
 package rest.felix.back.group.controller;
 
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
+import rest.felix.back.common.config.GroupConfig;
 import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.Pair;
 import rest.felix.back.common.util.TestHelper;
@@ -34,11 +38,12 @@ import rest.felix.back.group.exception.NoInvitationException;
 import rest.felix.back.group.exception.TooManyInvitationsException;
 import rest.felix.back.group.repository.GroupRepository;
 import rest.felix.back.group.repository.UserGroupRepository;
+import rest.felix.back.todo.dto.TodoWithStarredStatusResponseDTO;
+import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.todo.repository.TodoRepository;
 import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.entity.User;
-import rest.felix.back.user.exception.NoMatchingUserException;
 import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @SpringBootTest
@@ -50,6 +55,7 @@ public class GroupControllerUnitTest {
   @Autowired private UserGroupRepository userGroupRepository;
   @Autowired private TodoRepository todoRepository;
   @Autowired private EntityFactory entityFactory;
+  @Autowired private GroupConfig groupConfig;
 
   @Autowired private TestHelper th;
 
@@ -58,8 +64,7 @@ public class GroupControllerUnitTest {
     th.cleanUp();
   }
 
-  @SpringBootTest
-  @ActiveProfiles("test")
+  @Nested
   @DisplayName("그룹 생성 테스트")
   class CreateGroupTest {
 
@@ -95,31 +100,9 @@ public class GroupControllerUnitTest {
 
       Assertions.assertEquals(GroupRole.OWNER, userGroup.getGroupRole());
     }
-
-    @Test
-    public void createGroup_Failure_NoSuchUser() {
-      // Given
-
-      User user = entityFactory.insertUser("username", "some_password", "nickname");
-
-      th.delete(user);
-
-      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
-
-      CreateGroupRequestDTO createGroupRequestDTO =
-          new CreateGroupRequestDTO("groupName", "group description");
-
-      // When
-
-      Runnable lambda = () -> groupController.createGroup(authUserDTO, createGroupRequestDTO);
-
-      // Then
-
-      Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
-    }
   }
 
-  @SpringBootTest
+  @Nested
   @DisplayName("유저 전체 그룹 조회 테스트")
   class GetMyDetailedGroupsTest {
 
@@ -203,9 +186,10 @@ public class GroupControllerUnitTest {
       Assertions.assertNotNull(body);
       Assertions.assertEquals(2, body.size());
 
-      body.sort((a, b) -> a.name().compareTo(b.name()));
+      List<DetailedGroupResponseDTO> data =
+          body.stream().sorted(Comparator.comparing(DetailedGroupResponseDTO::name)).toList();
 
-      DetailedGroupResponseDTO group1DTO = body.get(0);
+      DetailedGroupResponseDTO group1DTO = data.get(0);
       Assertions.assertEquals(group1.getId(), group1DTO.id());
       Assertions.assertEquals("Group 1", group1DTO.name());
       Assertions.assertEquals("Description 1", group1DTO.description());
@@ -216,9 +200,9 @@ public class GroupControllerUnitTest {
 
       Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick"),
-          group1DTO.members().stream().map(MemberResponseDTO::getNickname).sorted().toList());
+          group1DTO.members().stream().map(MemberResponseDTO::nickname).sorted().toList());
 
-      DetailedGroupResponseDTO group2DTO = body.get(1);
+      DetailedGroupResponseDTO group2DTO = data.get(1);
       Assertions.assertEquals(group2.getId(), group2DTO.id());
       Assertions.assertEquals("Group 2", group2DTO.name());
       Assertions.assertEquals("Description 2", group2DTO.description());
@@ -229,7 +213,7 @@ public class GroupControllerUnitTest {
 
       Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick", "otherUser2Nick"),
-          group2DTO.members().stream().map(MemberResponseDTO::getNickname).sorted().toList());
+          group2DTO.members().stream().map(MemberResponseDTO::nickname).sorted().toList());
     }
 
     @Test
@@ -278,7 +262,7 @@ public class GroupControllerUnitTest {
 
       Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick"),
-          group1DTO.members().stream().map(MemberResponseDTO::getNickname).sorted().toList());
+          group1DTO.members().stream().map(MemberResponseDTO::nickname).sorted().toList());
     }
 
     @Test
@@ -301,25 +285,9 @@ public class GroupControllerUnitTest {
       Assertions.assertNotNull(body);
       Assertions.assertEquals(0, body.size());
     }
-
-    @Test
-    @DisplayName("Failure - No such user")
-    public void Failure_NoSuchUser() {
-      // Given
-      User mainUser = entityFactory.insertUser("mainUser", "password", "mainUserNick");
-      AuthUserDTO authUserDTO = AuthUserDTO.of(mainUser);
-
-      th.delete(mainUser);
-
-      // When
-      Runnable lambda = () -> groupController.getMyDetailedGroups(authUserDTO);
-
-      // Then
-      Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
-    }
   }
 
-  @SpringBootTest
+  @Nested
   @DisplayName("유저 단일 그룹 조회 테스트")
   class GetUserGroupTest {
 
@@ -337,24 +305,26 @@ public class GroupControllerUnitTest {
       entityFactory.insertUserGroup(memberUser1.getId(), group.getId(), GroupRole.MEMBER);
       entityFactory.insertUserGroup(memberUser2.getId(), group.getId(), GroupRole.VIEWER);
 
-      entityFactory.insertTodo(
-          ownerUser.getId(),
-          ownerUser.getId(),
-          group.getId(),
-          "Owner Todo 1",
-          "Desc",
-          TodoStatus.IN_PROGRESS,
-          "a",
-          false);
-      entityFactory.insertTodo(
-          memberUser1.getId(),
-          memberUser1.getId(),
-          group.getId(),
-          "Member1 Todo 1",
-          "Desc",
-          TodoStatus.DONE,
-          "b",
-          false);
+      Todo todo1 =
+          entityFactory.insertTodo(
+              ownerUser.getId(),
+              ownerUser.getId(),
+              group.getId(),
+              "Owner Todo 1",
+              "Desc",
+              TodoStatus.IN_PROGRESS,
+              "a",
+              false);
+      Todo todo2 =
+          entityFactory.insertTodo(
+              memberUser1.getId(),
+              memberUser1.getId(),
+              group.getId(),
+              "Member1 Todo 1",
+              "Desc",
+              TodoStatus.DONE,
+              "b",
+              false);
       entityFactory.insertTodo(
           memberUser2.getId(),
           memberUser2.getId(),
@@ -363,7 +333,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "c",
-          false);
+          true);
       entityFactory.insertTodo(
           ownerUser.getId(),
           ownerUser.getId(),
@@ -371,8 +341,12 @@ public class GroupControllerUnitTest {
           "Owner Todo 2",
           "Desc",
           TodoStatus.DONE,
-          "d",
+          LocalDate.of(2023, 12, 10),
           false);
+
+      entityFactory.insertUserTodoStar(memberUser1.getId(), todo1.getId());
+      entityFactory.insertUserTodoStar(ownerUser.getId(), todo2.getId());
+      entityFactory.insertUserTodoStar(memberUser2.getId(), todo2.getId());
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(ownerUser);
 
@@ -391,16 +365,30 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(3, body.memberCount());
       Assertions.assertEquals(
           List.of("memberNick1", "memberNick2", "ownerNick"),
-          body.members().stream().map(MemberResponseDTO::getNickname).sorted().toList());
+          body.members().stream().map(MemberResponseDTO::nickname).sorted().toList());
+
       Assertions.assertEquals(4, body.todos().size());
-      Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Owner Todo 1")));
-      Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Member1 Todo 1")));
-      Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Member2 Todo 1")));
-      Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Owner Todo 2")));
+
+      List<TodoWithStarredStatusResponseDTO> todos =
+          body.todos().stream()
+              .sorted(Comparator.comparing(TodoWithStarredStatusResponseDTO::id))
+              .toList();
+
+      Assertions.assertEquals(
+          List.of("Owner Todo 1", "Member1 Todo 1", "Member2 Todo 1", "Owner Todo 2"),
+          todos.stream().map(TodoWithStarredStatusResponseDTO::title).toList());
+
+      Assertions.assertEquals(
+          List.of(false, true, false, false),
+          todos.stream().map(TodoWithStarredStatusResponseDTO::isStarred).toList());
+
+      Assertions.assertEquals(
+          List.of(false, false, true, false),
+          todos.stream().map(TodoWithStarredStatusResponseDTO::isImportant).toList());
+
+      Assertions.assertEquals(
+          Arrays.asList(null, null, null, LocalDate.of(2023, 12, 10)),
+          todos.stream().map(TodoWithStarredStatusResponseDTO::dueDate).toList());
     }
 
     @Test
@@ -462,14 +450,14 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(3, body.memberCount());
       Assertions.assertEquals(
           List.of("memberNick3", "memberNick4", "ownerNick2"),
-          body.members().stream().map(MemberResponseDTO::getNickname).sorted().toList());
+          body.members().stream().map(MemberResponseDTO::nickname).sorted().toList());
       Assertions.assertEquals(3, body.todos().size());
       Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Owner Todo 3")));
+          body.todos().stream().anyMatch(todo -> todo.title().equals("Owner Todo 3")));
       Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Member3 Todo 1")));
+          body.todos().stream().anyMatch(todo -> todo.title().equals("Member3 Todo 1")));
       Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Member4 Todo 1")));
+          body.todos().stream().anyMatch(todo -> todo.title().equals("Member4 Todo 1")));
     }
 
     @Test
@@ -531,14 +519,14 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(3, body.memberCount());
       Assertions.assertEquals(
           List.of("managerNick", "memberNick5", "ownerNick3"),
-          body.members().stream().map(MemberResponseDTO::getNickname).sorted().toList());
+          body.members().stream().map(MemberResponseDTO::nickname).sorted().toList());
       Assertions.assertEquals(3, body.todos().size());
       Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Owner Todo 4")));
+          body.todos().stream().anyMatch(todo -> todo.title().equals("Owner Todo 4")));
       Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Member5 Todo 1")));
+          body.todos().stream().anyMatch(todo -> todo.title().equals("Member5 Todo 1")));
       Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.getTitle().equals("Manager Todo 1")));
+          body.todos().stream().anyMatch(todo -> todo.title().equals("Manager Todo 1")));
     }
 
     @Test
@@ -548,14 +536,15 @@ public class GroupControllerUnitTest {
       User user = entityFactory.insertUser("testUser4", "password", "nick4");
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
-      Long nonExistentGroupId = 999L; // A group ID that does not exist
+
+      Group wrongGroup = entityFactory.insertGroup("wrong grop", "desc");
+      th.delete(wrongGroup);
 
       // When
-      Runnable lambda = () -> groupController.getUserGroup(authUserDTO, nonExistentGroupId);
+      Runnable lambda = () -> groupController.getUserGroup(authUserDTO, wrongGroup.getId());
 
       // Then
-      Assertions.assertThrows(
-          rest.felix.back.group.exception.GroupNotFoundException.class, lambda::run);
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
     }
 
     @Test
@@ -564,8 +553,10 @@ public class GroupControllerUnitTest {
       // Given
       User user = entityFactory.insertUser("testUser5", "password", "nick5");
       Group group = entityFactory.insertGroup("Test Group 5", "Description 5");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
+      th.delete(userGroup);
       th.delete(user); // Remove the user to simulate no such user
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
@@ -574,7 +565,7 @@ public class GroupControllerUnitTest {
       Runnable lambda = () -> groupController.getUserGroup(authUserDTO, group.getId());
 
       // Then
-      Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
     }
 
     @Test
@@ -595,7 +586,7 @@ public class GroupControllerUnitTest {
     }
   }
 
-  @SpringBootTest
+  @Nested
   @DisplayName("그룹 삭제 테스트 테스트")
   class DeleteGroupTest {
 
@@ -705,7 +696,7 @@ public class GroupControllerUnitTest {
 
       // Then
 
-      Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
 
       Assertions.assertTrue(groupRepository.findById(group.getId()).isPresent());
     }
@@ -760,7 +751,7 @@ public class GroupControllerUnitTest {
     }
   }
 
-  @SpringBootTest
+  @Nested
   @DisplayName("그룹 초대 생성 테스트")
   class CreateGroupInvitationTest {
 
@@ -804,30 +795,15 @@ public class GroupControllerUnitTest {
     }
 
     @Test
-    @DisplayName("실패 - 없는 유저")
-    public void Failure_NoSuchUser() {
-      // Given
-      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group name", "group description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-      th.delete(user);
-
-      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
-
-      // When
-      Runnable lambda = () -> groupController.createGroupInvitation(authUserDTO, group.getId());
-
-      // Then
-      Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
-    }
-
-    @Test
     @DisplayName("실패 - 없는 그룹")
     public void Failure_NoGroup() {
       // Given
       User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group name", "group description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+
+      th.delete(userGroup);
       th.delete(group);
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
@@ -836,7 +812,7 @@ public class GroupControllerUnitTest {
       Runnable lambda = () -> groupController.createGroupInvitation(authUserDTO, group.getId());
 
       // Then
-      Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
     }
 
     @Test
@@ -848,7 +824,7 @@ public class GroupControllerUnitTest {
       entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
       // Fill up invitations to hit the limit
-      for (int i = 0; i < 5; i++) { // Assuming groupConfig.getLimit() is 5
+      for (int i = 0; i < groupConfig.getLimit(); i++) { // Assuming groupConfig.getLimit() is 5
         entityFactory.insertGroupInvitation(
             user.getId(), group.getId(), "token" + i, ZonedDateTime.now().plusDays(1));
       }
@@ -863,7 +839,7 @@ public class GroupControllerUnitTest {
     }
   }
 
-  @SpringBootTest
+  @Nested
   @DisplayName("그룹 초대 정보 테스트")
   class GetInvitationInfoTest {
 
@@ -892,31 +868,7 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(group.getName(), responseEntity.getBody().name());
       Assertions.assertEquals(group.getDescription(), responseEntity.getBody().description());
       Assertions.assertNotNull(responseEntity.getBody().expiresAt());
-      Assertions.assertEquals(issuer.getId(), responseEntity.getBody().issuer().getId());
-    }
-
-    @Test
-    @DisplayName("실패 - 없는 유저")
-    public void Failure_NoSuchUser() {
-      // Given
-      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
-      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
-      Group group = entityFactory.insertGroup("group name", "group description");
-      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
-
-      String token = "validToken";
-      entityFactory.insertGroupInvitation(
-          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
-
-      th.delete(user);
-
-      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
-
-      // When
-      Runnable lambda = () -> groupController.getInvitationInfo(authUserDTO, token);
-
-      // Then
-      Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
+      Assertions.assertEquals(issuer.getId(), responseEntity.getBody().issuer().id());
     }
 
     @Test
@@ -981,7 +933,7 @@ public class GroupControllerUnitTest {
     }
   }
 
-  @SpringBootTest
+  @Nested
   @DisplayName("그룹 초대 수락 테스트")
   class AcceptInvitationTest {
 
@@ -1007,30 +959,6 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
       Assertions.assertTrue(
           userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).isPresent());
-    }
-
-    @Test
-    @DisplayName("실패 - 없는 유저")
-    public void Failure_NoSuchUser() {
-      // Given
-      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
-      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
-      Group group = entityFactory.insertGroup("group name", "group description");
-      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
-
-      String token = "validToken";
-      entityFactory.insertGroupInvitation(
-          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
-
-      th.delete(user);
-
-      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
-
-      // When
-      Runnable lambda = () -> groupController.acceptInvitation(authUserDTO, token);
-
-      // Then
-      Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
     }
 
     @Test
