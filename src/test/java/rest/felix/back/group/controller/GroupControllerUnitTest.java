@@ -1,6 +1,5 @@
 package rest.felix.back.group.controller;
 
-import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
@@ -18,13 +17,17 @@ import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.group.dto.CreateGroupRequestDTO;
 import rest.felix.back.group.dto.DetailedGroupResponseDTO;
 import rest.felix.back.group.dto.FullGroupDetailsResponseDTO;
+import rest.felix.back.group.dto.GroupDTO;
 import rest.felix.back.group.dto.GroupResponseDTO;
 import rest.felix.back.group.dto.MemberDTO;
+import rest.felix.back.group.dto.UserGroupDTO;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
-import rest.felix.back.todo.entity.Todo;
+import rest.felix.back.group.repository.GroupRepository;
+import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
+import rest.felix.back.todo.repository.TodoRepository;
 import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.entity.User;
 import rest.felix.back.user.exception.NoMatchingUserException;
@@ -35,7 +38,9 @@ import rest.felix.back.user.exception.UserAccessDeniedException;
 public class GroupControllerUnitTest {
 
   @Autowired private GroupController groupController;
-  @Autowired private EntityManager em;
+  @Autowired private GroupRepository groupRepository;
+  @Autowired private UserGroupRepository userGroupRepository;
+  @Autowired private TodoRepository todoRepository;
   @Autowired private EntityFactory entityFactory;
 
   @Autowired private TestHelper th;
@@ -72,39 +77,13 @@ public class GroupControllerUnitTest {
 
       GroupResponseDTO groupResponseDTO = responseEntity.getBody();
 
-      Group createdGroup =
-          em.createQuery(
-                  """
-            SELECT
-                g
-            FROM
-                Group g
-            WHERE
-                g.id = :groupId
-
-            """,
-                  Group.class)
-              .setParameter("groupId", groupResponseDTO.id())
-              .getSingleResult();
+      GroupDTO createdGroup = groupRepository.findById(groupResponseDTO.id()).get();
 
       Assertions.assertEquals("groupName", createdGroup.getName());
       Assertions.assertEquals("group description", createdGroup.getDescription());
 
-      UserGroup userGroup =
-          em.createQuery(
-                  """
-            SELECT
-                ug
-            FROM
-                UserGroup ug
-            WHERE
-                ug.group.id = :groupId AND
-                ug.user.id = :userId
-            """,
-                  UserGroup.class)
-              .setParameter("groupId", groupResponseDTO.id())
-              .setParameter("userId", user.getId())
-              .getSingleResult();
+      UserGroupDTO userGroup =
+          userGroupRepository.findByUserIdAndGroupId(user.getId(), groupResponseDTO.id()).get();
 
       Assertions.assertEquals(GroupRole.OWNER, userGroup.getGroupRole());
     }
@@ -640,44 +619,11 @@ public class GroupControllerUnitTest {
 
       // Then
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-                  SELECT g
-                  FROM Group g
-                  WHERE g.id = :groupId
-                  """,
-                  Group.class)
-              .setParameter("groupId", group.getId())
-              .getResultStream()
-              .findFirst()
-              .isEmpty());
+      Assertions.assertTrue(groupRepository.findById(group.getId()).isEmpty());
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-                  SELECT t
-                  FROM Todo t
-                  WHERE t.group.id = :groupId
-                  """,
-                  Todo.class)
-              .setParameter("groupId", group.getId())
-              .getResultStream()
-              .findFirst()
-              .isEmpty());
+      Assertions.assertTrue(todoRepository.findByGroupId(group.getId()).isEmpty());
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-                  SELECT ug
-                  FROM UserGroup ug
-                  WHERE ug.group.id = :groupId
-                  """,
-                  UserGroup.class)
-              .setParameter("groupId", group.getId())
-              .getResultStream()
-              .findFirst()
-              .isEmpty());
+      Assertions.assertTrue(userGroupRepository.findByGroupId(group.getId()).isEmpty());
     }
 
     @Test
@@ -722,44 +668,11 @@ public class GroupControllerUnitTest {
 
                 Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
 
-                Assertions.assertTrue(
-                    em.createQuery(
-                            """
-                            SELECT g
-                            FROM Group g
-                            WHERE g.id = :groupId
-                            """,
-                            Group.class)
-                        .setParameter("groupId", group.getId())
-                        .getResultStream()
-                        .findFirst()
-                        .isPresent());
+                Assertions.assertTrue(groupRepository.findById(group.getId()).isPresent());
 
-                Assertions.assertTrue(
-                    em.createQuery(
-                            """
-                            SELECT t
-                            FROM Todo t
-                            WHERE t.group.id = :groupId
-                            """,
-                            Todo.class)
-                        .setParameter("groupId", group.getId())
-                        .getResultStream()
-                        .findFirst()
-                        .isPresent());
+                Assertions.assertTrue(0 < todoRepository.findByGroupId(group.getId()).size());
 
-                Assertions.assertTrue(
-                    em.createQuery(
-                            """
-                            SELECT ug
-                            FROM UserGroup ug
-                            WHERE ug.group.id = :groupId
-                            """,
-                            UserGroup.class)
-                        .setParameter("groupId", group.getId())
-                        .getResultStream()
-                        .findFirst()
-                        .isPresent());
+                Assertions.assertTrue(0 < userGroupRepository.findByGroupId(group.getId()).size());
               });
     }
 
@@ -786,18 +699,7 @@ public class GroupControllerUnitTest {
 
       Assertions.assertThrows(NoMatchingUserException.class, lambda::run);
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-                  SELECT g
-                  FROM Group g
-                  WHERE g.id = :groupId
-                  """,
-                  Group.class)
-              .setParameter("groupId", group.getId())
-              .getResultStream()
-              .findFirst()
-              .isPresent());
+      Assertions.assertTrue(groupRepository.findById(group.getId()).isPresent());
     }
 
     @Test
@@ -822,18 +724,7 @@ public class GroupControllerUnitTest {
 
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
 
-      Assertions.assertTrue(
-          em.createQuery(
-                  """
-                  SELECT g
-                  FROM Group g
-                  WHERE g.id = :groupId
-                  """,
-                  Group.class)
-              .setParameter("groupId", group.getId())
-              .getResultStream()
-              .findFirst()
-              .isPresent());
+      Assertions.assertTrue(groupRepository.findById(group.getId()).isPresent());
     }
 
     @Test

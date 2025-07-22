@@ -15,5 +15,5 @@ public class GroupInvitationInfoDTO {
   private final long memberCount;
   private final MemberDTO issuer;
   private final List<MemberDTO> members;
-  private final ZonedDateTime activeUntil;
+  private final ZonedDateTime expiresAt;
 }

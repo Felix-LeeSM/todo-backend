@@ -11,7 +11,7 @@ public record GroupInvitationInfoDTOResponse(
     long memberCount,
     MemberDTO issuer,
     List<MemberDTO> members,
-    ZonedDateTime activeUntil) {
+    ZonedDateTime expiresAt) {
 
   public static GroupInvitationInfoDTOResponse of(
       GroupInvitationInfoDTO groupInvitationInfoDetails) {
@@ -23,6 +23,6 @@ public record GroupInvitationInfoDTOResponse(
         groupInvitationInfoDetails.getMemberCount(),
         groupInvitationInfoDetails.getIssuer(),
         groupInvitationInfoDetails.getMembers(),
-        groupInvitationInfoDetails.getActiveUntil());
+        groupInvitationInfoDetails.getExpiresAt());
   }
 }

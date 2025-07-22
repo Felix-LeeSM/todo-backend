@@ -1,6 +1,7 @@
 package rest.felix.back.group.repository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -37,16 +38,16 @@ public class GroupInvitationRepository {
   }
 
   @Transactional(readOnly = true)
-  public Integer countActiveUntil(long issuerId, long groupId, ZonedDateTime now) {
+  public Long countActiveUntil(long issuerId, long groupId, ZonedDateTime now) {
     return em.createQuery(
             """
           SELECT COUNT(*)
           FROM GroupInvitation gi
           WHERE gi.issuer.id = :issuerId
             AND gi.group.id = :groupId
-            AND gi.expiresAt < :now
+            AND :now < gi.expiresAt
           """,
-            Integer.class)
+            Long.class)
         .setParameter("issuerId", issuerId)
         .setParameter("groupId", groupId)
         .setParameter("now", now)
@@ -55,19 +56,21 @@ public class GroupInvitationRepository {
 
   @Transactional(readOnly = true)
   public Optional<GroupInvitationDTO> findByToken(String token) {
-    return em.createQuery(
-            """
+    try {
+      return Optional.of(
+              em.createQuery(
+                      """
           SELECT gi
           FROM GroupInvitation gi
-          LEFT JOIN FETCH gi.group g
-          LEFT JOIN FETCH gi.issuer i
           WHERE gi.token = :token
           """,
-            GroupInvitation.class)
-        .setParameter("token", token)
-        .getResultStream()
-        .findFirst()
-        .map(GroupInvitationDTO::of);
+                      GroupInvitation.class)
+                  .setParameter("token", token)
+                  .getSingleResult())
+          .map(GroupInvitationDTO::of);
+    } catch (NoResultException e) {
+      return Optional.empty();
+    }
   }
 
   @Transactional

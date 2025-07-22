@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
-import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
+import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
 import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.group.dto.CreateGroupDTO;

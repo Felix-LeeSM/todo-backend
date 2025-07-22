@@ -42,9 +42,11 @@ public class UserRepository {
   @Transactional(readOnly = true)
   public Optional<UserDTO> findByUsername(String username) {
 
-    return em.createQuery("SELECT u FROM User u WHERE u.username = :username", User.class)
+    return em
+        .createQuery("SELECT u FROM User u WHERE u.username = :username", User.class)
         .setParameter("username", username)
-        .getResultStream()
+        .getResultList()
+        .stream()
         .findFirst()
         .map(UserDTO::of);
   }
@@ -99,9 +101,11 @@ public class UserRepository {
 
   @Transactional(readOnly = true)
   public Optional<UserDTO> findById(Long userId) {
-    return em.createQuery("SELECT u FROM User u WHERE u.id = :userId", User.class)
+    return em
+        .createQuery("SELECT u FROM User u WHERE u.id = :userId", User.class)
         .setParameter("userId", userId)
-        .getResultStream()
+        .getResultList()
+        .stream()
         .findFirst()
         .map(UserDTO::of);
   }

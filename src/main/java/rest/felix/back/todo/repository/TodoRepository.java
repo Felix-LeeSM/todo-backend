@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
+import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.todo.dto.CreateTodoDTO;
 import rest.felix.back.todo.dto.TodoCountDTO;
@@ -52,22 +52,27 @@ public class TodoRepository {
 
   @Transactional(readOnly = true)
   public Optional<TodoCountDTO> findTodoCountsByGroupId(Long groupId) {
-    return em.createQuery(
-            """
-            SELECT new rest.felix.back.todo.dto.TodoCountDTO(
-                g.id,
-                COUNT(t),
-                SUM(CASE WHEN t.todoStatus = TodoStatus.DONE THEN 1 ELSE 0 END)
-            )
-            FROM Group g
-            LEFT JOIN g.todos t
-            WHERE g.id = :groupIds
-            GROUP BY g.id
-            """,
-            TodoCountDTO.class)
-        .setParameter("groupId", groupId)
-        .getResultStream()
-        .findFirst();
+    try {
+      return Optional.of(
+          em.createQuery(
+                  """
+              SELECT new rest.felix.back.todo.dto.TodoCountDTO(
+                  g.id,
+                  COUNT(t),
+                  SUM(CASE WHEN t.todoStatus = TodoStatus.DONE THEN 1 ELSE 0 END)
+              )
+              FROM Group g
+              LEFT JOIN g.todos t
+              WHERE g.id = :groupId
+              GROUP BY g.id
+              """,
+                  TodoCountDTO.class)
+              .setParameter("groupId", groupId)
+              .getSingleResult());
+
+    } catch (NoResultException e) {
+      return Optional.empty();
+    }
   }
 
   @Transactional(readOnly = true)

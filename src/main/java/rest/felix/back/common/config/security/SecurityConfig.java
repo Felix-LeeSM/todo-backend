@@ -54,7 +54,6 @@ public class SecurityConfig {
   }
 
   private boolean isLocalAddress(String ip) {
-    System.out.println(ip);
     return ip.equals("127.0.0.1") || ip.equals("0:0:0:0:0:0:0:1"); // IPv4 and IPv6 localhost
   }
 }

@@ -1,6 +1,7 @@
 package rest.felix.back.common.util;
 
 import jakarta.persistence.EntityManager;
+import java.time.ZonedDateTime;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -137,7 +138,8 @@ public class EntityFactory {
     return todo;
   }
 
-  public GroupInvitation insertGroupInvitation(Long groupId, Long issuerId, String token) {
+  public GroupInvitation insertGroupInvitation(
+      Long issuerId, Long groupId, String token, ZonedDateTime expiresAt) {
     User issuer = entityManager.getReference(User.class, issuerId);
     Group group = entityManager.getReference(Group.class, groupId);
 
@@ -146,6 +148,7 @@ public class EntityFactory {
     groupInvitation.setGroup(group);
     groupInvitation.setIssuer(issuer);
     groupInvitation.setToken(token);
+    groupInvitation.setExpiresAt(expiresAt);
 
     entityManager.persist(groupInvitation);
 

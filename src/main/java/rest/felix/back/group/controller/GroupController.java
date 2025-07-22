@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import rest.felix.back.common.config.GroupConfig;
 import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.CreateGroupInvitationDTO;
 import rest.felix.back.group.dto.CreateGroupInvitationResponseDTO;
@@ -28,7 +29,6 @@ import rest.felix.back.group.dto.GroupInvitationInfoDTO;
 import rest.felix.back.group.dto.GroupInvitationInfoDTOResponse;
 import rest.felix.back.group.dto.GroupResponseDTO;
 import rest.felix.back.group.entity.enumerated.GroupRole;
-import rest.felix.back.group.enumerated.InvitationDurationUnit;
 import rest.felix.back.group.exception.AlreadyGroupMemberException;
 import rest.felix.back.group.service.GroupInvitationService;
 import rest.felix.back.group.service.GroupService;
@@ -42,9 +42,7 @@ public class GroupController {
   private final GroupService groupService;
   private final GroupInvitationService groupInvitationService;
 
-  // 만 하루 안에 10개만 만들 수 있다.
-  private final Integer INVITATION_LIMIT = 10;
-  private final InvitationDurationUnit INVITATION_LIMIT_UNIT = InvitationDurationUnit.DAYS;
+  private final GroupConfig groupConfig;
 
   @PostMapping
   public ResponseEntity<GroupResponseDTO> createGroup(
@@ -108,11 +106,12 @@ public class GroupController {
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
 
     groupService.assertGroupAuthority(userId, groupId, GroupRole.MANAGER);
-    groupInvitationService.assertInvitationCountLimitation(userId, groupId, INVITATION_LIMIT, now);
+    groupInvitationService.assertInvitationCountLimitation(
+        userId, groupId, groupConfig.getLimit(), now);
 
     // 기본적으로 하루만 지속되는 토큰을 만듦
     String token = groupInvitationService.createInvitationToken();
-    ZonedDateTime expiresAt = now.plus(1, INVITATION_LIMIT_UNIT.toChronoUnit());
+    ZonedDateTime expiresAt = now.plus(1, groupConfig.getLimitUnit().toChronoUnit());
 
     CreateGroupInvitationDTO createGroupInvitationDTO =
         new CreateGroupInvitationDTO(userId, groupId, token, expiresAt);
@@ -130,17 +129,11 @@ public class GroupController {
     long userId = authUser.getUserId();
     ZonedDateTime now = ZonedDateTime.now();
 
-    // 1. token으로 invitation을 찾는다.
-    // 없는 경우, 에러를 반환한다.
-    // 만료된 경우, 에러를 반환한다.
     GroupInvitationDTO groupInvitation = groupInvitationService.findValidInvitation(token, now);
 
-    // 2. groupRole을 찾는다.
-    // 이미 가입된 경우, 에러를 반환한다.
     if (groupService.findUserRole(userId, groupInvitation.getGroupId()).isPresent())
       throw new AlreadyGroupMemberException();
 
-    // 3. 정보를 찾아서 반환한다.
     GroupInvitationInfoDTO groupInvitationInfo =
         groupService.findGroupInvitationInfo(groupInvitation);
 
@@ -159,7 +152,6 @@ public class GroupController {
     if (groupService.findUserRole(userId, groupInvitation.getGroupId()).isPresent())
       throw new AlreadyGroupMemberException();
 
-    // 3. 유저를 가입시키고, 201 created를 반환한다.
     groupService.registerUserToGroup(userId, groupInvitation.getGroupId(), GroupRole.MEMBER);
 
     return ResponseEntity.status(HttpStatus.CREATED).build();

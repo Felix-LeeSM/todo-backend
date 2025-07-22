@@ -1,4 +1,4 @@
-package rest.felix.back.common.exception.throwable.notfound;
+package rest.felix.back.common.exception.throwable.notFound;
 
 import lombok.Getter;
 import org.springframework.http.HttpStatus;

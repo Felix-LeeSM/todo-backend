@@ -11,7 +11,9 @@ import rest.felix.back.common.exception.ErrorResponseDTO;
 import rest.felix.back.common.exception.throwable.badrequest.BadRequestException;
 import rest.felix.back.common.exception.throwable.conflict.ConflictException;
 import rest.felix.back.common.exception.throwable.gone.GoneException;
-import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
+import rest.felix.back.common.exception.throwable.notFound.NotFoundException;
+import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
+import rest.felix.back.common.exception.throwable.tooManyRequests.TooManyRequestsException;
 import rest.felix.back.common.exception.throwable.unauthorized.UnauthorizedException;
 import rest.felix.back.user.exception.UserAccessDeniedException;
 
@@ -36,6 +38,13 @@ public class GlobalExceptionHandler {
         .body(new ErrorResponseDTO(exception.getMessage()));
   }
 
+  @ExceptionHandler(TooManyRequestsException.class)
+  public ResponseEntity<ErrorResponseDTO> handleTooManyRequestsException(
+      TooManyRequestsException exception) {
+    return ResponseEntity.status(exception.getStatusCode())
+        .body(new ErrorResponseDTO(exception.getMessage()));
+  }
+
   @ExceptionHandler(UnauthorizedException.class)
   public ResponseEntity<ErrorResponseDTO> handleUnauthorizedException(
       UnauthorizedException exception) {
@@ -51,8 +60,14 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(ResourceNotFoundException.class)
-  public ResponseEntity<ErrorResponseDTO> handleGroupNotFoundException(
+  public ResponseEntity<ErrorResponseDTO> handleResourceNotFoundException(
       ResourceNotFoundException exception) {
+    return ResponseEntity.status(exception.getStatusCode())
+        .body(new ErrorResponseDTO(exception.getMessage()));
+  }
+
+  @ExceptionHandler(NotFoundException.class)
+  public ResponseEntity<ErrorResponseDTO> handleNotFoundException(NotFoundException exception) {
     return ResponseEntity.status(exception.getStatusCode())
         .body(new ErrorResponseDTO(exception.getMessage()));
   }

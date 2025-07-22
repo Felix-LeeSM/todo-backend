@@ -1,4 +1,4 @@
-package rest.felix.back.common.exception.throwable.notfound;
+package rest.felix.back.common.exception.throwable.notFound;
 
 public class ResourceNotFoundException extends NotFoundException {
 

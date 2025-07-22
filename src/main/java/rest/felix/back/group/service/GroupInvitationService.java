@@ -25,7 +25,7 @@ public class GroupInvitationService {
 
   @Transactional(readOnly = true)
   public void assertInvitationCountLimitation(
-      long issuerId, long groupId, Integer limit, ZonedDateTime now) {
+      long issuerId, long groupId, Long limit, ZonedDateTime now) {
 
     if (limit <= groupInvitationRepository.countActiveUntil(issuerId, groupId, now))
       throw new TooManyInvitationsException();
@@ -46,7 +46,6 @@ public class GroupInvitationService {
   public GroupInvitationDTO findValidInvitation(String token, ZonedDateTime now) {
     GroupInvitationDTO groupInvitation =
         groupInvitationRepository.findByToken(token).orElseThrow(NoInvitationException::new);
-
     if (groupInvitation.getExpiresAt().isBefore(ZonedDateTime.now()))
       throw new ExpiredInvitationException();
 

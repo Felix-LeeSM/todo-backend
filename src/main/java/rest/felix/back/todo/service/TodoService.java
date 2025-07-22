@@ -6,7 +6,7 @@ import java.util.function.Predicate;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
+import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.dto.CreateTodoDTO;

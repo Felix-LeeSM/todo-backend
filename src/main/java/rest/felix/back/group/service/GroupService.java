@@ -7,7 +7,7 @@ import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import rest.felix.back.common.exception.throwable.notfound.ResourceNotFoundException;
+import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
 import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.DetailedGroupDTO;
 import rest.felix.back.group.dto.FullGroupDetailsDTO;
@@ -17,7 +17,7 @@ import rest.felix.back.group.dto.GroupInvitationInfoDTO;
 import rest.felix.back.group.dto.MemberDTO;
 import rest.felix.back.group.dto.UserGroupDTO;
 import rest.felix.back.group.entity.enumerated.GroupRole;
-import rest.felix.back.group.repository.GroupInvitationRepository;
+import rest.felix.back.group.exception.GroupNotFoundException;
 import rest.felix.back.group.repository.GroupRepository;
 import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.dto.TodoCountDTO;
@@ -34,7 +34,6 @@ public class GroupService {
   private final UserGroupRepository userGroupRepository;
   private final TodoRepository todoRepository;
   private final UserRepository userRepository;
-  private final GroupInvitationRepository groupInvitationRepository;
 
   @Transactional
   public GroupDTO createGroup(CreateGroupDTO createGroupDTO) {
@@ -153,13 +152,10 @@ public class GroupService {
     long groupId = groupInvitation.getGroupId();
     long issuerId = groupInvitation.getIssuerId();
 
-    GroupDTO groupDTO =
-        groupRepository.findById(groupId).orElseThrow(ResourceNotFoundException::new);
+    GroupDTO groupDTO = groupRepository.findById(groupId).orElseThrow(GroupNotFoundException::new);
 
     TodoCountDTO todoCount =
-        todoRepository
-            .findTodoCountsByGroupIds(List.of(groupId))
-            .getOrDefault(groupId, new TodoCountDTO(groupId, 0, 0));
+        todoRepository.findTodoCountsByGroupId(groupId).orElseThrow(GroupNotFoundException::new);
 
     List<MemberDTO> members = userRepository.findMembersByGroupId(groupId);
 
