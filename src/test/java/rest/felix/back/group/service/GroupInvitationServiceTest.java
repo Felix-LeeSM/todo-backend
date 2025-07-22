@@ -55,7 +55,9 @@ class GroupInvitationServiceTest {
       Assertions.assertNotNull(token);
       Assertions.assertFalse(token.isEmpty());
       // Basic UUID format check (e.g., length, presence of hyphens)
-      Assertions.assertTrue(token.matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"));
+      Assertions.assertTrue(
+          token.matches(
+              "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"));
     }
   }
 
@@ -157,16 +159,17 @@ class GroupInvitationServiceTest {
       Assertions.assertEquals(issuer.getId(), createdInvitation.getIssuerId());
       Assertions.assertEquals(group.getId(), createdInvitation.getGroupId());
       Assertions.assertEquals(token, createdInvitation.getToken());
-      Assertions.assertEquals(expiresAt.toEpochSecond(), createdInvitation.getExpiresAt().toEpochSecond());
+      Assertions.assertEquals(
+          expiresAt.toEpochSecond(), createdInvitation.getExpiresAt().toEpochSecond());
 
-      
       GroupInvitationDTO foundInvitation = groupInvitationRepository.findByToken(token).get();
 
       Assertions.assertNotNull(foundInvitation);
       Assertions.assertEquals(issuer.getId(), foundInvitation.getIssuerId());
       Assertions.assertEquals(group.getId(), foundInvitation.getGroupId());
       Assertions.assertEquals(token, foundInvitation.getToken());
-      Assertions.assertEquals(expiresAt.toEpochSecond(), foundInvitation.getExpiresAt().toEpochSecond());
+      Assertions.assertEquals(
+          expiresAt.toEpochSecond(), foundInvitation.getExpiresAt().toEpochSecond());
     }
 
     @Test
@@ -175,11 +178,11 @@ class GroupInvitationServiceTest {
       // Given
       User issuer = entityFactory.insertUser("issuer", "password", "issuerNick");
       Group group = entityFactory.insertGroup("group", "description");
-      UserGroup userGroup = entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
 
       th.delete(userGroup);
       th.delete(issuer);
-      
 
       String token = UUID.randomUUID().toString();
       ZonedDateTime expiresAt = ZonedDateTime.now().plusDays(1);
@@ -187,7 +190,8 @@ class GroupInvitationServiceTest {
           new CreateGroupInvitationDTO(issuer.getId(), group.getId(), token, expiresAt);
 
       // When
-      Runnable lambda = () -> groupInvitationService.createGroupInvitation(createGroupInvitationDTO);
+      Runnable lambda =
+          () -> groupInvitationService.createGroupInvitation(createGroupInvitationDTO);
 
       // Then
       Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
@@ -199,7 +203,8 @@ class GroupInvitationServiceTest {
       // Given
       User issuer = entityFactory.insertUser("issuer", "password", "issuerNick");
       Group group = entityFactory.insertGroup("group", "description");
-      UserGroup userGroup = entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
       th.delete(userGroup);
       th.delete(group);
 
@@ -209,7 +214,8 @@ class GroupInvitationServiceTest {
           new CreateGroupInvitationDTO(issuer.getId(), group.getId(), token, expiresAt);
 
       // When
-      Runnable lambda = () -> groupInvitationService.createGroupInvitation(createGroupInvitationDTO);
+      Runnable lambda =
+          () -> groupInvitationService.createGroupInvitation(createGroupInvitationDTO);
 
       // Then
       Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
@@ -240,7 +246,8 @@ class GroupInvitationServiceTest {
       Assertions.assertEquals(issuer.getId(), foundInvitation.getIssuerId());
       Assertions.assertEquals(group.getId(), foundInvitation.getGroupId());
       Assertions.assertEquals(token, foundInvitation.getToken());
-      Assertions.assertEquals(expiresAt.toEpochSecond(), foundInvitation.getExpiresAt().toEpochSecond());
+      Assertions.assertEquals(
+          expiresAt.toEpochSecond(), foundInvitation.getExpiresAt().toEpochSecond());
     }
 
     @Test

@@ -1,13 +1,10 @@
 package rest.felix.back.group.service;
 
-import jakarta.persistence.EntityManager;
-
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -636,7 +633,8 @@ class GroupServiceTest {
       entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
 
       // When
-      Runnable lambda = () -> groupService.assertGroupAuthority(user.getId(), group.getId(), requiredRole);
+      Runnable lambda =
+          () -> groupService.assertGroupAuthority(user.getId(), group.getId(), requiredRole);
 
       // Then
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
@@ -648,12 +646,14 @@ class GroupServiceTest {
       // Given
       User user = entityFactory.insertUser("user", "password", "userNick");
       Group group = entityFactory.insertGroup("group", "description");
-      UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
       th.delete(userGroup);
       th.delete(user);
 
       // When
-      Runnable lambda = () -> groupService.assertGroupAuthority(user.getId(), group.getId(), GroupRole.OWNER);
+      Runnable lambda =
+          () -> groupService.assertGroupAuthority(user.getId(), group.getId(), GroupRole.OWNER);
 
       // Then
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
@@ -665,12 +665,14 @@ class GroupServiceTest {
       // Given
       User user = entityFactory.insertUser("user", "password", "userNick");
       Group group = entityFactory.insertGroup("group", "description");
-      UserGroup userGroup = entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
       th.delete(userGroup);
       th.delete(group);
 
       // When
-      Runnable lambda = () -> groupService.assertGroupAuthority(user.getId(), group.getId(), GroupRole.OWNER);
+      Runnable lambda =
+          () -> groupService.assertGroupAuthority(user.getId(), group.getId(), GroupRole.OWNER);
 
       // Then
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
@@ -685,7 +687,8 @@ class GroupServiceTest {
       // User is not associated with the group
 
       // When
-      Runnable lambda = () -> groupService.assertGroupAuthority(user.getId(), group.getId(), GroupRole.OWNER);
+      Runnable lambda =
+          () -> groupService.assertGroupAuthority(user.getId(), group.getId(), GroupRole.OWNER);
 
       // Then
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
@@ -709,12 +712,29 @@ class GroupServiceTest {
       entityFactory.insertUserGroup(member1.getId(), group.getId(), GroupRole.MEMBER);
       entityFactory.insertUserGroup(member2.getId(), group.getId(), GroupRole.VIEWER);
 
-      entityFactory.insertTodo(issuer.getId(), issuer.getId(), group.getId(), "Todo 1", "Desc 1", TodoStatus.IN_PROGRESS, "a", false);
-      entityFactory.insertTodo(member1.getId(), member1.getId(), group.getId(), "Todo 2", "Desc 2", TodoStatus.DONE, "b", false);
+      entityFactory.insertTodo(
+          issuer.getId(),
+          issuer.getId(),
+          group.getId(),
+          "Todo 1",
+          "Desc 1",
+          TodoStatus.IN_PROGRESS,
+          "a",
+          false);
+      entityFactory.insertTodo(
+          member1.getId(),
+          member1.getId(),
+          group.getId(),
+          "Todo 2",
+          "Desc 2",
+          TodoStatus.DONE,
+          "b",
+          false);
 
       String token = "testToken";
       ZonedDateTime expiresAt = ZonedDateTime.now().plusDays(1);
-      GroupInvitationDTO groupInvitationDTO = new GroupInvitationDTO(issuer.getId(), group.getId(), token, expiresAt);
+      GroupInvitationDTO groupInvitationDTO =
+          new GroupInvitationDTO(issuer.getId(), group.getId(), token, expiresAt);
 
       // When
       GroupInvitationInfoDTO info = groupService.findGroupInvitationInfo(groupInvitationDTO);
@@ -743,13 +763,15 @@ class GroupServiceTest {
       // Given
       User issuer = entityFactory.insertUser("issuer", "password", "issuerNick");
       Group group = entityFactory.insertGroup("group name", "group description");
-      UserGroup userGroup = entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
       th.delete(userGroup);
       th.delete(group);
 
       String token = "testToken";
       ZonedDateTime expiresAt = ZonedDateTime.now().plusDays(1);
-      GroupInvitationDTO groupInvitationDTO = new GroupInvitationDTO(issuer.getId(), group.getId(), token, expiresAt);
+      GroupInvitationDTO groupInvitationDTO =
+          new GroupInvitationDTO(issuer.getId(), group.getId(), token, expiresAt);
 
       // When
       Runnable lambda = () -> groupService.findGroupInvitationInfo(groupInvitationDTO);
@@ -766,7 +788,8 @@ class GroupServiceTest {
       User member1 = entityFactory.insertUser("member1", "password", "memberNick1");
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      UserGroup userGroup = entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
       entityFactory.insertUserGroup(member1.getId(), group.getId(), GroupRole.MEMBER);
 
       th.delete(userGroup);
@@ -774,7 +797,8 @@ class GroupServiceTest {
 
       String token = "testToken";
       ZonedDateTime expiresAt = ZonedDateTime.now().plusDays(1);
-      GroupInvitationDTO groupInvitationDTO = new GroupInvitationDTO(issuer.getId(), group.getId(), token, expiresAt);
+      GroupInvitationDTO groupInvitationDTO =
+          new GroupInvitationDTO(issuer.getId(), group.getId(), token, expiresAt);
 
       // When
       Runnable lambda = () -> groupService.findGroupInvitationInfo(groupInvitationDTO);
@@ -799,8 +823,9 @@ class GroupServiceTest {
       groupService.registerUserToGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
       // Then
-      UserGroupDTO userGroup = userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).get();
-      
+      UserGroupDTO userGroup =
+          userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).get();
+
       Assertions.assertEquals(GroupRole.MEMBER, userGroup.getGroupRole());
     }
 
@@ -813,7 +838,8 @@ class GroupServiceTest {
       th.delete(user);
 
       // When
-      Runnable lambda = () -> groupService.registerUserToGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Runnable lambda =
+          () -> groupService.registerUserToGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
       // Then
       Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
@@ -828,7 +854,8 @@ class GroupServiceTest {
       th.delete(group);
 
       // When
-      Runnable lambda = () -> groupService.registerUserToGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Runnable lambda =
+          () -> groupService.registerUserToGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
       // Then
       Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
@@ -843,7 +870,8 @@ class GroupServiceTest {
       entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
 
       // When
-      Runnable lambda = () -> groupService.registerUserToGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      Runnable lambda =
+          () -> groupService.registerUserToGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
       // Then
       Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);

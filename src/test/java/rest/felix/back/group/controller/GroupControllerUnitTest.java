@@ -12,7 +12,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
-
 import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
 import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.Pair;
@@ -792,7 +791,8 @@ public class GroupControllerUnitTest {
       // Given
       User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group name", "group description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER); // Not MANAGER or OWNER
+      entityFactory.insertUserGroup(
+          user.getId(), group.getId(), GroupRole.MEMBER); // Not MANAGER or OWNER
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
@@ -849,7 +849,8 @@ public class GroupControllerUnitTest {
 
       // Fill up invitations to hit the limit
       for (int i = 0; i < 5; i++) { // Assuming groupConfig.getLimit() is 5
-        entityFactory.insertGroupInvitation(user.getId(), group.getId(), "token" + i, ZonedDateTime.now().plusDays(1));
+        entityFactory.insertGroupInvitation(
+            user.getId(), group.getId(), "token" + i, ZonedDateTime.now().plusDays(1));
       }
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
@@ -876,7 +877,8 @@ public class GroupControllerUnitTest {
       entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
 
       String token = "validToken";
-      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
@@ -903,7 +905,8 @@ public class GroupControllerUnitTest {
       entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
 
       String token = "validToken";
-      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
 
       th.delete(user);
 
@@ -942,7 +945,8 @@ public class GroupControllerUnitTest {
       entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
 
       String token = "expiredToken";
-      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().minusDays(1));
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().minusDays(1));
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
@@ -964,7 +968,8 @@ public class GroupControllerUnitTest {
       entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
       String token = "validToken";
-      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
@@ -990,17 +995,18 @@ public class GroupControllerUnitTest {
       entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
 
       String token = "validToken";
-      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
       // When
-      ResponseEntity<Void> responseEntity =
-          groupController.acceptInvitation(authUserDTO, token);
+      ResponseEntity<Void> responseEntity = groupController.acceptInvitation(authUserDTO, token);
 
       // Then
       Assertions.assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
-      Assertions.assertTrue(userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).isPresent());
+      Assertions.assertTrue(
+          userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).isPresent());
     }
 
     @Test
@@ -1013,7 +1019,8 @@ public class GroupControllerUnitTest {
       entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
 
       String token = "validToken";
-      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
 
       th.delete(user);
 
@@ -1052,7 +1059,8 @@ public class GroupControllerUnitTest {
       entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
 
       String token = "expiredToken";
-      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().minusDays(1));
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().minusDays(1));
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
@@ -1074,7 +1082,8 @@ public class GroupControllerUnitTest {
       entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
 
       String token = "validToken";
-      entityFactory.insertGroupInvitation(issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
+      entityFactory.insertGroupInvitation(
+          issuer.getId(), group.getId(), token, ZonedDateTime.now().plusDays(1));
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
 
