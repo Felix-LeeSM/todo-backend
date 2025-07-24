@@ -15,20 +15,16 @@ class JwtTokenProviderTest {
   void generateParseValidate() {
     // Given
 
-    AuthUserDTO authUser = new AuthUserDTO(1L, "username");
+    AuthUserDTO authUser = new AuthUserDTO(1L);
     String token = jwtTokenProvider.generateToken(authUser);
 
     // When
 
-    Assertions.assertDoesNotThrow(
-        () -> {
-          jwtTokenProvider.validateToken(token);
-        });
+    Assertions.assertDoesNotThrow(() -> jwtTokenProvider.validateToken(token));
 
     // Then
 
-    Assertions.assertNotEquals(authUser.getUsername(), token);
     Assertions.assertEquals(
-        authUser.getUsername(), jwtTokenProvider.getAuthUserFromToken(token).getUsername());
+        authUser.getUserId(), jwtTokenProvider.getAuthUserFromToken(token).getUserId());
   }
 }

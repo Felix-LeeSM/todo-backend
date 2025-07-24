@@ -18,7 +18,6 @@ import rest.felix.back.user.entity.User;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AuthUserDTO implements UserDetails {
   private Long userId;
-  private String username;
 
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -27,6 +26,11 @@ public class AuthUserDTO implements UserDetails {
 
   @Override
   public String getPassword() {
+    return null;
+  }
+
+  @Override
+  public String getUsername() {
     return null;
   }
 
@@ -51,10 +55,10 @@ public class AuthUserDTO implements UserDetails {
   }
 
   public static AuthUserDTO of(User user) {
-    return new AuthUserDTO(user.getId(), user.getUsername());
+    return new AuthUserDTO(user.getId());
   }
 
   public static AuthUserDTO of(UserDTO user) {
-    return new AuthUserDTO(user.id(), user.username());
+    return new AuthUserDTO(user.id());
   }
 }

@@ -102,12 +102,12 @@ public class UserController {
   public ResponseEntity<UserResponseDTO> getCurrentUserInfo(
       @AuthenticationPrincipal AuthUserDTO authUser) {
 
-    if (authUser == null) { // authUser가 null인 경우 처리
+    if (authUser == null) {
       throw new UnauthorizedException("User not authenticated.");
     }
 
     return userService
-        .findByUsername(authUser.getUsername())
+        .findById(authUser.getUserId())
         .map(userDTO -> new UserResponseDTO(userDTO.id(), userDTO.username(), userDTO.nickname()))
         .map(ResponseEntity::ok)
         .orElseThrow(NoMatchingUserException::new);

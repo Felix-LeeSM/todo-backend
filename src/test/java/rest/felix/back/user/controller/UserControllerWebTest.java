@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -238,7 +238,7 @@ public class UserControllerWebTest {
   void createAccessToken_HappyPath() throws Exception {
     // Given
 
-    entityFactory.insertUser("username123", "password123412341234", "nickname");
+    User user = entityFactory.insertUser("username123", "password123412341234", "nickname");
 
     String path = "/api/v1/user/token/access-token";
 
@@ -259,17 +259,17 @@ public class UserControllerWebTest {
     result.andExpect(status().isCreated());
     result.andExpect(cookie().exists("accessToken"));
 
-    MockHttpServletResponse response = result.andReturn().getResponse();
-    Cookie accessTokenCookie = response.getCookie("accessToken");
+    String token =
+        Objects.requireNonNull(result.andReturn().getResponse().getCookie("accessToken"))
+            .getValue();
 
-    Assertions.assertNotNull(accessTokenCookie);
-    String token = accessTokenCookie.getValue();
-    Assertions.assertDoesNotThrow(
-        () -> {
-          jwtTokenProvider.validateToken(token);
-        });
-    Assertions.assertEquals(
-        "username123", jwtTokenProvider.getAuthUserFromToken(token).getUsername());
+    Assertions.assertDoesNotThrow(() -> jwtTokenProvider.validateToken(token));
+
+    AuthUserDTO authUser = jwtTokenProvider.getAuthUserFromToken(token);
+
+    Assertions.assertEquals(user.getId(), authUser.getUserId());
+    Assertions.assertNull(authUser.getUsername());
+    Assertions.assertNull(authUser.getPassword());
   }
 
   @Test
