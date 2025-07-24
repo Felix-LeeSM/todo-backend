@@ -1501,14 +1501,14 @@ public class TodoControllerWebTest {
 
       // Then
       result.andExpect(status().isOk());
-      result.andExpect(jsonPath("$.important", equalTo(true)));
+      result.andExpect(jsonPath("$.isImportant", equalTo(true)));
       result.andExpect(jsonPath("$.dueDate", equalTo(LocalDate.now().plusDays(1).toString())));
       result.andExpect(jsonPath("$.assigneeId", equalTo(assignee.getId().intValue())));
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
       Assertions.assertEquals(true, fetchedTodo.isImportant());
-      Assertions.assertEquals(LocalDate.now().plusDays(1), fetchedTodo.getDueDate());
-      Assertions.assertEquals(assignee.getId(), fetchedTodo.getAssigneeId());
+      Assertions.assertEquals(LocalDate.now().plusDays(1), fetchedTodo.dueDate());
+      Assertions.assertEquals(assignee.getId(), fetchedTodo.assigneeId());
     }
 
     @Test
@@ -1546,14 +1546,14 @@ public class TodoControllerWebTest {
       // Then
       // Then
       result.andExpect(status().isOk());
-      result.andExpect(jsonPath("$.important", equalTo(true)));
+      result.andExpect(jsonPath("$.isImportant", equalTo(true)));
       result.andExpect(jsonPath("$.dueDate").doesNotExist());
       result.andExpect(jsonPath("$.assigneeId").doesNotExist());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
       Assertions.assertEquals(true, fetchedTodo.isImportant());
-      Assertions.assertNull(fetchedTodo.getDueDate());
-      Assertions.assertNull(fetchedTodo.getAssigneeId());
+      Assertions.assertNull(fetchedTodo.dueDate());
+      Assertions.assertNull(fetchedTodo.assigneeId());
     }
 
     @Test
@@ -1591,14 +1591,14 @@ public class TodoControllerWebTest {
 
       // Then
       result.andExpect(status().isOk());
-      result.andExpect(jsonPath("$.important").value(true));
+      result.andExpect(jsonPath("$.isImportant").value(true));
       result.andExpect(jsonPath("$.dueDate", equalTo(LocalDate.now().plusDays(2).toString())));
       result.andExpect(jsonPath("$.assigneeId").doesNotExist());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
       Assertions.assertEquals(true, fetchedTodo.isImportant());
-      Assertions.assertEquals(LocalDate.now().plusDays(2), fetchedTodo.getDueDate());
-      Assertions.assertNull(fetchedTodo.getAssigneeId());
+      Assertions.assertEquals(LocalDate.now().plusDays(2), fetchedTodo.dueDate());
+      Assertions.assertNull(fetchedTodo.assigneeId());
     }
 
     @Test
@@ -1636,14 +1636,14 @@ public class TodoControllerWebTest {
 
       // Then
       result.andExpect(status().isOk());
-      result.andExpect(jsonPath("$.important").value(true));
+      result.andExpect(jsonPath("$.isImportant").value(true));
       result.andExpect(jsonPath("$.dueDate", equalTo(LocalDate.now().minusDays(2).toString())));
       result.andExpect(jsonPath("$.assigneeId").doesNotExist());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
       Assertions.assertEquals(true, fetchedTodo.isImportant());
-      Assertions.assertEquals(LocalDate.now().minusDays(2), fetchedTodo.getDueDate());
-      Assertions.assertNull(fetchedTodo.getAssigneeId());
+      Assertions.assertEquals(LocalDate.now().minusDays(2), fetchedTodo.dueDate());
+      Assertions.assertNull(fetchedTodo.assigneeId());
     }
 
     @Test
@@ -1683,14 +1683,14 @@ public class TodoControllerWebTest {
 
       // Then
       result.andExpect(status().isOk());
-      result.andExpect(jsonPath("$.important").value(false));
+      result.andExpect(jsonPath("$.isImportant").value(false));
       result.andExpect(jsonPath("$.dueDate").doesNotExist());
       result.andExpect(jsonPath("$.assigneeId", equalTo(assignee.getId().intValue())));
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
       Assertions.assertEquals(false, fetchedTodo.isImportant());
-      Assertions.assertNull(fetchedTodo.getDueDate());
-      Assertions.assertEquals(assignee.getId(), fetchedTodo.getAssigneeId());
+      Assertions.assertNull(fetchedTodo.dueDate());
+      Assertions.assertEquals(assignee.getId(), fetchedTodo.assigneeId());
     }
 
     @Test
@@ -1732,7 +1732,7 @@ public class TodoControllerWebTest {
       result.andExpect(jsonPath("$.assigneeId").doesNotExist());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertNull(fetchedTodo.getAssigneeId());
+      Assertions.assertNull(fetchedTodo.assigneeId());
     }
 
     @Test
@@ -2192,8 +2192,8 @@ public class TodoControllerWebTest {
                   result.andReturn().getResponse().getContentAsString(),
                   new TypeReference<List<TodoDTO>>() {})
               .stream()
-              .sorted(Comparator.comparing(TodoDTO::getOrder))
-              .map(TodoDTO::getId)
+              .sorted(Comparator.comparing(TodoDTO::order))
+              .map(TodoDTO::id)
               .collect(Collectors.toList());
 
       Assertions.assertIterableEquals(

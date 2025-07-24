@@ -48,10 +48,10 @@ class UserServiceTest {
 
     // Then
 
-    Assertions.assertEquals("hashedPassword", createdUserDTO.getHashedPassword());
-    Assertions.assertEquals("nickname", createdUserDTO.getNickname());
-    Assertions.assertEquals("username", createdUserDTO.getUsername());
-    Assertions.assertEquals(createdUser.getId(), createdUserDTO.getId());
+    Assertions.assertEquals("hashedPassword", createdUserDTO.hashedPassword());
+    Assertions.assertEquals("nickname", createdUserDTO.nickname());
+    Assertions.assertEquals("username", createdUserDTO.username());
+    Assertions.assertEquals(createdUser.id(), createdUserDTO.id());
   }
 
   @Test
@@ -142,10 +142,10 @@ class UserServiceTest {
 
     // Then
 
-    Assertions.assertEquals(user.getId(), userDTO.getId());
-    Assertions.assertEquals(user.getUsername(), userDTO.getUsername());
-    Assertions.assertEquals(user.getNickname(), userDTO.getNickname());
-    Assertions.assertEquals(user.getHashedPassword(), userDTO.getHashedPassword());
+    Assertions.assertEquals(user.getId(), userDTO.id());
+    Assertions.assertEquals(user.getUsername(), userDTO.username());
+    Assertions.assertEquals(user.getNickname(), userDTO.nickname());
+    Assertions.assertEquals(user.getHashedPassword(), userDTO.hashedPassword());
   }
 
   @Test

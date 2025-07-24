@@ -32,10 +32,10 @@ public class UserService {
   public void validateSignupRequestDTO(SignupRequestDTO signupRequestDTO)
       throws ConfirmPasswordMismatchException, UsernameTakenException {
 
-    if (!signupRequestDTO.getPassword().equals(signupRequestDTO.getConfirmPassword()))
+    if (!signupRequestDTO.password().equals(signupRequestDTO.confirmPassword()))
       throw new ConfirmPasswordMismatchException();
 
-    if (userRepository.findByUsername(signupRequestDTO.getUsername()).isPresent())
+    if (userRepository.findByUsername(signupRequestDTO.username()).isPresent())
       throw new UsernameTakenException();
   }
 

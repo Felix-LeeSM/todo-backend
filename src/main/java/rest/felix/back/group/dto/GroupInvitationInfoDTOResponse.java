@@ -16,13 +16,13 @@ public record GroupInvitationInfoDTOResponse(
   public static GroupInvitationInfoDTOResponse of(
       GroupInvitationInfoDTO groupInvitationInfoDetails) {
     return new GroupInvitationInfoDTOResponse(
-        groupInvitationInfoDetails.getName(),
-        groupInvitationInfoDetails.getDescription(),
-        groupInvitationInfoDetails.getTodoCount(),
-        groupInvitationInfoDetails.getCompletedTodoCount(),
-        groupInvitationInfoDetails.getMemberCount(),
-        MemberResponseDTO.of(groupInvitationInfoDetails.getIssuer()),
-        groupInvitationInfoDetails.getMembers().stream().map(MemberResponseDTO::of).toList(),
-        groupInvitationInfoDetails.getExpiresAt());
+        groupInvitationInfoDetails.name(),
+        groupInvitationInfoDetails.description(),
+        groupInvitationInfoDetails.todoCount(),
+        groupInvitationInfoDetails.completedTodoCount(),
+        groupInvitationInfoDetails.memberCount(),
+        MemberResponseDTO.of(groupInvitationInfoDetails.issuer()),
+        groupInvitationInfoDetails.members().stream().map(MemberResponseDTO::of).toList(),
+        groupInvitationInfoDetails.expiresAt());
   }
 }

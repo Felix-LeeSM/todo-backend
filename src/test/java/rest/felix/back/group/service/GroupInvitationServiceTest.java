@@ -156,20 +156,20 @@ class GroupInvitationServiceTest {
 
       // Then
       Assertions.assertNotNull(createdInvitation);
-      Assertions.assertEquals(issuer.getId(), createdInvitation.getIssuerId());
-      Assertions.assertEquals(group.getId(), createdInvitation.getGroupId());
-      Assertions.assertEquals(token, createdInvitation.getToken());
+      Assertions.assertEquals(issuer.getId(), createdInvitation.issuerId());
+      Assertions.assertEquals(group.getId(), createdInvitation.groupId());
+      Assertions.assertEquals(token, createdInvitation.token());
       Assertions.assertEquals(
-          expiresAt.toEpochSecond(), createdInvitation.getExpiresAt().toEpochSecond());
+          expiresAt.toEpochSecond(), createdInvitation.expiresAt().toEpochSecond());
 
       GroupInvitationDTO foundInvitation = groupInvitationRepository.findByToken(token).get();
 
       Assertions.assertNotNull(foundInvitation);
-      Assertions.assertEquals(issuer.getId(), foundInvitation.getIssuerId());
-      Assertions.assertEquals(group.getId(), foundInvitation.getGroupId());
-      Assertions.assertEquals(token, foundInvitation.getToken());
+      Assertions.assertEquals(issuer.getId(), foundInvitation.issuerId());
+      Assertions.assertEquals(group.getId(), foundInvitation.groupId());
+      Assertions.assertEquals(token, foundInvitation.token());
       Assertions.assertEquals(
-          expiresAt.toEpochSecond(), foundInvitation.getExpiresAt().toEpochSecond());
+          expiresAt.toEpochSecond(), foundInvitation.expiresAt().toEpochSecond());
     }
 
     @Test
@@ -243,11 +243,11 @@ class GroupInvitationServiceTest {
 
       // Then
       Assertions.assertNotNull(foundInvitation);
-      Assertions.assertEquals(issuer.getId(), foundInvitation.getIssuerId());
-      Assertions.assertEquals(group.getId(), foundInvitation.getGroupId());
-      Assertions.assertEquals(token, foundInvitation.getToken());
+      Assertions.assertEquals(issuer.getId(), foundInvitation.issuerId());
+      Assertions.assertEquals(group.getId(), foundInvitation.groupId());
+      Assertions.assertEquals(token, foundInvitation.token());
       Assertions.assertEquals(
-          expiresAt.toEpochSecond(), foundInvitation.getExpiresAt().toEpochSecond());
+          expiresAt.toEpochSecond(), foundInvitation.expiresAt().toEpochSecond());
     }
 
     @Test

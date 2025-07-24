@@ -804,18 +804,18 @@ public class TodoControllerUnitTest {
 
     TodoDTO todoDTO = responseEntity.getBody();
 
-    Assertions.assertEquals(user.getId(), todoDTO.getAuthorId());
-    Assertions.assertEquals(group.getId(), todoDTO.getGroupId());
-    Assertions.assertEquals("updated todo title", todoDTO.getTitle());
-    Assertions.assertEquals("updated todo description", todoDTO.getDescription());
+    Assertions.assertEquals(user.getId(), todoDTO.authorId());
+    Assertions.assertEquals(group.getId(), todoDTO.groupId());
+    Assertions.assertEquals("updated todo title", todoDTO.title());
+    Assertions.assertEquals("updated todo description", todoDTO.description());
 
     TodoDTO updatedTodo = todoRepository.findById(todo.getId()).orElseThrow();
 
-    Assertions.assertEquals(updatedTodo.getId(), updatedTodo.getId());
-    Assertions.assertEquals(user.getId(), updatedTodo.getAuthorId());
-    Assertions.assertEquals(group.getId(), updatedTodo.getGroupId());
-    Assertions.assertEquals("updated todo title", updatedTodo.getTitle());
-    Assertions.assertEquals("updated todo description", updatedTodo.getDescription());
+    Assertions.assertEquals(updatedTodo.id(), updatedTodo.id());
+    Assertions.assertEquals(user.getId(), updatedTodo.authorId());
+    Assertions.assertEquals(group.getId(), updatedTodo.groupId());
+    Assertions.assertEquals("updated todo title", updatedTodo.title());
+    Assertions.assertEquals("updated todo description", updatedTodo.description());
   }
 
   @Test
@@ -1405,14 +1405,14 @@ public class TodoControllerUnitTest {
       Assertions.assertNotNull(updatedTodo);
       Assertions.assertTrue(updatedTodo.isImportant());
       Assertions.assertEquals(
-          LocalDate.now().plusDays(1).toString(), updatedTodo.getDueDate().toString());
-      Assertions.assertEquals(assignee.getId(), updatedTodo.getAssigneeId());
+          LocalDate.now().plusDays(1).toString(), updatedTodo.dueDate().toString());
+      Assertions.assertEquals(assignee.getId(), updatedTodo.assigneeId());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
       Assertions.assertTrue(fetchedTodo.isImportant());
       Assertions.assertEquals(
-          LocalDate.now().plusDays(1).toString(), fetchedTodo.getDueDate().toString());
-      Assertions.assertEquals(assignee.getId(), fetchedTodo.getAssigneeId());
+          LocalDate.now().plusDays(1).toString(), fetchedTodo.dueDate().toString());
+      Assertions.assertEquals(assignee.getId(), fetchedTodo.assigneeId());
     }
 
     @Test
@@ -1445,13 +1445,13 @@ public class TodoControllerUnitTest {
       TodoDTO updatedTodo = responseEntity.getBody();
       Assertions.assertNotNull(updatedTodo);
       Assertions.assertTrue(updatedTodo.isImportant());
-      Assertions.assertNull(updatedTodo.getDueDate());
-      Assertions.assertNull(updatedTodo.getAssigneeId());
+      Assertions.assertNull(updatedTodo.dueDate());
+      Assertions.assertNull(updatedTodo.assigneeId());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
       Assertions.assertTrue(fetchedTodo.isImportant());
-      Assertions.assertNull(fetchedTodo.getDueDate());
-      Assertions.assertNull(fetchedTodo.getAssigneeId());
+      Assertions.assertNull(fetchedTodo.dueDate());
+      Assertions.assertNull(fetchedTodo.assigneeId());
     }
 
     @Test
@@ -1486,14 +1486,14 @@ public class TodoControllerUnitTest {
       Assertions.assertNotNull(updatedTodo);
       Assertions.assertTrue(updatedTodo.isImportant());
       Assertions.assertEquals(
-          LocalDate.now().plusDays(2).toString(), updatedTodo.getDueDate().toString());
-      Assertions.assertNull(updatedTodo.getAssigneeId());
+          LocalDate.now().plusDays(2).toString(), updatedTodo.dueDate().toString());
+      Assertions.assertNull(updatedTodo.assigneeId());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
       Assertions.assertTrue(fetchedTodo.isImportant());
       Assertions.assertEquals(
-          LocalDate.now().plusDays(2).toString(), fetchedTodo.getDueDate().toString());
-      Assertions.assertNull(fetchedTodo.getAssigneeId());
+          LocalDate.now().plusDays(2).toString(), fetchedTodo.dueDate().toString());
+      Assertions.assertNull(fetchedTodo.assigneeId());
     }
 
     @Test
@@ -1530,13 +1530,13 @@ public class TodoControllerUnitTest {
       TodoDTO updatedTodo = responseEntity.getBody();
       Assertions.assertNotNull(updatedTodo);
       Assertions.assertEquals(false, updatedTodo.isImportant());
-      Assertions.assertNull(updatedTodo.getDueDate());
-      Assertions.assertEquals(assignee.getId(), updatedTodo.getAssigneeId());
+      Assertions.assertNull(updatedTodo.dueDate());
+      Assertions.assertEquals(assignee.getId(), updatedTodo.assigneeId());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
       Assertions.assertEquals(false, fetchedTodo.isImportant());
-      Assertions.assertNull(fetchedTodo.getDueDate());
-      Assertions.assertEquals(assignee.getId(), fetchedTodo.getAssigneeId());
+      Assertions.assertNull(fetchedTodo.dueDate());
+      Assertions.assertEquals(assignee.getId(), fetchedTodo.assigneeId());
     }
 
     @Test
@@ -1570,10 +1570,10 @@ public class TodoControllerUnitTest {
       Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
       TodoDTO updatedTodo = responseEntity.getBody();
       Assertions.assertNotNull(updatedTodo);
-      Assertions.assertNull(updatedTodo.getAssigneeId());
+      Assertions.assertNull(updatedTodo.assigneeId());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertNull(fetchedTodo.getAssigneeId());
+      Assertions.assertNull(fetchedTodo.assigneeId());
     }
 
     @Test

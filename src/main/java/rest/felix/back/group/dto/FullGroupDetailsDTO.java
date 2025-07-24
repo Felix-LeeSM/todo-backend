@@ -1,19 +1,14 @@
 package rest.felix.back.group.dto;
 
 import java.util.List;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.todo.dto.TodoWithStarredStatusDTO;
 
-@Getter
-@AllArgsConstructor
-public class FullGroupDetailsDTO {
-  private final long id;
-  private final String name;
-  private final String description;
-  private final List<MemberDTO> members;
-  private final long memberCount;
-  private final GroupRole myRole;
-  private final List<TodoWithStarredStatusDTO> todos;
-}
+public record FullGroupDetailsDTO(
+    long id,
+    String name,
+    String description,
+    List<MemberDTO> members,
+    long memberCount,
+    GroupRole myRole,
+    List<TodoWithStarredStatusDTO> todos) {}

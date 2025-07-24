@@ -6,6 +6,6 @@ public record MemberResponseDTO(long id, String nickname, long groupId, GroupRol
 
   public static MemberResponseDTO of(MemberDTO dto) {
     if (dto == null) return null;
-    return new MemberResponseDTO(dto.getId(), dto.getNickname(), dto.getGroupId(), dto.getRole());
+    return new MemberResponseDTO(dto.id(), dto.nickname(), dto.groupId(), dto.role());
   }
 }

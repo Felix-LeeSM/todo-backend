@@ -22,15 +22,15 @@ public class GroupInvitationRepository {
   @Transactional
   public GroupInvitationDTO createGroupInvitation(
       CreateGroupInvitationDTO createGroupInvitationDTO) {
-    Group group = em.getReference(Group.class, createGroupInvitationDTO.getGroupId());
-    User issuer = em.getReference(User.class, createGroupInvitationDTO.getIssuerId());
+    Group group = em.getReference(Group.class, createGroupInvitationDTO.groupId());
+    User issuer = em.getReference(User.class, createGroupInvitationDTO.issuerId());
 
     GroupInvitation groupInvitation = new GroupInvitation();
 
     groupInvitation.setGroup(group);
     groupInvitation.setIssuer(issuer);
-    groupInvitation.setToken(createGroupInvitationDTO.getToken());
-    groupInvitation.setExpiresAt(createGroupInvitationDTO.getExpiresAt());
+    groupInvitation.setToken(createGroupInvitationDTO.token());
+    groupInvitation.setExpiresAt(createGroupInvitationDTO.expiresAt());
 
     em.persist(groupInvitation);
 

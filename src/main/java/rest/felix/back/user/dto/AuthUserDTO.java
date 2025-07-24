@@ -55,6 +55,6 @@ public class AuthUserDTO implements UserDetails {
   }
 
   public static AuthUserDTO of(UserDTO user) {
-    return new AuthUserDTO(user.getId(), user.getUsername());
+    return new AuthUserDTO(user.id(), user.username());
   }
 }

@@ -58,8 +58,8 @@ class UserControllerUnitTest {
     Assertions.assertEquals("nickname", signupResponseDTO.nickname());
 
     UserDTO user = userRepository.findById(signupResponseDTO.id()).get();
-    Assertions.assertEquals("username", user.getUsername());
-    Assertions.assertEquals("nickname", user.getNickname());
+    Assertions.assertEquals("username", user.username());
+    Assertions.assertEquals("nickname", user.nickname());
   }
 
   @Test

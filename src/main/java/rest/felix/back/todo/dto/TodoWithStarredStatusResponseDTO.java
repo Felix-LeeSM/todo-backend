@@ -18,16 +18,16 @@ public record TodoWithStarredStatusResponseDTO(
 
   public static TodoWithStarredStatusResponseDTO of(TodoWithStarredStatusDTO dto) {
     return new TodoWithStarredStatusResponseDTO(
-        dto.getId(),
-        dto.getTitle(),
-        dto.getDescription(),
-        dto.getOrder(),
-        dto.getStatus(),
+        dto.id(),
+        dto.title(),
+        dto.description(),
+        dto.order(),
+        dto.status(),
         dto.isImportant(),
-        dto.getDueDate(),
+        dto.dueDate(),
         dto.isStarred(),
-        dto.getAuthorId(),
-        dto.getGroupId(),
-        dto.getAssigneeId());
+        dto.authorId(),
+        dto.groupId(),
+        dto.assigneeId());
   }
 }

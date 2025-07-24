@@ -70,12 +70,12 @@ class GroupServiceTest {
 
       // Then
 
-      Assertions.assertEquals("groupName", groupDTO.getName());
+      Assertions.assertEquals("groupName", groupDTO.name());
 
-      GroupDTO createdGroup = groupRepository.findById(groupDTO.getId()).get();
+      GroupDTO createdGroup = groupRepository.findById(groupDTO.id()).get();
 
-      Assertions.assertEquals(createdGroup.getId(), groupDTO.getId());
-      Assertions.assertEquals("group description", createdGroup.getDescription());
+      Assertions.assertEquals(createdGroup.id(), groupDTO.id());
+      Assertions.assertEquals("group description", createdGroup.description());
     }
 
     @Test
@@ -137,13 +137,13 @@ class GroupServiceTest {
 
       Assertions.assertTrue(
           user1GroupDTOs.stream()
-              .map(GroupDTO::getName)
+              .map(GroupDTO::name)
               .toList()
               .containsAll(List.of("user1 group1", "user1 group2", "user1 group3")));
 
       Assertions.assertTrue(
           user1GroupDTOs.stream()
-              .map(GroupDTO::getDescription)
+              .map(GroupDTO::description)
               .toList()
               .containsAll(
                   List.of(
@@ -153,13 +153,13 @@ class GroupServiceTest {
 
       Assertions.assertTrue(
           user2GroupDTOs.stream()
-              .map(GroupDTO::getName)
+              .map(GroupDTO::name)
               .toList()
               .containsAll(List.of("user2 group1", "user2 group2", "user2 group3")));
 
       Assertions.assertTrue(
           user2GroupDTOs.stream()
-              .map(GroupDTO::getDescription)
+              .map(GroupDTO::description)
               .toList()
               .containsAll(
                   List.of(
@@ -281,33 +281,33 @@ class GroupServiceTest {
       Assertions.assertEquals(2, detailedGroups.size());
 
       List<DetailedGroupDTO> sortedGroups = new java.util.ArrayList<>(detailedGroups);
-      sortedGroups.sort((a, b) -> a.getName().compareTo(b.getName()));
+      sortedGroups.sort((a, b) -> a.name().compareTo(b.name()));
 
       DetailedGroupDTO group1DTO = sortedGroups.get(0);
-      Assertions.assertEquals(group1.getId(), group1DTO.getId());
-      Assertions.assertEquals("Group 1", group1DTO.getName());
-      Assertions.assertEquals("Description 1", group1DTO.getDescription());
-      Assertions.assertEquals(2, group1DTO.getTodoCount());
-      Assertions.assertEquals(1, group1DTO.getCompletedTodoCount());
-      Assertions.assertEquals(2, group1DTO.getMemberCount());
-      Assertions.assertEquals(GroupRole.OWNER, group1DTO.getMyRole());
+      Assertions.assertEquals(group1.getId(), group1DTO.id());
+      Assertions.assertEquals("Group 1", group1DTO.name());
+      Assertions.assertEquals("Description 1", group1DTO.description());
+      Assertions.assertEquals(2, group1DTO.todoCount());
+      Assertions.assertEquals(1, group1DTO.completedTodoCount());
+      Assertions.assertEquals(2, group1DTO.memberCount());
+      Assertions.assertEquals(GroupRole.OWNER, group1DTO.myRole());
 
       Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick"),
-          group1DTO.getMembers().stream().map(MemberDTO::getNickname).sorted().toList());
+          group1DTO.members().stream().map(MemberDTO::nickname).sorted().toList());
 
       DetailedGroupDTO group2DTO = detailedGroups.get(1);
-      Assertions.assertEquals(group2.getId(), group2DTO.getId());
-      Assertions.assertEquals("Group 2", group2DTO.getName());
-      Assertions.assertEquals("Description 2", group2DTO.getDescription());
-      Assertions.assertEquals(3, group2DTO.getTodoCount());
-      Assertions.assertEquals(2, group2DTO.getCompletedTodoCount());
-      Assertions.assertEquals(3, group2DTO.getMemberCount());
-      Assertions.assertEquals(GroupRole.MEMBER, group2DTO.getMyRole());
+      Assertions.assertEquals(group2.getId(), group2DTO.id());
+      Assertions.assertEquals("Group 2", group2DTO.name());
+      Assertions.assertEquals("Description 2", group2DTO.description());
+      Assertions.assertEquals(3, group2DTO.todoCount());
+      Assertions.assertEquals(2, group2DTO.completedTodoCount());
+      Assertions.assertEquals(3, group2DTO.memberCount());
+      Assertions.assertEquals(GroupRole.MEMBER, group2DTO.myRole());
 
       Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick", "otherUser2Nick"),
-          group2DTO.getMembers().stream().map(MemberDTO::getNickname).sorted().toList());
+          group2DTO.members().stream().map(MemberDTO::nickname).sorted().toList());
     }
 
     @Test
@@ -340,17 +340,17 @@ class GroupServiceTest {
       Assertions.assertEquals(1, detailedGroups.size());
 
       DetailedGroupDTO group1DTO = detailedGroups.get(0);
-      Assertions.assertEquals(group1.getId(), group1DTO.getId());
-      Assertions.assertEquals("Group 1", group1DTO.getName());
-      Assertions.assertEquals("Description 1", group1DTO.getDescription());
-      Assertions.assertEquals(1, group1DTO.getTodoCount());
-      Assertions.assertEquals(0, group1DTO.getCompletedTodoCount());
-      Assertions.assertEquals(2, group1DTO.getMemberCount());
-      Assertions.assertEquals(GroupRole.OWNER, group1DTO.getMyRole());
+      Assertions.assertEquals(group1.getId(), group1DTO.id());
+      Assertions.assertEquals("Group 1", group1DTO.name());
+      Assertions.assertEquals("Description 1", group1DTO.description());
+      Assertions.assertEquals(1, group1DTO.todoCount());
+      Assertions.assertEquals(0, group1DTO.completedTodoCount());
+      Assertions.assertEquals(2, group1DTO.memberCount());
+      Assertions.assertEquals(GroupRole.OWNER, group1DTO.myRole());
 
       Assertions.assertEquals(
           List.of("mainUserNick", "otherUser1Nick"),
-          group1DTO.getMembers().stream().map(MemberDTO::getNickname).sorted().toList());
+          group1DTO.members().stream().map(MemberDTO::nickname).sorted().toList());
     }
 
     @Test
@@ -369,16 +369,16 @@ class GroupServiceTest {
       Assertions.assertEquals(1, detailedGroups.size());
 
       DetailedGroupDTO group1DTO = detailedGroups.get(0);
-      Assertions.assertEquals(group1.getId(), group1DTO.getId());
-      Assertions.assertEquals("Group 1", group1DTO.getName());
-      Assertions.assertEquals("Description 1", group1DTO.getDescription());
-      Assertions.assertEquals(0, group1DTO.getTodoCount());
-      Assertions.assertEquals(0, group1DTO.getCompletedTodoCount());
-      Assertions.assertEquals(1, group1DTO.getMemberCount());
-      Assertions.assertEquals(GroupRole.OWNER, group1DTO.getMyRole());
+      Assertions.assertEquals(group1.getId(), group1DTO.id());
+      Assertions.assertEquals("Group 1", group1DTO.name());
+      Assertions.assertEquals("Description 1", group1DTO.description());
+      Assertions.assertEquals(0, group1DTO.todoCount());
+      Assertions.assertEquals(0, group1DTO.completedTodoCount());
+      Assertions.assertEquals(1, group1DTO.memberCount());
+      Assertions.assertEquals(GroupRole.OWNER, group1DTO.myRole());
 
       List<String> group1MemberNicknames =
-          group1DTO.getMembers().stream().map(MemberDTO::getNickname).sorted().toList();
+          group1DTO.members().stream().map(MemberDTO::nickname).sorted().toList();
       Assertions.assertEquals(List.of("mainUserNick"), group1MemberNicknames);
     }
 
@@ -522,9 +522,9 @@ class GroupServiceTest {
 
             // Then
 
-            Assertions.assertNotNull(groupDTO.getId());
-            Assertions.assertEquals("group name", groupDTO.getName());
-            Assertions.assertEquals("group description", groupDTO.getDescription());
+            Assertions.assertNotNull(groupDTO.id());
+            Assertions.assertEquals("group name", groupDTO.name());
+            Assertions.assertEquals("group description", groupDTO.description());
           });
     }
 
@@ -741,20 +741,20 @@ class GroupServiceTest {
 
       // Then
       Assertions.assertNotNull(info);
-      Assertions.assertEquals(group.getName(), info.getName());
-      Assertions.assertEquals(group.getDescription(), info.getDescription());
-      Assertions.assertEquals(2, info.getTodoCount());
-      Assertions.assertEquals(1, info.getCompletedTodoCount());
-      Assertions.assertEquals(3, info.getMemberCount());
-      Assertions.assertEquals(issuer.getId(), info.getIssuer().getId());
-      Assertions.assertEquals(issuer.getNickname(), info.getIssuer().getNickname());
-      Assertions.assertEquals(expiresAt.toEpochSecond(), info.getExpiresAt().toEpochSecond());
+      Assertions.assertEquals(group.getName(), info.name());
+      Assertions.assertEquals(group.getDescription(), info.description());
+      Assertions.assertEquals(2, info.todoCount());
+      Assertions.assertEquals(1, info.completedTodoCount());
+      Assertions.assertEquals(3, info.memberCount());
+      Assertions.assertEquals(issuer.getId(), info.issuer().id());
+      Assertions.assertEquals(issuer.getNickname(), info.issuer().nickname());
+      Assertions.assertEquals(expiresAt.toEpochSecond(), info.expiresAt().toEpochSecond());
 
       // Verify members
-      Assertions.assertEquals(3, info.getMembers().size());
-      Assertions.assertTrue(info.getMembers().stream().anyMatch(m -> m.getId() == issuer.getId()));
-      Assertions.assertTrue(info.getMembers().stream().anyMatch(m -> m.getId() == member1.getId()));
-      Assertions.assertTrue(info.getMembers().stream().anyMatch(m -> m.getId() == member2.getId()));
+      Assertions.assertEquals(3, info.members().size());
+      Assertions.assertTrue(info.members().stream().anyMatch(m -> m.id() == issuer.getId()));
+      Assertions.assertTrue(info.members().stream().anyMatch(m -> m.id() == member1.getId()));
+      Assertions.assertTrue(info.members().stream().anyMatch(m -> m.id() == member2.getId()));
     }
 
     @Test
@@ -826,7 +826,7 @@ class GroupServiceTest {
       UserGroupDTO userGroup =
           userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).get();
 
-      Assertions.assertEquals(GroupRole.MEMBER, userGroup.getGroupRole());
+      Assertions.assertEquals(GroupRole.MEMBER, userGroup.groupRole());
     }
 
     @Test

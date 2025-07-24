@@ -15,12 +15,12 @@ public record FullGroupDetailsResponseDTO(
 
   public static FullGroupDetailsResponseDTO of(FullGroupDetailsDTO dto) {
     return new FullGroupDetailsResponseDTO(
-        dto.getId(),
-        dto.getName(),
-        dto.getDescription(),
-        dto.getMembers().stream().map(MemberResponseDTO::of).toList(),
-        dto.getMemberCount(),
-        dto.getMyRole(),
-        dto.getTodos().stream().map(TodoWithStarredStatusResponseDTO::of).toList());
+        dto.id(),
+        dto.name(),
+        dto.description(),
+        dto.members().stream().map(MemberResponseDTO::of).toList(),
+        dto.memberCount(),
+        dto.myRole(),
+        dto.todos().stream().map(TodoWithStarredStatusResponseDTO::of).toList());
   }
 }

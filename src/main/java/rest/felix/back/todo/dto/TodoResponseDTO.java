@@ -16,15 +16,15 @@ public record TodoResponseDTO(
     Long assigneeId) {
   public static TodoResponseDTO of(TodoDTO todoDTO) {
     return new TodoResponseDTO(
-        todoDTO.getId(),
-        todoDTO.getTitle(),
-        todoDTO.getDescription(),
-        todoDTO.getOrder(),
-        todoDTO.getStatus(),
+        todoDTO.id(),
+        todoDTO.title(),
+        todoDTO.description(),
+        todoDTO.order(),
+        todoDTO.status(),
         todoDTO.isImportant(),
-        todoDTO.getDueDate(),
-        todoDTO.getAuthorId(),
-        todoDTO.getGroupId(),
-        todoDTO.getAssigneeId());
+        todoDTO.dueDate(),
+        todoDTO.authorId(),
+        todoDTO.groupId(),
+        todoDTO.assigneeId());
   }
 }

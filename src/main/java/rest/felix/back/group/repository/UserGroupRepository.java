@@ -114,6 +114,6 @@ public class UserGroupRepository {
         .getResultList()
         .stream()
         .map(UserGroupDTO::of)
-        .collect(Collectors.toMap(UserGroupDTO::getGroupId, dto -> dto.getGroupRole()));
+        .collect(Collectors.toMap(UserGroupDTO::groupId, dto -> dto.groupRole()));
   }
 }

@@ -41,7 +41,7 @@ public class GroupService {
     GroupDTO groupDTO = groupRepository.createGroup(createGroupDTO);
 
     userGroupRepository.registerUserToGroup(
-        createGroupDTO.getUserId(), groupDTO.getId(), GroupRole.OWNER);
+        createGroupDTO.userId(), groupDTO.id(), GroupRole.OWNER);
 
     return groupDTO;
   }
@@ -57,7 +57,7 @@ public class GroupService {
     List<GroupDTO> myGroups = groupRepository.findGroupsByUserId(userId);
     if (myGroups.isEmpty()) return List.of();
 
-    List<Long> groupIds = myGroups.stream().map(GroupDTO::getId).toList();
+    List<Long> groupIds = myGroups.stream().map(GroupDTO::id).toList();
 
     Map<Long, TodoCountDTO> todoCountDTOs = todoRepository.findTodoCountsByGroupIds(groupIds);
     Map<Long, List<MemberDTO>> memberDTOs = userRepository.findMembersByGroupIds(groupIds);
@@ -66,7 +66,7 @@ public class GroupService {
     return myGroups.stream()
         .map(
             group -> {
-              long groupId = group.getId();
+              long groupId = group.id();
               TodoCountDTO todoCount =
                   todoCountDTOs.getOrDefault(groupId, new TodoCountDTO(groupId, 0, 0));
               List<MemberDTO> members = memberDTOs.getOrDefault(groupId, List.of());
@@ -74,10 +74,10 @@ public class GroupService {
 
               return new DetailedGroupDTO(
                   groupId,
-                  group.getName(),
-                  group.getDescription(),
-                  todoCount.getTodoCount(),
-                  todoCount.getCompletedTodoCount(),
+                  group.name(),
+                  group.description(),
+                  todoCount.todoCount(),
+                  todoCount.completedTodoCount(),
                   members,
                   members.size(),
                   myRole);
@@ -93,9 +93,7 @@ public class GroupService {
 
   @Transactional(readOnly = true)
   public Optional<GroupRole> findUserRole(long userId, long groupId) {
-    return userGroupRepository
-        .findByUserIdAndGroupId(userId, groupId)
-        .map(UserGroupDTO::getGroupRole);
+    return userGroupRepository.findByUserIdAndGroupId(userId, groupId).map(UserGroupDTO::groupRole);
   }
 
   @Transactional
@@ -113,7 +111,7 @@ public class GroupService {
     GroupRole myRole =
         userGroupRepository
             .findByUserIdAndGroupId(userId, groupId)
-            .map(UserGroupDTO::getGroupRole)
+            .map(UserGroupDTO::groupRole)
             .orElseThrow(UserAccessDeniedException::new);
     GroupDTO groupDTO =
         groupRepository.findById(groupId).orElseThrow(ResourceNotFoundException::new);
@@ -125,8 +123,8 @@ public class GroupService {
 
     return new FullGroupDetailsDTO(
         groupId,
-        groupDTO.getName(),
-        groupDTO.getDescription(),
+        groupDTO.name(),
+        groupDTO.description(),
         memberDTOs,
         memberDTOs.size(),
         myRole,
@@ -138,7 +136,7 @@ public class GroupService {
 
     userGroupRepository
         .findByUserIdAndGroupId(userId, groupId)
-        .map(dto -> dto.getGroupRole())
+        .map(dto -> dto.groupRole())
         .filter(role -> role.gte(groupRole))
         .orElseThrow(UserAccessDeniedException::new);
   }
@@ -150,8 +148,8 @@ public class GroupService {
 
   @Transactional(readOnly = true)
   public GroupInvitationInfoDTO findGroupInvitationInfo(GroupInvitationDTO groupInvitation) {
-    long groupId = groupInvitation.getGroupId();
-    long issuerId = groupInvitation.getIssuerId();
+    long groupId = groupInvitation.groupId();
+    long issuerId = groupInvitation.issuerId();
 
     GroupDTO groupDTO = groupRepository.findById(groupId).orElseThrow(GroupNotFoundException::new);
 
@@ -162,17 +160,17 @@ public class GroupService {
 
     MemberDTO issuer =
         members.stream()
-            .filter(member -> member.getId() == issuerId)
+            .filter(member -> member.id() == issuerId)
             .findFirst()
             .orElseThrow(ResourceNotFoundException::new);
 
-    ZonedDateTime activeUntil = groupInvitation.getExpiresAt();
+    ZonedDateTime activeUntil = groupInvitation.expiresAt();
 
     return new GroupInvitationInfoDTO(
-        groupDTO.getName(),
-        groupDTO.getDescription(),
-        todoCount.getTodoCount(),
-        todoCount.getCompletedTodoCount(),
+        groupDTO.name(),
+        groupDTO.description(),
+        todoCount.todoCount(),
+        todoCount.completedTodoCount(),
         members.size(),
         issuer,
         members,

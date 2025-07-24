@@ -19,11 +19,11 @@ public class GroupRepository {
 
   @Transactional
   public GroupDTO createGroup(CreateGroupDTO createGroupDTO) {
-    String groupName = createGroupDTO.getGroupName();
+    String groupName = createGroupDTO.groupName();
 
     Group group = new Group();
     group.setName(groupName);
-    group.setDescription(createGroupDTO.getDescription());
+    group.setDescription(createGroupDTO.description());
 
     em.persist(group);
 

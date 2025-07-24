@@ -46,7 +46,7 @@ public class GroupInvitationService {
   public GroupInvitationDTO findValidInvitation(String token, ZonedDateTime now) {
     GroupInvitationDTO groupInvitation =
         groupInvitationRepository.findByToken(token).orElseThrow(NoInvitationException::new);
-    if (groupInvitation.getExpiresAt().isBefore(ZonedDateTime.now()))
+    if (groupInvitation.expiresAt().isBefore(ZonedDateTime.now()))
       throw new ExpiredInvitationException();
 
     return groupInvitation;

@@ -15,13 +15,13 @@ public record DetailedGroupResponseDTO(
 
   public static DetailedGroupResponseDTO of(DetailedGroupDTO dto) {
     return new DetailedGroupResponseDTO(
-        dto.getId(),
-        dto.getName(),
-        dto.getDescription(),
-        dto.getTodoCount(),
-        dto.getCompletedTodoCount(),
-        dto.getMembers().stream().map(MemberResponseDTO::of).toList(),
-        dto.getMemberCount(),
-        dto.getMyRole());
+        dto.id(),
+        dto.name(),
+        dto.description(),
+        dto.todoCount(),
+        dto.completedTodoCount(),
+        dto.members().stream().map(MemberResponseDTO::of).toList(),
+        dto.memberCount(),
+        dto.myRole());
   }
 }

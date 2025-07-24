@@ -39,17 +39,16 @@ public class UserController {
       @RequestBody @Valid SignupRequestDTO signupRequestDTO) {
 
     userService.validateSignupRequestDTO(signupRequestDTO);
-    String hashedPassword = passwordService.hashPassword(signupRequestDTO.getPassword());
+    String hashedPassword = passwordService.hashPassword(signupRequestDTO.password());
 
     SignupDTO signupDTO =
-        new SignupDTO(
-            signupRequestDTO.getUsername(), signupRequestDTO.getNickname(), hashedPassword);
+        new SignupDTO(signupRequestDTO.username(), signupRequestDTO.nickname(), hashedPassword);
 
     UserDTO createdUserDTO = userService.signup(signupDTO);
 
     UserResponseDTO userResponseDTO =
         new UserResponseDTO(
-            createdUserDTO.getId(), createdUserDTO.getUsername(), createdUserDTO.getNickname());
+            createdUserDTO.id(), createdUserDTO.username(), createdUserDTO.nickname());
 
     return ResponseEntity.status(201).body(userResponseDTO);
   }
@@ -58,13 +57,13 @@ public class UserController {
   public ResponseEntity<UserResponseDTO> createAccessToken(
       @RequestBody @Valid SignInRequestDTO signInRequestDTO) {
 
-    String givenUsername = signInRequestDTO.getUsername();
-    String givenPassword = signInRequestDTO.getPassword();
+    String givenUsername = signInRequestDTO.username();
+    String givenPassword = signInRequestDTO.password();
 
     UserDTO userDTO =
         userService
             .findByUsername(givenUsername)
-            .filter(DTO -> passwordService.verifyPassword(givenPassword, DTO.getHashedPassword()))
+            .filter(DTO -> passwordService.verifyPassword(givenPassword, DTO.hashedPassword()))
             .orElseThrow(NoMatchingUserException::new);
 
     String token = jwtTokenProvider.generateToken(AuthUserDTO.of(userDTO));
@@ -80,7 +79,7 @@ public class UserController {
 
     return ResponseEntity.status(201)
         .header(HttpHeaders.SET_COOKIE, authCookie.toString())
-        .body(new UserResponseDTO(userDTO.getId(), userDTO.getUsername(), userDTO.getNickname()));
+        .body(new UserResponseDTO(userDTO.id(), userDTO.username(), userDTO.nickname()));
   }
 
   @DeleteMapping("/token")
@@ -109,9 +108,7 @@ public class UserController {
 
     return userService
         .findByUsername(authUser.getUsername())
-        .map(
-            userDTO ->
-                new UserResponseDTO(userDTO.getId(), userDTO.getUsername(), userDTO.getNickname()))
+        .map(userDTO -> new UserResponseDTO(userDTO.id(), userDTO.username(), userDTO.nickname()))
         .map(ResponseEntity::ok)
         .orElseThrow(NoMatchingUserException::new);
   }

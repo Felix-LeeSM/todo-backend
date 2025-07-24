@@ -53,12 +53,12 @@ public class GroupController {
 
     CreateGroupDTO createGroupDTO =
         new CreateGroupDTO(
-            userId, createGroupRequestDTO.getName(), createGroupRequestDTO.getDescription());
+            userId, createGroupRequestDTO.name(), createGroupRequestDTO.description());
 
     GroupDTO groupDTO = groupService.createGroup(createGroupDTO);
 
     GroupResponseDTO groupResponseDTO =
-        new GroupResponseDTO(groupDTO.getId(), groupDTO.getName(), groupDTO.getDescription());
+        new GroupResponseDTO(groupDTO.id(), groupDTO.name(), groupDTO.description());
 
     return ResponseEntity.status(HttpStatus.CREATED).body(groupResponseDTO);
   }
@@ -131,7 +131,7 @@ public class GroupController {
 
     GroupInvitationDTO groupInvitation = groupInvitationService.findValidInvitation(token, now);
 
-    if (groupService.findUserRole(userId, groupInvitation.getGroupId()).isPresent())
+    if (groupService.findUserRole(userId, groupInvitation.groupId()).isPresent())
       throw new AlreadyGroupMemberException();
 
     GroupInvitationInfoDTO groupInvitationInfo =
@@ -149,10 +149,10 @@ public class GroupController {
 
     GroupInvitationDTO groupInvitation = groupInvitationService.findValidInvitation(token, now);
 
-    if (groupService.findUserRole(userId, groupInvitation.getGroupId()).isPresent())
+    if (groupService.findUserRole(userId, groupInvitation.groupId()).isPresent())
       throw new AlreadyGroupMemberException();
 
-    groupService.registerUserToGroup(userId, groupInvitation.getGroupId(), GroupRole.MEMBER);
+    groupService.registerUserToGroup(userId, groupInvitation.groupId(), GroupRole.MEMBER);
 
     return ResponseEntity.status(HttpStatus.CREATED).build();
   }

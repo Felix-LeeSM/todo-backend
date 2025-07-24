@@ -5,6 +5,6 @@ import java.time.ZonedDateTime;
 public record CreateGroupInvitationResponseDTO(String token, ZonedDateTime expiresAt) {
   public static CreateGroupInvitationResponseDTO of(GroupInvitationDTO groupInvitationDTO) {
     return new CreateGroupInvitationResponseDTO(
-        groupInvitationDTO.getToken(), groupInvitationDTO.getExpiresAt());
+        groupInvitationDTO.token(), groupInvitationDTO.expiresAt());
   }
 }

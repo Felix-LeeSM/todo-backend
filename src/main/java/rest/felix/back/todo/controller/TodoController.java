@@ -59,9 +59,9 @@ public class TodoController {
 
     groupService.assertGroupAuthority(userId, groupId, GroupRole.MEMBER);
 
-    if (createTodoRequestDTO.getAssigneeId() != null)
+    if (createTodoRequestDTO.assigneeId() != null)
       groupService
-          .findUserRole(createTodoRequestDTO.getAssigneeId(), groupId)
+          .findUserRole(createTodoRequestDTO.assigneeId(), groupId)
           .orElseThrow(UserNotFoundException::new);
 
     CreateTodoDTO createTodoDTO = CreateTodoDTO.of(createTodoRequestDTO, userId, groupId);
@@ -87,7 +87,7 @@ public class TodoController {
         todoId,
         (role, todo) ->
             role.gte(GroupRole.MANAGER)
-                || (role.eq(GroupRole.MEMBER) && todo.getAuthorId() == userId));
+                || (role.eq(GroupRole.MEMBER) && todo.authorId() == userId));
 
     todoService.deleteTodo(todoId);
 
@@ -109,11 +109,10 @@ public class TodoController {
         todoId,
         (role, todo) ->
             role.gte(GroupRole.MANAGER)
-                || (role.eq(GroupRole.MEMBER) && todo.getAuthorId() == userId));
+                || (role.eq(GroupRole.MEMBER) && todo.authorId() == userId));
 
     UpdateTodoDTO updateTodoDTO =
-        new UpdateTodoDTO(
-            todoId, updateTodoRequestDTO.getTitle(), updateTodoRequestDTO.getDescription());
+        new UpdateTodoDTO(todoId, updateTodoRequestDTO.title(), updateTodoRequestDTO.description());
 
     TodoDTO updatedTodoDTO = todoService.updateTodo(updateTodoDTO);
 
@@ -130,17 +129,17 @@ public class TodoController {
     long userId = authUser.getUserId();
 
     groupService.assertGroupAuthority(userId, groupId, GroupRole.MANAGER);
-    if (updateTodoMetadataRequestDTO.getAssigneeId() != null)
+    if (updateTodoMetadataRequestDTO.assigneeId() != null)
       groupService
-          .findUserRole(updateTodoMetadataRequestDTO.getAssigneeId(), groupId)
+          .findUserRole(updateTodoMetadataRequestDTO.assigneeId(), groupId)
           .orElseThrow(UserNotFoundException::new);
 
     UpdateTodoMetadataDTO updateTodoMetadataDTO =
         new UpdateTodoMetadataDTO(
             todoId,
-            updateTodoMetadataRequestDTO.getIsImportant(),
-            updateTodoMetadataRequestDTO.getDueDate(),
-            updateTodoMetadataRequestDTO.getAssigneeId());
+            updateTodoMetadataRequestDTO.isImportant(),
+            updateTodoMetadataRequestDTO.dueDate(),
+            updateTodoMetadataRequestDTO.assigneeId());
 
     TodoDTO updatedTodoDTO = todoService.updateTodoMetadata(updateTodoMetadataDTO);
 
@@ -159,7 +158,7 @@ public class TodoController {
 
     TodoDTO todo =
         todoService.moveTodo(
-            todoId, moveTodoRequestDTO.getDestinationId(), moveTodoRequestDTO.getTodoStatus());
+            todoId, moveTodoRequestDTO.destinationId(), moveTodoRequestDTO.todoStatus());
 
     return ResponseEntity.ok().body(TodoResponseDTO.of(todo));
   }

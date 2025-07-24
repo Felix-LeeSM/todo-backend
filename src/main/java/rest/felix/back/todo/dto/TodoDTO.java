@@ -1,26 +1,20 @@
 package rest.felix.back.todo.dto;
 
 import java.time.LocalDate;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
 
-@Getter
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class TodoDTO {
-
-  private final long id;
-  private final String title;
-  private final String description;
-  private final String order;
-  private final TodoStatus status;
-  private final boolean isImportant;
-  private final LocalDate dueDate;
-  private final long authorId;
-  private final long groupId;
-  private final Long assigneeId;
+public record TodoDTO(
+    long id,
+    String title,
+    String description,
+    String order,
+    TodoStatus status,
+    boolean isImportant,
+    LocalDate dueDate,
+    long authorId,
+    long groupId,
+    Long assigneeId) {
 
   public static TodoDTO of(Todo todo) {
     return new TodoDTO(

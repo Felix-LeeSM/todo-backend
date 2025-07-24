@@ -126,7 +126,7 @@ public class TodoRepository {
         .setParameter("groupIds", groupIds)
         .getResultList()
         .stream()
-        .collect(Collectors.toMap(TodoCountDTO::getGroupId, dto -> dto));
+        .collect(Collectors.toMap(TodoCountDTO::groupId, dto -> dto));
   }
 
   @Transactional(readOnly = true)
@@ -153,11 +153,11 @@ public class TodoRepository {
   public TodoDTO createTodo(CreateTodoDTO createTodoDTO) {
     Todo todo = new Todo();
 
-    User author = em.getReference(User.class, createTodoDTO.getAuthorId());
-    Group group = em.getReference(Group.class, createTodoDTO.getGroupId());
+    User author = em.getReference(User.class, createTodoDTO.authorId());
+    Group group = em.getReference(Group.class, createTodoDTO.groupId());
     User assignee =
-        createTodoDTO.getAssigneeId() != null
-            ? em.getReference(User.class, createTodoDTO.getAssigneeId())
+        createTodoDTO.assigneeId() != null
+            ? em.getReference(User.class, createTodoDTO.assigneeId())
             : null;
 
     TodoStatus defaultTodoStatus = TodoStatus.TO_DO;
@@ -165,9 +165,9 @@ public class TodoRepository {
     todo.setAuthor(author);
     todo.setGroup(group);
     todo.setAssignee(assignee);
-    todo.setDueDate(createTodoDTO.getDueDate());
-    todo.setTitle(createTodoDTO.getTitle());
-    todo.setDescription(createTodoDTO.getDescription());
+    todo.setDueDate(createTodoDTO.dueDate());
+    todo.setTitle(createTodoDTO.title());
+    todo.setDescription(createTodoDTO.description());
     todo.setTodoStatus(defaultTodoStatus);
 
     String maxOrder =
@@ -207,11 +207,11 @@ public class TodoRepository {
 
   @Transactional
   public TodoDTO updateTodo(UpdateTodoDTO updateTodoDTO) {
-    Todo todo = findEntityById(updateTodoDTO.getId()).orElseThrow(TodoNotFoundException::new);
+    Todo todo = findEntityById(updateTodoDTO.id()).orElseThrow(TodoNotFoundException::new);
 
-    if (updateTodoDTO.getTitle() != null) todo.setTitle(updateTodoDTO.getTitle());
+    if (updateTodoDTO.title() != null) todo.setTitle(updateTodoDTO.title());
 
-    if (updateTodoDTO.getDescription() != null) todo.setDescription(updateTodoDTO.getDescription());
+    if (updateTodoDTO.description() != null) todo.setDescription(updateTodoDTO.description());
 
     return TodoDTO.of(todo);
   }
@@ -378,9 +378,9 @@ public class TodoRepository {
 
   @Transactional
   public TodoDTO updateTodoMetadata(UpdateTodoMetadataDTO updateTodoMetadataDTO) {
-    long todoId = updateTodoMetadataDTO.getTodoId();
-    Long assigneeId = updateTodoMetadataDTO.getAssigneeId();
-    LocalDate dueDate = updateTodoMetadataDTO.getDueDate();
+    long todoId = updateTodoMetadataDTO.todoId();
+    Long assigneeId = updateTodoMetadataDTO.assigneeId();
+    LocalDate dueDate = updateTodoMetadataDTO.dueDate();
     boolean isImportant = updateTodoMetadataDTO.isImportant();
 
     User assignee = assigneeId != null ? em.getReference(User.class, assigneeId) : null;

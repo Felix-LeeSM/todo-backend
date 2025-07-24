@@ -92,13 +92,13 @@ public class GroupControllerUnitTest {
 
       GroupDTO createdGroup = groupRepository.findById(groupResponseDTO.id()).get();
 
-      Assertions.assertEquals("groupName", createdGroup.getName());
-      Assertions.assertEquals("group description", createdGroup.getDescription());
+      Assertions.assertEquals("groupName", createdGroup.name());
+      Assertions.assertEquals("group description", createdGroup.description());
 
       UserGroupDTO userGroup =
           userGroupRepository.findByUserIdAndGroupId(user.getId(), groupResponseDTO.id()).get();
 
-      Assertions.assertEquals(GroupRole.OWNER, userGroup.getGroupRole());
+      Assertions.assertEquals(GroupRole.OWNER, userGroup.groupRole());
     }
   }
 

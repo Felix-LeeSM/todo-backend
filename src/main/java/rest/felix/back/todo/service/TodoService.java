@@ -71,7 +71,7 @@ public class TodoService {
 
     userGroupRepository
         .findByUserIdAndGroupId(userId, groupId)
-        .map(dto -> dto.getGroupRole())
+        .map(dto -> dto.groupRole())
         .orElseThrow(UserAccessDeniedException::new);
     TodoDTO todo = todoRepository.findById(groupId, todoId).orElseThrow(TodoNotFoundException::new);
 
@@ -86,7 +86,7 @@ public class TodoService {
     GroupRole role =
         userGroupRepository
             .findByUserIdAndGroupId(userId, groupId)
-            .map(dto -> dto.getGroupRole())
+            .map(dto -> dto.groupRole())
             .orElseThrow(UserAccessDeniedException::new);
     TodoDTO todo = todoRepository.findById(groupId, todoId).orElseThrow(TodoNotFoundException::new);
 
@@ -100,7 +100,7 @@ public class TodoService {
 
     userGroupRepository
         .findByUserIdAndGroupId(userId, groupId)
-        .map(dto -> dto.getGroupRole())
+        .map(dto -> dto.groupRole())
         .filter(role -> role.gte(groupRole))
         .orElseThrow(UserAccessDeniedException::new);
     todoRepository.findById(groupId, todoId).orElseThrow(TodoNotFoundException::new);

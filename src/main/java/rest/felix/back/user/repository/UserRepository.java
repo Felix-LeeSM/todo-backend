@@ -26,9 +26,9 @@ public class UserRepository {
     try {
       User user = new User();
 
-      user.setHashedPassword(signupDTO.getHashedPassword());
-      user.setNickname(signupDTO.getNickname());
-      user.setUsername(signupDTO.getUsername());
+      user.setHashedPassword(signupDTO.hashedPassword());
+      user.setNickname(signupDTO.nickname());
+      user.setUsername(signupDTO.username());
 
       em.persist(user);
 
@@ -71,7 +71,7 @@ public class UserRepository {
         .setParameter("groupIds", groupIds)
         .getResultList()
         .stream()
-        .collect(Collectors.groupingBy(MemberDTO::getGroupId));
+        .collect(Collectors.groupingBy(MemberDTO::groupId));
   }
 
   @Transactional(readOnly = true)
