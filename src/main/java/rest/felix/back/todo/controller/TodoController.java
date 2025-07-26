@@ -2,29 +2,15 @@ package rest.felix.back.todo.controller;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.group.service.GroupService;
-import rest.felix.back.todo.dto.CreateTodoDTO;
-import rest.felix.back.todo.dto.CreateTodoRequestDTO;
-import rest.felix.back.todo.dto.MoveTodoRequestDTO;
-import rest.felix.back.todo.dto.TodoDTO;
-import rest.felix.back.todo.dto.TodoResponseDTO;
-import rest.felix.back.todo.dto.UpdateTodoDTO;
-import rest.felix.back.todo.dto.UpdateTodoMetadataDTO;
-import rest.felix.back.todo.dto.UpdateTodoMetadataRequestDTO;
-import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
+import rest.felix.back.todo.dto.*;
 import rest.felix.back.todo.service.TodoService;
 import rest.felix.back.user.dto.AuthUserDTO;
 import rest.felix.back.user.exception.UserNotFoundException;
@@ -119,29 +105,28 @@ public class TodoController {
     return ResponseEntity.ok().body(updatedTodoDTO);
   }
 
-  @PutMapping("/group/{groupId}/todo/{todoId}/metadata")
+  @PatchMapping("/group/{groupId}/todo/{todoId}/metadata")
   public ResponseEntity<TodoDTO> updateTodoMetadata(
       @AuthenticationPrincipal AuthUserDTO authUser,
       @PathVariable(name = "groupId") long groupId,
       @PathVariable(name = "todoId") long todoId,
-      @RequestBody @Valid UpdateTodoMetadataRequestDTO updateTodoMetadataRequestDTO) {
+      @RequestBody @Valid UpdateTodoMetadataRequestDTO dto) {
 
     long userId = authUser.getUserId();
 
-    groupService.assertGroupAuthority(userId, groupId, GroupRole.MANAGER);
-    if (updateTodoMetadataRequestDTO.assigneeId() != null)
-      groupService
-          .findUserRole(updateTodoMetadataRequestDTO.assigneeId(), groupId)
-          .orElseThrow(UserNotFoundException::new);
+    todoService.assertTodoAuthority(userId, groupId, todoId, GroupRole.MANAGER);
 
-    UpdateTodoMetadataDTO updateTodoMetadataDTO =
-        new UpdateTodoMetadataDTO(
-            todoId,
-            updateTodoMetadataRequestDTO.isImportant(),
-            updateTodoMetadataRequestDTO.dueDate(),
-            updateTodoMetadataRequestDTO.assigneeId());
+    if (dto.assigneeId().isPresent() && dto.assigneeId().getValue() != null) {
+      long assigneeId = dto.assigneeId().getValue();
+      groupService.findUserRole(assigneeId, groupId).orElseThrow(UserNotFoundException::new);
+    }
 
-    TodoDTO updatedTodoDTO = todoService.updateTodoMetadata(updateTodoMetadataDTO);
+    dto.isImportant()
+        .ifPresent(
+            isImportant ->
+                Optional.ofNullable(isImportant).orElseThrow(IllegalArgumentException::new));
+
+    TodoDTO updatedTodoDTO = todoService.updateTodoMetadata(UpdateTodoMetadataDTO.of(todoId, dto));
 
     return ResponseEntity.ok().body(updatedTodoDTO);
   }

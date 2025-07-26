@@ -1,7 +1,7 @@
 package rest.felix.back.user.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.util.ArrayList; // 필요한 import 추가
+import java.util.ArrayList;
 import java.util.Collection;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

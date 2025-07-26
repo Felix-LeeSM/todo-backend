@@ -6,29 +6,24 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import rest.felix.back.common.util.EntityFactory;
+import rest.felix.back.common.util.NullableField;
 import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.common.util.Trio;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
-import rest.felix.back.todo.dto.CreateTodoRequestDTO;
-import rest.felix.back.todo.dto.MoveTodoRequestDTO;
-import rest.felix.back.todo.dto.TodoDTO;
-import rest.felix.back.todo.dto.TodoResponseDTO;
-import rest.felix.back.todo.dto.UpdateTodoMetadataRequestDTO;
-import rest.felix.back.todo.dto.UpdateTodoRequestDTO;
+import rest.felix.back.todo.dto.*;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
 import rest.felix.back.todo.exception.TodoNotFoundException;
@@ -1393,7 +1388,10 @@ public class TodoControllerUnitTest {
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
       UpdateTodoMetadataRequestDTO requestDTO =
-          new UpdateTodoMetadataRequestDTO(true, LocalDate.now().plusDays(1), assignee.getId());
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Present<>(true),
+              new NullableField.Present<>(LocalDate.now().plusDays(1)),
+              new NullableField.Present<>(assignee.getId()));
 
       // When
       ResponseEntity<TodoDTO> responseEntity =
@@ -1415,9 +1413,10 @@ public class TodoControllerUnitTest {
       Assertions.assertEquals(assignee.getId(), fetchedTodo.assigneeId());
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("isImportantParameter")
     @DisplayName("성공 - isImportant만 업데이트")
-    void HappyPath_2() {
+    void HappyPath_2(Boolean current, Boolean toUpdate) {
       // Given
       User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group", "description");
@@ -1431,10 +1430,15 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
-              false);
+              LocalDate.now(),
+              current != null && current);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
-      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Present<>(toUpdate),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>());
 
       // When
       ResponseEntity<TodoDTO> responseEntity =
@@ -1444,19 +1448,28 @@ public class TodoControllerUnitTest {
       Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
       TodoDTO updatedTodo = responseEntity.getBody();
       Assertions.assertNotNull(updatedTodo);
-      Assertions.assertTrue(updatedTodo.isImportant());
-      Assertions.assertNull(updatedTodo.dueDate());
+      Assertions.assertEquals(toUpdate, updatedTodo.isImportant());
+      Assertions.assertNotNull(updatedTodo.dueDate());
       Assertions.assertNull(updatedTodo.assigneeId());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertTrue(fetchedTodo.isImportant());
-      Assertions.assertNull(fetchedTodo.dueDate());
+      Assertions.assertEquals(toUpdate, fetchedTodo.isImportant());
+      Assertions.assertNotNull(fetchedTodo.dueDate());
       Assertions.assertNull(fetchedTodo.assigneeId());
     }
 
-    @Test
+    private static Stream<Arguments> isImportantParameter() {
+      return Stream.of(
+          Arguments.of(true, false),
+          Arguments.of(false, true),
+          Arguments.of(true, true),
+          Arguments.of(false, false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("dueDateParameter")
     @DisplayName("성공 - dueDate만 업데이트")
-    void HappyPath_3() {
+    void HappyPath_3(LocalDate current, LocalDate toUpdate) {
       // Given
       User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group", "description");
@@ -1470,11 +1483,15 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              current,
               true);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
       UpdateTodoMetadataRequestDTO requestDTO =
-          new UpdateTodoMetadataRequestDTO(true, LocalDate.now().plusDays(2), null);
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Absent<>(),
+              new NullableField.Present<>(toUpdate),
+              new NullableField.Absent<>());
 
       // When
       ResponseEntity<TodoDTO> responseEntity =
@@ -1485,19 +1502,26 @@ public class TodoControllerUnitTest {
       TodoDTO updatedTodo = responseEntity.getBody();
       Assertions.assertNotNull(updatedTodo);
       Assertions.assertTrue(updatedTodo.isImportant());
-      Assertions.assertEquals(
-          LocalDate.now().plusDays(2).toString(), updatedTodo.dueDate().toString());
+      Assertions.assertEquals(toUpdate, updatedTodo.dueDate());
       Assertions.assertNull(updatedTodo.assigneeId());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
       Assertions.assertTrue(fetchedTodo.isImportant());
-      Assertions.assertEquals(
-          LocalDate.now().plusDays(2).toString(), fetchedTodo.dueDate().toString());
+      Assertions.assertEquals(toUpdate, fetchedTodo.dueDate());
       Assertions.assertNull(fetchedTodo.assigneeId());
     }
 
+    private static Stream<Arguments> dueDateParameter() {
+      LocalDate now = LocalDate.now();
+      return Stream.of(
+          Arguments.of(now, now.plusDays(3)),
+          Arguments.of(null, now.minusDays(2)),
+          Arguments.of(now.minusDays(20), null),
+          Arguments.of(null, now.plusDays(2)));
+    }
+
     @Test
-    @DisplayName("성공 - assigneeId만 업데이트")
+    @DisplayName("성공 - assigneeId를 설정하여 담당자 설정")
     void HappyPath_4() {
       // Given
       User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
@@ -1518,7 +1542,10 @@ public class TodoControllerUnitTest {
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
       UpdateTodoMetadataRequestDTO requestDTO =
-          new UpdateTodoMetadataRequestDTO(false, null, assignee.getId());
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>(),
+              new NullableField.Present<>(assignee.getId()));
 
       // When
       ResponseEntity<TodoDTO> responseEntity =
@@ -1529,19 +1556,64 @@ public class TodoControllerUnitTest {
 
       TodoDTO updatedTodo = responseEntity.getBody();
       Assertions.assertNotNull(updatedTodo);
-      Assertions.assertEquals(false, updatedTodo.isImportant());
+      Assertions.assertFalse(updatedTodo.isImportant());
       Assertions.assertNull(updatedTodo.dueDate());
       Assertions.assertEquals(assignee.getId(), updatedTodo.assigneeId());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertEquals(false, fetchedTodo.isImportant());
+      Assertions.assertFalse(fetchedTodo.isImportant());
       Assertions.assertNull(fetchedTodo.dueDate());
       Assertions.assertEquals(assignee.getId(), fetchedTodo.assigneeId());
     }
 
     @Test
-    @DisplayName("성공 - assigneeId를 null로 설정하여 담당자 해제")
+    @DisplayName("성공 - assigneeId를 설정하여 담당자 변경")
     void HappyPath_5() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User oldAssignee =
+          entityFactory.insertUser("oldAssignee", "hashedPassword", "oldAssigneeNickname");
+      User newAssignee =
+          entityFactory.insertUser("newAssignee", "hashedPassword", "newAssigneeNickname");
+      Group group = entityFactory.insertGroup("group", "description");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(oldAssignee.getId(), group.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(newAssignee.getId(), group.getId(), GroupRole.MEMBER);
+
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              oldAssignee.getId(),
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>(),
+              new NullableField.Present<>(newAssignee.getId()));
+
+      // When
+      ResponseEntity<TodoDTO> responseEntity =
+          todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+      TodoDTO updatedTodo = responseEntity.getBody();
+      Assertions.assertNotNull(updatedTodo);
+      Assertions.assertEquals(newAssignee.getId(), updatedTodo.assigneeId());
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertEquals(newAssignee.getId(), fetchedTodo.assigneeId());
+    }
+
+    @Test
+    @DisplayName("성공 - assigneeId를 null로 설정하여 담당자 해제")
+    void HappyPath_6() {
       // Given
       User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
       User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
@@ -1560,7 +1632,11 @@ public class TodoControllerUnitTest {
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
-      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(false, null, null);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>(),
+              new NullableField.Present<>(null));
 
       // When
       ResponseEntity<TodoDTO> responseEntity =
@@ -1577,17 +1653,67 @@ public class TodoControllerUnitTest {
     }
 
     @Test
-    @DisplayName("실패 - 유저 없음")
-    void Failure_NoUser() {
+    @DisplayName("실패 - isImportant를 null로 변경하려 함.")
+    void Failure_IsImportantIsNotNull() throws Exception {
       // Given
       User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
       Group group = entityFactory.insertGroup("group", "description");
-      UserGroup userGroup =
-          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
 
       Todo todo =
           entityFactory.insertTodo(
               user.getId(),
+              assignee.getId(),
+              group.getId(),
+              "todo title",
+              "todo description",
+              TodoStatus.TO_DO,
+              false);
+
+      AuthUserDTO authUser = AuthUserDTO.of(user);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>(),
+              new NullableField.Present<>(null));
+
+      // When
+      ResponseEntity<TodoDTO> responseEntity =
+          todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+      TodoDTO updatedTodo = responseEntity.getBody();
+      Assertions.assertNotNull(updatedTodo);
+      Assertions.assertNull(updatedTodo.assigneeId());
+
+      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
+      Assertions.assertNull(fetchedTodo.assigneeId());
+    }
+
+    @Test
+    @DisplayName("실패 - 토큰 없음")
+    void Failure_NoToken() {
+      // This test is not applicable for unit tests as Spring Security context is not available.
+      // It's better suited for web tests (TodoControllerWebTest).
+    }
+
+    @Test
+    @DisplayName("실패 - 유저 없음")
+    void Failure_NoUser() {
+      // Given
+      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
+      User author =
+          entityFactory.insertUser("username_author", "hashedPassword", "nickname_author");
+      Group group = entityFactory.insertGroup("group", "description");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      entityFactory.insertUserGroup(author.getId(), group.getId(), GroupRole.MANAGER);
+      Todo todo =
+          entityFactory.insertTodo(
+              author.getId(),
               null,
               group.getId(),
               "todo title",
@@ -1595,12 +1721,15 @@ public class TodoControllerUnitTest {
               TodoStatus.TO_DO,
               false);
 
-      th.delete(todo);
+      AuthUserDTO authUser = AuthUserDTO.of(user);
       th.delete(userGroup);
       th.delete(user);
 
-      AuthUserDTO authUser = AuthUserDTO.of(user);
-      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Present<>(true),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>());
 
       // When
       Runnable lambda =
@@ -1619,7 +1748,6 @@ public class TodoControllerUnitTest {
       Group group = entityFactory.insertGroup("group", "description");
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
       Todo todo =
           entityFactory.insertTodo(
               user.getId(),
@@ -1629,11 +1757,14 @@ public class TodoControllerUnitTest {
               "todo description",
               TodoStatus.TO_DO,
               false);
-
       th.delete(userGroup);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
-      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Present<>(true),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>());
 
       // When
       Runnable lambda =
@@ -1663,7 +1794,11 @@ public class TodoControllerUnitTest {
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
-      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Present<>(true),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>());
 
       // When
       Runnable lambda =
@@ -1682,7 +1817,6 @@ public class TodoControllerUnitTest {
       Group group = entityFactory.insertGroup("group", "description");
       UserGroup userGroup =
           entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
       Todo todo =
           entityFactory.insertTodo(
               user.getId(),
@@ -1693,17 +1827,23 @@ public class TodoControllerUnitTest {
               TodoStatus.TO_DO,
               false);
 
+      long deletedGroupId = group.getId();
+
       th.delete(todo);
       th.delete(userGroup);
       th.delete(group);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
-      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Present<>(true),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>());
 
       // When
       Runnable lambda =
           () ->
-              todoController.updateTodoMetadata(authUser, group.getId(), todo.getId(), requestDTO);
+              todoController.updateTodoMetadata(authUser, deletedGroupId, todo.getId(), requestDTO);
 
       // Then
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
@@ -1730,7 +1870,11 @@ public class TodoControllerUnitTest {
       th.delete(todo);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
-      UpdateTodoMetadataRequestDTO requestDTO = new UpdateTodoMetadataRequestDTO(true, null, null);
+      UpdateTodoMetadataRequestDTO requestDTO =
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Present<>(true),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>());
 
       // When
       Runnable lambda =
@@ -1763,7 +1907,10 @@ public class TodoControllerUnitTest {
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
       UpdateTodoMetadataRequestDTO requestDTO =
-          new UpdateTodoMetadataRequestDTO(true, null, assignee.getId());
+          new UpdateTodoMetadataRequestDTO(
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>(),
+              new NullableField.Present<>(assignee.getId()));
 
       // When
       Runnable lambda =

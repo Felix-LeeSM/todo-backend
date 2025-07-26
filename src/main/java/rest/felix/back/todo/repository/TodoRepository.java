@@ -2,7 +2,6 @@ package rest.felix.back.todo.repository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -11,12 +10,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.group.entity.Group;
-import rest.felix.back.todo.dto.CreateTodoDTO;
-import rest.felix.back.todo.dto.TodoCountDTO;
-import rest.felix.back.todo.dto.TodoDTO;
-import rest.felix.back.todo.dto.TodoWithStarredStatusDTO;
-import rest.felix.back.todo.dto.UpdateTodoDTO;
-import rest.felix.back.todo.dto.UpdateTodoMetadataDTO;
+import rest.felix.back.todo.dto.*;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.UserTodoStar;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
@@ -43,7 +37,7 @@ public class TodoRepository {
             JOIN FETCH t.author
             WHERE g.id = :groupId
             ORDER BY t.order ASC
-                """,
+            """,
             Todo.class)
         .setParameter("groupId", groupId)
         .getResultList()
@@ -75,7 +69,7 @@ public class TodoRepository {
             LEFT JOIN UserTodoStar uts ON uts.todo.id = t.id AND uts.user.id = :userId
             WHERE t.group.id = :groupId
             ORDER BY t.order ASC
-                """,
+            """,
             TodoWithStarredStatusDTO.class)
         .setParameter("groupId", groupId)
         .setParameter("userId", userId)
@@ -376,20 +370,20 @@ public class TodoRepository {
         .isEmpty();
   }
 
-  @Transactional
-  public TodoDTO updateTodoMetadata(UpdateTodoMetadataDTO updateTodoMetadataDTO) {
-    long todoId = updateTodoMetadataDTO.todoId();
-    Long assigneeId = updateTodoMetadataDTO.assigneeId();
-    LocalDate dueDate = updateTodoMetadataDTO.dueDate();
-    boolean isImportant = updateTodoMetadataDTO.isImportant();
+  public TodoDTO updateTodoMetadata(UpdateTodoMetadataDTO dto) {
+    Todo todo = findEntityById(dto.todoId()).orElseThrow(TodoNotFoundException::new);
 
-    User assignee = assigneeId != null ? em.getReference(User.class, assigneeId) : null;
+    if (dto.isImportant().isPresent()) todo.setImportant(dto.isImportant().getValue());
 
-    Todo todo = findEntityById(todoId).orElseThrow(TodoNotFoundException::new);
+    if (dto.dueDate().isPresent()) todo.setDueDate(dto.dueDate().getValue());
 
-    todo.setAssignee(assignee);
-    todo.setDueDate(dueDate);
-    todo.setImportant(isImportant);
+    if (dto.assigneeId().isPresent()) {
+      User assignee =
+          dto.assigneeId().getValue() != null
+              ? em.getReference(User.class, dto.assigneeId().getValue())
+              : null;
+      todo.setAssignee(assignee);
+    }
 
     return TodoDTO.of(todo);
   }

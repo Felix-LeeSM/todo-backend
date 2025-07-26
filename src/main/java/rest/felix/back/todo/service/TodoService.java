@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
+import rest.felix.back.group.dto.UserGroupDTO;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.dto.CreateTodoDTO;
@@ -60,9 +61,9 @@ public class TodoService {
   }
 
   @Transactional
-  public TodoDTO updateTodoMetadata(UpdateTodoMetadataDTO updateTodoMetadataDTO) {
+  public TodoDTO updateTodoMetadata(UpdateTodoMetadataDTO dto) {
 
-    return todoRepository.updateTodoMetadata(updateTodoMetadataDTO);
+    return todoRepository.updateTodoMetadata(dto);
   }
 
   @Transactional(readOnly = true)
@@ -71,7 +72,7 @@ public class TodoService {
 
     userGroupRepository
         .findByUserIdAndGroupId(userId, groupId)
-        .map(dto -> dto.groupRole())
+        .map(UserGroupDTO::groupRole)
         .orElseThrow(UserAccessDeniedException::new);
     TodoDTO todo = todoRepository.findById(groupId, todoId).orElseThrow(TodoNotFoundException::new);
 
@@ -86,7 +87,7 @@ public class TodoService {
     GroupRole role =
         userGroupRepository
             .findByUserIdAndGroupId(userId, groupId)
-            .map(dto -> dto.groupRole())
+            .map(UserGroupDTO::groupRole)
             .orElseThrow(UserAccessDeniedException::new);
     TodoDTO todo = todoRepository.findById(groupId, todoId).orElseThrow(TodoNotFoundException::new);
 
@@ -97,10 +98,9 @@ public class TodoService {
 
   @Transactional
   public void assertTodoAuthority(long userId, long groupId, long todoId, GroupRole groupRole) {
-
     userGroupRepository
         .findByUserIdAndGroupId(userId, groupId)
-        .map(dto -> dto.groupRole())
+        .map(UserGroupDTO::groupRole)
         .filter(role -> role.gte(groupRole))
         .orElseThrow(UserAccessDeniedException::new);
     todoRepository.findById(groupId, todoId).orElseThrow(TodoNotFoundException::new);

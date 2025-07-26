@@ -4,11 +4,7 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -19,6 +15,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
 import rest.felix.back.common.util.EntityFactory;
+import rest.felix.back.common.util.NullableField;
 import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.enumerated.GroupRole;
@@ -954,245 +951,280 @@ class TodoServiceTest {
     @DisplayName("성공: Todo의 메타데이터(중요도, 마감일, 담당자)를 수정한다")
     void success_whenUpdatingAllMetadataFields() {
       // Given
-      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-      User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
-      Group group = entityFactory.insertGroup("group", "description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      User assignee = entityFactory.insertUser("assignee", "p", "n");
+      Group group = trio.second();
       entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
-
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(),
-              null,
-              group.getId(),
-              "todo title",
-              "todo description",
-              TodoStatus.TO_DO,
-              false);
-
-      UpdateTodoMetadataDTO updateTodoMetadataDTO =
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+      UpdateTodoMetadataDTO requestDTO =
           new UpdateTodoMetadataDTO(
-              todo.getId(), true, LocalDate.now().plusDays(1), assignee.getId());
+              todo.getId(),
+              new NullableField.Present<>(true),
+              new NullableField.Present<>(LocalDate.now()),
+              new NullableField.Present<>(assignee.getId()));
 
       // When
-      TodoDTO updatedTodoDTO = todoService.updateTodoMetadata(updateTodoMetadataDTO);
+      TodoDTO result = todoService.updateTodoMetadata(requestDTO);
 
       // Then
-      Assertions.assertEquals(todo.getId(), updatedTodoDTO.id());
-      Assertions.assertTrue(updatedTodoDTO.isImportant());
-      Assertions.assertEquals(LocalDate.now().plusDays(1), updatedTodoDTO.dueDate());
-      Assertions.assertEquals(assignee.getId(), updatedTodoDTO.assigneeId());
-
-      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertTrue(fetchedTodo.isImportant());
-      Assertions.assertEquals(LocalDate.now().plusDays(1), fetchedTodo.dueDate());
-      Assertions.assertEquals(assignee.getId(), fetchedTodo.assigneeId());
+      Assertions.assertNotNull(result);
+      Assertions.assertTrue(result.isImportant());
+      Assertions.assertEquals(LocalDate.now(), result.dueDate());
+      Assertions.assertEquals(assignee.getId(), result.assigneeId());
     }
 
-    @Test
-    @DisplayName("성공: isImportant만 수정한다")
-    void success_whenUpdatingOnlyIsImportant() {
+    @ParameterizedTest
+    @MethodSource("isImportantParameter")
+    @DisplayName("성공 - isImportant만 업데이트")
+    void success_whenUpdatingOnlyIsImportant(Boolean current, Boolean toUpdate) {
       // Given
-      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group", "description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(),
-              null,
-              group.getId(),
-              "todo title",
-              "todo description",
-              TodoStatus.TO_DO,
-              false);
-
-      UpdateTodoMetadataDTO updateTodoMetadataDTO =
-          new UpdateTodoMetadataDTO(todo.getId(), true, null, null);
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, current);
+      UpdateTodoMetadataDTO requestDTO =
+          new UpdateTodoMetadataDTO(
+              todo.getId(),
+              new NullableField.Present<>(toUpdate),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>());
 
       // When
-      TodoDTO updatedTodoDTO = todoService.updateTodoMetadata(updateTodoMetadataDTO);
+      TodoDTO result = todoService.updateTodoMetadata(requestDTO);
 
       // Then
-      Assertions.assertEquals(todo.getId(), updatedTodoDTO.id());
-      Assertions.assertTrue(updatedTodoDTO.isImportant());
-      Assertions.assertNull(updatedTodoDTO.dueDate());
-      Assertions.assertNull(updatedTodoDTO.assigneeId());
-
-      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertTrue(fetchedTodo.isImportant());
-      Assertions.assertNull(fetchedTodo.dueDate());
-      Assertions.assertNull(fetchedTodo.assigneeId());
+      Assertions.assertEquals(toUpdate, result.isImportant());
     }
 
-    @Test
+    private static Stream<Arguments> isImportantParameter() {
+      return Stream.of(
+          Arguments.of(true, false),
+          Arguments.of(false, true),
+          Arguments.of(true, true),
+          Arguments.of(false, false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("dueDateParameter")
     @DisplayName("성공: dueDate만 수정한다")
-    void success_whenUpdatingOnlyDueDate() {
+    void success_whenUpdatingOnlyDueDate(LocalDate current, LocalDate toUpdate) {
       // Given
-      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group", "description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
 
       Todo todo =
           entityFactory.insertTodo(
               user.getId(),
-              null,
+              user.getId(),
               group.getId(),
-              "todo title",
-              "todo description",
+              "t",
+              "d",
               TodoStatus.TO_DO,
+              current,
               false);
-
-      UpdateTodoMetadataDTO updateTodoMetadataDTO =
-          new UpdateTodoMetadataDTO(todo.getId(), false, LocalDate.now().plusDays(2), null);
+      UpdateTodoMetadataDTO requestDTO =
+          new UpdateTodoMetadataDTO(
+              todo.getId(),
+              new NullableField.Absent<>(),
+              new NullableField.Present<>(toUpdate),
+              new NullableField.Absent<>());
 
       // When
-      TodoDTO updatedTodoDTO = todoService.updateTodoMetadata(updateTodoMetadataDTO);
+      TodoDTO result = todoService.updateTodoMetadata(requestDTO);
 
       // Then
-      Assertions.assertEquals(todo.getId(), updatedTodoDTO.id());
-      Assertions.assertEquals(false, updatedTodoDTO.isImportant());
-      Assertions.assertEquals(LocalDate.now().plusDays(2), updatedTodoDTO.dueDate());
-      Assertions.assertNull(updatedTodoDTO.assigneeId());
+      Assertions.assertEquals(toUpdate, result.dueDate());
+    }
 
-      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertEquals(false, fetchedTodo.isImportant());
-      Assertions.assertEquals(LocalDate.now().plusDays(2), fetchedTodo.dueDate());
-      Assertions.assertNull(fetchedTodo.assigneeId());
+    private static Stream<Arguments> dueDateParameter() {
+      LocalDate now = LocalDate.now();
+      return Stream.of(
+          Arguments.of(now, now.plusDays(3)),
+          Arguments.of(null, now.minusDays(2)),
+          Arguments.of(now.minusDays(20), null),
+          Arguments.of(null, now.plusDays(30)));
+    }
+
+    @Test
+    @DisplayName("성공: assigneeId만 추가한다")
+    void success_whenSettingOnlyAssigneeId() {
+      // Given
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      User assignee = entityFactory.insertUser("assignee", "p", "n");
+      Group group = trio.second();
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+      UpdateTodoMetadataDTO requestDTO =
+          new UpdateTodoMetadataDTO(
+              todo.getId(),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>(),
+              new NullableField.Present<>(assignee.getId()));
+
+      // When
+      TodoDTO result = todoService.updateTodoMetadata(requestDTO);
+
+      // Then
+      Assertions.assertEquals(assignee.getId(), result.assigneeId());
     }
 
     @Test
     @DisplayName("성공: assigneeId만 수정한다")
     void success_whenUpdatingOnlyAssigneeId() {
       // Given
-      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-      User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
-      Group group = entityFactory.insertGroup("group", "description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
-
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      User originalAssignee = entityFactory.insertUser("original", "p", "n");
+      User newAssignee = entityFactory.insertUser("new", "p", "n");
+      Group group = trio.second();
+      entityFactory.insertUserGroup(originalAssignee.getId(), group.getId(), GroupRole.MEMBER);
+      entityFactory.insertUserGroup(newAssignee.getId(), group.getId(), GroupRole.MEMBER);
       Todo todo =
           entityFactory.insertTodo(
               user.getId(),
-              null,
+              originalAssignee.getId(),
               group.getId(),
-              "todo title",
-              "todo description",
+              "t",
+              "d",
               TodoStatus.TO_DO,
+              "a",
               false);
-
-      UpdateTodoMetadataDTO updateTodoMetadataDTO =
-          new UpdateTodoMetadataDTO(todo.getId(), false, null, assignee.getId());
+      UpdateTodoMetadataDTO requestDTO =
+          new UpdateTodoMetadataDTO(
+              todo.getId(),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>(),
+              new NullableField.Present<>(newAssignee.getId()));
 
       // When
-      TodoDTO updatedTodoDTO = todoService.updateTodoMetadata(updateTodoMetadataDTO);
+      TodoDTO result = todoService.updateTodoMetadata(requestDTO);
 
       // Then
-      Assertions.assertEquals(todo.getId(), updatedTodoDTO.id());
-      Assertions.assertEquals(false, updatedTodoDTO.isImportant());
-      Assertions.assertNull(updatedTodoDTO.dueDate());
-      Assertions.assertEquals(assignee.getId(), updatedTodoDTO.assigneeId());
-
-      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertEquals(false, fetchedTodo.isImportant());
-      Assertions.assertNull(fetchedTodo.dueDate());
-      Assertions.assertEquals(assignee.getId(), fetchedTodo.assigneeId());
+      Assertions.assertEquals(newAssignee.getId(), result.assigneeId());
     }
 
     @Test
     @DisplayName("성공: assigneeId를 null로 설정하여 담당자를 해제한다")
     void success_whenSettingAssigneeIdToNull() {
       // Given
-      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-      User assignee = entityFactory.insertUser("assignee", "hashedPassword", "assigneeNickname");
-      Group group = entityFactory.insertGroup("group", "description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      User assignee = entityFactory.insertUser("assignee", "p", "n");
+      Group group = trio.second();
       entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
-
       Todo todo =
           entityFactory.insertTodo(
               user.getId(),
               assignee.getId(),
               group.getId(),
-              "todo title",
-              "todo description",
+              "t",
+              "d",
               TodoStatus.TO_DO,
-              true);
-
-      UpdateTodoMetadataDTO updateTodoMetadataDTO =
-          new UpdateTodoMetadataDTO(todo.getId(), true, null, null);
+              "a",
+              false);
+      UpdateTodoMetadataDTO requestDTO =
+          new UpdateTodoMetadataDTO(
+              todo.getId(),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>(),
+              new NullableField.Present<>(null));
 
       // When
-      TodoDTO updatedTodoDTO = todoService.updateTodoMetadata(updateTodoMetadataDTO);
+      TodoDTO result = todoService.updateTodoMetadata(requestDTO);
 
       // Then
-      Assertions.assertEquals(todo.getId(), updatedTodoDTO.id());
-      Assertions.assertNull(updatedTodoDTO.assigneeId());
+      Assertions.assertNull(result.assigneeId());
+    }
 
-      TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertNull(fetchedTodo.assigneeId());
+    @Test
+    @DisplayName("실패 - isImportant를 null로 변경하려 함.")
+    void Failure_IsImportantIsNotNull() {
+      // Given
+
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      User assignee = entityFactory.insertUser("assignee", "p", "n");
+      Group group = trio.second();
+      entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
+      Todo todo =
+          entityFactory.insertTodo(
+              user.getId(),
+              assignee.getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              "a",
+              false);
+
+      UpdateTodoMetadataDTO requestDTO =
+          new UpdateTodoMetadataDTO(
+              todo.getId(),
+              new NullableField.Present<>(null),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>());
+
+      // When
+      Runnable lambda = () -> todoService.updateTodoMetadata(requestDTO);
+
+      // Then
+
+      Assertions.assertThrows(NullPointerException.class, lambda::run);
     }
 
     @Test
     @DisplayName("실패: 존재하지 않는 Todo ID로 수정 요청 시 예외가 발생한다")
     void fail_whenTodoNotFound() {
       // Given
-      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group", "description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      UpdateTodoMetadataDTO requestDTO =
+          new UpdateTodoMetadataDTO(
+              999L,
+              new NullableField.Present<>(true),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>());
 
-      Todo todo =
-          entityFactory.insertTodo(
-              user.getId(),
-              null,
-              group.getId(),
-              "todo title",
-              "todo description",
-              TodoStatus.TO_DO,
-              false);
-
-      th.delete(todo);
-
-      UpdateTodoMetadataDTO updateTodoMetadataDTO =
-          new UpdateTodoMetadataDTO(todo.getId(), true, null, null);
-
-      // When
-      Runnable lambda = () -> todoService.updateTodoMetadata(updateTodoMetadataDTO);
-
-      // Then
-      Assertions.assertThrows(ResourceNotFoundException.class, lambda::run);
+      // When / Then
+      Assertions.assertThrows(
+          TodoNotFoundException.class,
+          () -> {
+            todoService.updateTodoMetadata(requestDTO);
+          });
     }
 
     @Test
     @DisplayName("실패: 존재하지 않는 assigneeId로 수정 요청 시 예외가 발생한다")
     void fail_whenAssigneeNotFound() {
       // Given
-      User user = entityFactory.insertUser("username", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group", "description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
-
+      var trio = entityFactory.insertUserGroup();
+      User user = trio.first();
+      Group group = trio.second();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(),
-              null,
-              group.getId(),
-              "todo title",
-              "todo description",
-              TodoStatus.TO_DO,
-              true);
+              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+      UpdateTodoMetadataDTO requestDTO =
+          new UpdateTodoMetadataDTO(
+              todo.getId(),
+              new NullableField.Absent<>(),
+              new NullableField.Absent<>(),
+              new NullableField.Present<>(999L));
 
-      User nonExistentAssignee =
-          entityFactory.insertUser("nonExistent", "hashedPassword", "nonExistentNickname");
-      th.delete(nonExistentAssignee);
-
-      UpdateTodoMetadataDTO updateTodoMetadataDTO =
-          new UpdateTodoMetadataDTO(todo.getId(), true, null, nonExistentAssignee.getId());
-
-      // When
-      Runnable lambda = () -> todoService.updateTodoMetadata(updateTodoMetadataDTO);
-
-      // Then
-      Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
+      // When / Then
+      Assertions.assertThrows(
+          DataIntegrityViolationException.class,
+          () -> {
+            todoService.updateTodoMetadata(requestDTO);
+          });
     }
   }
 
