@@ -4,6 +4,7 @@ import java.time.ZonedDateTime;
 import java.util.List;
 
 public record GroupInvitationInfoDTO(
+    long groupId,
     String name,
     String description,
     long todoCount,

@@ -11,6 +11,7 @@ import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundExcep
 import rest.felix.back.group.dto.*;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.group.exception.GroupNotFoundException;
+import rest.felix.back.group.exception.MembershipNotFoundException;
 import rest.felix.back.group.repository.GroupRepository;
 import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.dto.TodoCountDTO;
@@ -129,9 +130,16 @@ public class GroupService {
 
     userGroupRepository
         .findByUserIdAndGroupId(userId, groupId)
-        .map(dto -> dto.groupRole())
+        .map(UserGroupDTO::groupRole)
         .filter(role -> role.gte(groupRole))
         .orElseThrow(UserAccessDeniedException::new);
+  }
+
+  @Transactional(readOnly = true)
+  public void assertMembershipExists(long memberId, long groupId) {
+    userGroupRepository
+        .findByUserIdAndGroupId(memberId, groupId)
+        .orElseThrow(MembershipNotFoundException::new);
   }
 
   @Transactional
@@ -160,6 +168,7 @@ public class GroupService {
     ZonedDateTime activeUntil = groupInvitation.expiresAt();
 
     return new GroupInvitationInfoDTO(
+        groupId,
         groupDTO.name(),
         groupDTO.description(),
         todoCount.todoCount(),
@@ -168,5 +177,20 @@ public class GroupService {
         issuer,
         members,
         activeUntil);
+  }
+
+  @Transactional
+  public GroupDTO updateGroup(UpdateGroupDTO updateGroupDTO) {
+    return groupRepository.updateGroup(updateGroupDTO);
+  }
+
+  @Transactional
+  public void deleteUserGroupById(long memberId, long groupId) {
+    userGroupRepository.deleteById(memberId, groupId);
+  }
+
+  @Transactional
+  public void updateUserGroup(UpdateMemberDTO updateMemberDTO) {
+    userGroupRepository.updateUserGroup(updateMemberDTO);
   }
 }

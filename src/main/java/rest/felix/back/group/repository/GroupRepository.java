@@ -9,7 +9,9 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.group.dto.CreateGroupDTO;
 import rest.felix.back.group.dto.GroupDTO;
+import rest.felix.back.group.dto.UpdateGroupDTO;
 import rest.felix.back.group.entity.Group;
+import rest.felix.back.group.exception.GroupNotFoundException;
 
 @Repository
 @AllArgsConstructor
@@ -77,5 +79,33 @@ public class GroupRepository {
         """)
         .setParameter("groupId", groupId)
         .executeUpdate();
+  }
+
+  @Transactional
+  public GroupDTO updateGroup(UpdateGroupDTO updateGroupDTO) {
+    Group group = findEntityById(updateGroupDTO.groupId()).orElseThrow(GroupNotFoundException::new);
+
+    group.setName(updateGroupDTO.name());
+    group.setDescription(updateGroupDTO.description());
+
+    return GroupDTO.of(group);
+  }
+
+  @Transactional
+  private Optional<Group> findEntityById(long groupId) {
+    try {
+      return Optional.of(
+          em.createQuery(
+                  """
+                      SELECT g
+                      FROM Group g
+                      WHERE g.id = :groupId
+                      """,
+                  Group.class)
+              .setParameter("groupId", groupId)
+              .getSingleResult());
+    } catch (NoResultException e) {
+      return Optional.empty();
+    }
   }
 }

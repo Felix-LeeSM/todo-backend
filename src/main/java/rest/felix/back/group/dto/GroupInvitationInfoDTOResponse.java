@@ -4,6 +4,7 @@ import java.time.ZonedDateTime;
 import java.util.List;
 
 public record GroupInvitationInfoDTOResponse(
+    long groupId,
     String name,
     String description,
     long todoCount,
@@ -16,6 +17,7 @@ public record GroupInvitationInfoDTOResponse(
   public static GroupInvitationInfoDTOResponse of(
       GroupInvitationInfoDTO groupInvitationInfoDetails) {
     return new GroupInvitationInfoDTOResponse(
+        groupInvitationInfoDetails.groupId(),
         groupInvitationInfoDetails.name(),
         groupInvitationInfoDetails.description(),
         groupInvitationInfoDetails.todoCount(),

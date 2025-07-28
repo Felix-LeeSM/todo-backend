@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import rest.felix.back.group.dto.UpdateMemberDTO;
 import rest.felix.back.group.dto.UserGroupDTO;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
@@ -94,6 +95,21 @@ public class UserGroupRepository {
         .executeUpdate();
   }
 
+  @Transactional
+  public void deleteById(long userId, long groupId) {
+    em.createQuery(
+            """
+                DELETE
+                FROM
+                  UserGroup ug
+                WHERE ug.group.id = :groupId
+                AND ug.user.id = :userId
+                """)
+        .setParameter("groupId", groupId)
+        .setParameter("userId", userId)
+        .executeUpdate();
+  }
+
   @Transactional(readOnly = true)
   public Map<Long, GroupRole> findUserRolesByGroupIds(Long userId, List<Long> groupIds) {
     return em
@@ -114,6 +130,25 @@ public class UserGroupRepository {
         .getResultList()
         .stream()
         .map(UserGroupDTO::of)
-        .collect(Collectors.toMap(UserGroupDTO::groupId, dto -> dto.groupRole()));
+        .collect(Collectors.toMap(UserGroupDTO::groupId, UserGroupDTO::groupRole));
+  }
+
+  @Transactional
+  public void updateUserGroup(UpdateMemberDTO updateMemberDTO) {
+    long userId = updateMemberDTO.userId();
+    long groupId = updateMemberDTO.groupId();
+    GroupRole role = updateMemberDTO.role();
+
+    em.createQuery(
+            """
+            UPDATE UserGroup ug
+            SET ug.groupRole = :role
+            WHERE ug.user.id = :userId
+            AND ug.group.id = :groupId
+            """)
+        .setParameter("userId", userId)
+        .setParameter("groupId", groupId)
+        .setParameter("role", role)
+        .executeUpdate();
   }
 }

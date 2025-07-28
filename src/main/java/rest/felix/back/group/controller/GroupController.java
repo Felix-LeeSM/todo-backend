@@ -12,10 +12,11 @@ import org.springframework.web.bind.annotation.*;
 import rest.felix.back.common.config.GroupConfig;
 import rest.felix.back.group.dto.*;
 import rest.felix.back.group.entity.enumerated.GroupRole;
-import rest.felix.back.group.exception.AlreadyGroupMemberException;
+import rest.felix.back.group.exception.*;
 import rest.felix.back.group.service.GroupInvitationService;
 import rest.felix.back.group.service.GroupService;
 import rest.felix.back.user.dto.AuthUserDTO;
+import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @RestController
 @RequestMapping("/api/v1/group")
@@ -69,6 +70,61 @@ public class GroupController {
     FullGroupDetailsDTO groupDTO = groupService.findFullDetailedGroupById(userId, groupId);
 
     return ResponseEntity.status(HttpStatus.OK).body(FullGroupDetailsResponseDTO.of(groupDTO));
+  }
+
+  @PutMapping("/{groupId}")
+  public ResponseEntity<GroupResponseDTO> updateGroup(
+      @AuthenticationPrincipal AuthUserDTO authUser,
+      @PathVariable(name = "groupId") long groupId,
+      @RequestBody @Valid UpdateGroupRequestDTO updateGroupRequestDTO) {
+
+    long userId = authUser.getUserId();
+
+    groupService.assertGroupAuthority(userId, groupId, GroupRole.MANAGER);
+
+    UpdateGroupDTO updateGroupDTO = UpdateGroupDTO.of(groupId, updateGroupRequestDTO);
+
+    GroupDTO groupDTO = groupService.updateGroup(updateGroupDTO);
+
+    return ResponseEntity.status(HttpStatus.OK).body(GroupResponseDTO.of(groupDTO));
+  }
+
+  @DeleteMapping("/{groupId}/member/{memberId}")
+  public ResponseEntity<Void> deleteUserGroup(
+      @AuthenticationPrincipal AuthUserDTO authUser,
+      @PathVariable(name = "groupId") long groupId,
+      @PathVariable(name = "memberId") long memberId) {
+    long userId = authUser.getUserId();
+    groupService.assertGroupAuthority(userId, groupId, GroupRole.OWNER);
+    groupService.findUserRole(memberId, groupId).orElseThrow(MembershipNotFoundException::new);
+
+    if (memberId == userId) throw new CannotRemoveSelfException();
+
+    groupService.deleteUserGroupById(memberId, groupId);
+
+    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+  }
+
+  @PatchMapping("/{groupId}/member/{memberId}")
+  public ResponseEntity<Void> updateUserGroup(
+      @AuthenticationPrincipal AuthUserDTO authUser,
+      @PathVariable(name = "groupId") long groupId,
+      @PathVariable(name = "memberId") long memberId,
+      @RequestBody @Valid UpdateMemberRequestDTO updateMemberRequestDTO) {
+    long userId = authUser.getUserId();
+    groupService.assertGroupAuthority(userId, groupId, GroupRole.MANAGER);
+
+    GroupRole userRole =
+        groupService.findUserRole(userId, groupId).orElseThrow(UserAccessDeniedException::new);
+    GroupRole memberRole =
+        groupService.findUserRole(memberId, groupId).orElseThrow(MembershipNotFoundException::new);
+
+    if (!userRole.gt(memberRole)) throw new ForbiddenRoleChangeException();
+
+    UpdateMemberDTO updateMemberDTO = UpdateMemberDTO.of(memberId, groupId, updateMemberRequestDTO);
+    groupService.updateUserGroup(updateMemberDTO);
+
+    return ResponseEntity.status(HttpStatus.OK).build();
   }
 
   @DeleteMapping("/{groupId}")
