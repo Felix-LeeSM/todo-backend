@@ -119,12 +119,14 @@ public class TodoControllerUnitTest {
     Assertions.assertEquals(TodoStatus.ON_HOLD, todoResponseDTOs.get(3).status());
     Assertions.assertEquals("d", todoResponseDTOs.get(3).order());
 
-    Assertions.assertTrue(
+    Assertions.assertEquals(
+        true,
         todoResponseDTOs.stream()
             .map(TodoResponseDTO::authorId)
             .allMatch(authorId -> authorId.equals(user.getId())));
 
-    Assertions.assertTrue(
+    Assertions.assertEquals(
+        true,
         todoResponseDTOs.stream()
             .map(TodoResponseDTO::groupId)
             .allMatch(groupId -> groupId.equals(group.getId())));
@@ -550,7 +552,7 @@ public class TodoControllerUnitTest {
 
     Assertions.assertEquals(HttpStatus.NO_CONTENT, responseEntity.getStatusCode());
 
-    Assertions.assertTrue(todoRepository.findById(todo.getId()).isEmpty());
+    Assertions.assertEquals(true, todoRepository.findById(todo.getId()).isEmpty());
   }
 
   @Test
@@ -1135,7 +1137,7 @@ public class TodoControllerUnitTest {
       TodoResponseDTO todoResponseDTO = responseEntity.getBody();
       Assertions.assertEquals(todo1.getId(), todoResponseDTO.id());
       Assertions.assertEquals(TodoStatus.IN_PROGRESS, todoResponseDTO.status());
-      Assertions.assertTrue(todoResponseDTO.order().compareTo(todo2.getOrder()) < 0);
+      Assertions.assertEquals(true, todoResponseDTO.order().compareTo(todo2.getOrder()) < 0);
     }
 
     @Test
@@ -1366,6 +1368,23 @@ public class TodoControllerUnitTest {
   @Nested
   @DisplayName("투두 메타데이터 업데이트 테스트")
   class UpdateTodoMetadata {
+    private static Stream<Arguments> isImportantParameter() {
+      return Stream.of(
+          Arguments.of(true, false),
+          Arguments.of(false, true),
+          Arguments.of(true, true),
+          Arguments.of(false, false));
+    }
+
+    private static Stream<Arguments> dueDateParameter() {
+      LocalDate now = LocalDate.now();
+      return Stream.of(
+          Arguments.of(now, now.plusDays(3)),
+          Arguments.of(null, now.minusDays(2)),
+          Arguments.of(now.minusDays(20), null),
+          Arguments.of(null, now.plusDays(2)));
+    }
+
     @Test
     @DisplayName("성공 - 모든 필드 업데이트")
     void HappyPath_1() {
@@ -1401,13 +1420,13 @@ public class TodoControllerUnitTest {
       Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
       TodoDTO updatedTodo = responseEntity.getBody();
       Assertions.assertNotNull(updatedTodo);
-      Assertions.assertTrue(updatedTodo.isImportant());
+      Assertions.assertEquals(true, updatedTodo.isImportant());
       Assertions.assertEquals(
           LocalDate.now().plusDays(1).toString(), updatedTodo.dueDate().toString());
       Assertions.assertEquals(assignee.getId(), updatedTodo.assigneeId());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertTrue(fetchedTodo.isImportant());
+      Assertions.assertEquals(true, fetchedTodo.isImportant());
       Assertions.assertEquals(
           LocalDate.now().plusDays(1).toString(), fetchedTodo.dueDate().toString());
       Assertions.assertEquals(assignee.getId(), fetchedTodo.assigneeId());
@@ -1458,14 +1477,6 @@ public class TodoControllerUnitTest {
       Assertions.assertNull(fetchedTodo.assigneeId());
     }
 
-    private static Stream<Arguments> isImportantParameter() {
-      return Stream.of(
-          Arguments.of(true, false),
-          Arguments.of(false, true),
-          Arguments.of(true, true),
-          Arguments.of(false, false));
-    }
-
     @ParameterizedTest
     @MethodSource("dueDateParameter")
     @DisplayName("성공 - dueDate만 업데이트")
@@ -1501,23 +1512,14 @@ public class TodoControllerUnitTest {
       Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
       TodoDTO updatedTodo = responseEntity.getBody();
       Assertions.assertNotNull(updatedTodo);
-      Assertions.assertTrue(updatedTodo.isImportant());
+      Assertions.assertEquals(true, updatedTodo.isImportant());
       Assertions.assertEquals(toUpdate, updatedTodo.dueDate());
       Assertions.assertNull(updatedTodo.assigneeId());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertTrue(fetchedTodo.isImportant());
+      Assertions.assertEquals(true, fetchedTodo.isImportant());
       Assertions.assertEquals(toUpdate, fetchedTodo.dueDate());
       Assertions.assertNull(fetchedTodo.assigneeId());
-    }
-
-    private static Stream<Arguments> dueDateParameter() {
-      LocalDate now = LocalDate.now();
-      return Stream.of(
-          Arguments.of(now, now.plusDays(3)),
-          Arguments.of(null, now.minusDays(2)),
-          Arguments.of(now.minusDays(20), null),
-          Arguments.of(null, now.plusDays(2)));
     }
 
     @Test
@@ -1556,12 +1558,12 @@ public class TodoControllerUnitTest {
 
       TodoDTO updatedTodo = responseEntity.getBody();
       Assertions.assertNotNull(updatedTodo);
-      Assertions.assertFalse(updatedTodo.isImportant());
+      Assertions.assertEquals(false, updatedTodo.isImportant());
       Assertions.assertNull(updatedTodo.dueDate());
       Assertions.assertEquals(assignee.getId(), updatedTodo.assigneeId());
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertFalse(fetchedTodo.isImportant());
+      Assertions.assertEquals(false, fetchedTodo.isImportant());
       Assertions.assertNull(fetchedTodo.dueDate());
       Assertions.assertEquals(assignee.getId(), fetchedTodo.assigneeId());
     }

@@ -36,12 +36,12 @@ public class GroupRepository {
   public List<GroupDTO> findGroupsByUserId(long userId) {
     String query =
         """
-        SELECT g
-        FROM UserGroup ug
-        JOIN ug.group g
-        WHERE ug.user.id = :userId
-        ORDER BY g.id ASC
-        """;
+                        SELECT g
+                        FROM UserGroup ug
+                        JOIN ug.group g
+                        WHERE ug.user.id = :userId
+                        ORDER BY g.id ASC
+                        """;
 
     return em
         .createQuery(query, Group.class)
@@ -57,10 +57,10 @@ public class GroupRepository {
     try {
       String query =
           """
-          SELECT g
-          FROM Group g
-          WHERE g.id = :groupId
-          """;
+                            SELECT g
+                            FROM Group g
+                            WHERE g.id = :groupId
+                            """;
 
       return Optional.of(
               em.createQuery(query, Group.class).setParameter("groupId", groupId).getSingleResult())
@@ -74,9 +74,9 @@ public class GroupRepository {
   public void deleteGroupById(long groupId) {
     em.createQuery(
             """
-        DELETE FROM Group g
-        WHERE g.id =:groupId
-        """)
+                                DELETE FROM Group g
+                                WHERE g.id =:groupId
+                                """)
         .setParameter("groupId", groupId)
         .executeUpdate();
   }
@@ -97,10 +97,10 @@ public class GroupRepository {
       return Optional.of(
           em.createQuery(
                   """
-                      SELECT g
-                      FROM Group g
-                      WHERE g.id = :groupId
-                      """,
+                                            SELECT g
+                                            FROM Group g
+                                            WHERE g.id = :groupId
+                                            """,
                   Group.class)
               .setParameter("groupId", groupId)
               .getSingleResult());

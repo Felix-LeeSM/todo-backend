@@ -440,12 +440,12 @@ public class GroupControllerUnitTest {
           List.of("memberNick3", "memberNick4", "ownerNick2"),
           body.members().stream().map(MemberResponseDTO::nickname).sorted().toList());
       Assertions.assertEquals(3, body.todos().size());
-      Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.title().equals("Owner Todo 3")));
-      Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.title().equals("Member3 Todo 1")));
-      Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.title().equals("Member4 Todo 1")));
+      Assertions.assertEquals(
+          true, body.todos().stream().anyMatch(todo -> todo.title().equals("Owner Todo 3")));
+      Assertions.assertEquals(
+          true, body.todos().stream().anyMatch(todo -> todo.title().equals("Member3 Todo 1")));
+      Assertions.assertEquals(
+          true, body.todos().stream().anyMatch(todo -> todo.title().equals("Member4 Todo 1")));
     }
 
     @Test
@@ -509,12 +509,12 @@ public class GroupControllerUnitTest {
           List.of("managerNick", "memberNick5", "ownerNick3"),
           body.members().stream().map(MemberResponseDTO::nickname).sorted().toList());
       Assertions.assertEquals(3, body.todos().size());
-      Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.title().equals("Owner Todo 4")));
-      Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.title().equals("Member5 Todo 1")));
-      Assertions.assertTrue(
-          body.todos().stream().anyMatch(todo -> todo.title().equals("Manager Todo 1")));
+      Assertions.assertEquals(
+          true, body.todos().stream().anyMatch(todo -> todo.title().equals("Owner Todo 4")));
+      Assertions.assertEquals(
+          true, body.todos().stream().anyMatch(todo -> todo.title().equals("Member5 Todo 1")));
+      Assertions.assertEquals(
+          true, body.todos().stream().anyMatch(todo -> todo.title().equals("Manager Todo 1")));
     }
 
     @Test
@@ -606,11 +606,11 @@ public class GroupControllerUnitTest {
 
       // Then
 
-      Assertions.assertTrue(groupRepository.findById(group.getId()).isEmpty());
+      Assertions.assertEquals(true, groupRepository.findById(group.getId()).isEmpty());
 
-      Assertions.assertTrue(todoRepository.findByGroupId(group.getId()).isEmpty());
+      Assertions.assertEquals(true, todoRepository.findByGroupId(group.getId()).isEmpty());
 
-      Assertions.assertTrue(userGroupRepository.findByGroupId(group.getId()).isEmpty());
+      Assertions.assertEquals(true, userGroupRepository.findByGroupId(group.getId()).isEmpty());
     }
 
     @Test
@@ -620,7 +620,6 @@ public class GroupControllerUnitTest {
 
       Group group = entityFactory.insertGroup("group name", "group description");
 
-      ;
       Stream.of(
               Pair.of(GroupRole.MANAGER, 1),
               Pair.of(GroupRole.VIEWER, 2),
@@ -655,11 +654,13 @@ public class GroupControllerUnitTest {
 
                 Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
 
-                Assertions.assertTrue(groupRepository.findById(group.getId()).isPresent());
+                Assertions.assertEquals(true, groupRepository.findById(group.getId()).isPresent());
 
-                Assertions.assertTrue(0 < todoRepository.findByGroupId(group.getId()).size());
+                Assertions.assertEquals(
+                    true, 0 < todoRepository.findByGroupId(group.getId()).size());
 
-                Assertions.assertTrue(0 < userGroupRepository.findByGroupId(group.getId()).size());
+                Assertions.assertEquals(
+                    true, 0 < userGroupRepository.findByGroupId(group.getId()).size());
               });
     }
 
@@ -686,7 +687,7 @@ public class GroupControllerUnitTest {
 
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
 
-      Assertions.assertTrue(groupRepository.findById(group.getId()).isPresent());
+      Assertions.assertEquals(true, groupRepository.findById(group.getId()).isPresent());
     }
 
     @Test
@@ -711,7 +712,7 @@ public class GroupControllerUnitTest {
 
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
 
-      Assertions.assertTrue(groupRepository.findById(group.getId()).isPresent());
+      Assertions.assertEquals(true, groupRepository.findById(group.getId()).isPresent());
     }
 
     @Test
@@ -945,7 +946,8 @@ public class GroupControllerUnitTest {
 
       // Then
       Assertions.assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
-      Assertions.assertTrue(
+      Assertions.assertEquals(
+          true,
           userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).isPresent());
     }
 
@@ -1015,6 +1017,14 @@ public class GroupControllerUnitTest {
   @DisplayName("그룹 정보 수정 테스트")
   class UpdateGroupTest {
 
+    private static Stream<Arguments> SuccessfulAuthorities() {
+      return Stream.of(Arguments.of(GroupRole.OWNER), Arguments.of(GroupRole.MANAGER));
+    }
+
+    private static Stream<Arguments> FailingAuthorities() {
+      return Stream.of(Arguments.of(GroupRole.MEMBER), Arguments.of(GroupRole.VIEWER));
+    }
+
     @ParameterizedTest
     @MethodSource("SuccessfulAuthorities")
     @DisplayName("성공")
@@ -1037,10 +1047,6 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals("new desc", updatedGroup.description());
     }
 
-    private static Stream<Arguments> SuccessfulAuthorities() {
-      return Stream.of(Arguments.of(GroupRole.OWNER), Arguments.of(GroupRole.MANAGER));
-    }
-
     @ParameterizedTest
     @MethodSource("FailingAuthorities")
     @DisplayName("실패 - 권한 없음 (MEMBER, VIEWER)")
@@ -1057,10 +1063,6 @@ public class GroupControllerUnitTest {
 
       // Then
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
-    }
-
-    private static Stream<Arguments> FailingAuthorities() {
-      return Stream.of(Arguments.of(GroupRole.MEMBER), Arguments.of(GroupRole.VIEWER));
     }
 
     @Test
@@ -1089,6 +1091,17 @@ public class GroupControllerUnitTest {
   @DisplayName("그룹 멤버 추방 테스트")
   class DeleteUserGroupTest {
 
+    private static Stream<Arguments> SuccessfulAuthorities() {
+      return Stream.of(Arguments.of(GroupRole.OWNER));
+    }
+
+    private static Stream<Arguments> FailingAuthorities() {
+      return Stream.of(
+          Arguments.of(GroupRole.MANAGER),
+          Arguments.of(GroupRole.MEMBER),
+          Arguments.of(GroupRole.VIEWER));
+    }
+
     @ParameterizedTest
     @MethodSource("SuccessfulAuthorities")
     @DisplayName("성공")
@@ -1107,12 +1120,9 @@ public class GroupControllerUnitTest {
 
       // Then
       Assertions.assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
-      Assertions.assertTrue(
+      Assertions.assertEquals(
+          true,
           userGroupRepository.findByUserIdAndGroupId(target.getId(), group.getId()).isEmpty());
-    }
-
-    private static Stream<Arguments> SuccessfulAuthorities() {
-      return Stream.of(Arguments.of(GroupRole.OWNER));
     }
 
     @ParameterizedTest
@@ -1133,13 +1143,6 @@ public class GroupControllerUnitTest {
 
       // Then
       Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
-    }
-
-    private static Stream<Arguments> FailingAuthorities() {
-      return Stream.of(
-          Arguments.of(GroupRole.MANAGER),
-          Arguments.of(GroupRole.MEMBER),
-          Arguments.of(GroupRole.VIEWER));
     }
 
     @Test
@@ -1182,6 +1185,30 @@ public class GroupControllerUnitTest {
   @DisplayName("그룹 멤버 역할 변경 테스트")
   class UpdateUserGroupTest {
 
+    private static Stream<Arguments> SuccessfulAuthoritiesUpdate() {
+      return Stream.of(
+          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.OWNER, GroupRole.MEMBER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.OWNER, GroupRole.MEMBER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.OWNER, GroupRole.VIEWER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.OWNER, GroupRole.VIEWER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.MEMBER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.VIEWER, GroupRole.MEMBER));
+    }
+
+    private static Stream<Arguments> FailingAuthoritiesUpdate() {
+      return Stream.of(
+          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER, GroupRole.VIEWER));
+    }
+
+    private static Stream<Arguments> FailingAuthoritiesToOwnerUpdate() {
+      return Stream.of(
+          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER, GroupRole.OWNER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER, GroupRole.OWNER));
+    }
+
     @ParameterizedTest
     @MethodSource("SuccessfulAuthoritiesUpdate")
     @DisplayName("성공")
@@ -1206,18 +1233,6 @@ public class GroupControllerUnitTest {
       Assertions.assertEquals(newRole, updatedUserGroup.groupRole());
     }
 
-    private static Stream<Arguments> SuccessfulAuthoritiesUpdate() {
-      return Stream.of(
-          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER, GroupRole.MEMBER),
-          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER, GroupRole.VIEWER),
-          Arguments.of(GroupRole.OWNER, GroupRole.MEMBER, GroupRole.MANAGER),
-          Arguments.of(GroupRole.OWNER, GroupRole.MEMBER, GroupRole.VIEWER),
-          Arguments.of(GroupRole.OWNER, GroupRole.VIEWER, GroupRole.MANAGER),
-          Arguments.of(GroupRole.OWNER, GroupRole.VIEWER, GroupRole.MEMBER),
-          Arguments.of(GroupRole.MANAGER, GroupRole.MEMBER, GroupRole.VIEWER),
-          Arguments.of(GroupRole.MANAGER, GroupRole.VIEWER, GroupRole.MEMBER));
-    }
-
     @ParameterizedTest
     @MethodSource("FailingAuthoritiesUpdate")
     @DisplayName("실패 - 권한 없음")
@@ -1239,12 +1254,6 @@ public class GroupControllerUnitTest {
 
       // Then
       Assertions.assertThrows(ForbiddenRoleChangeException.class, lambda::run);
-    }
-
-    private static Stream<Arguments> FailingAuthoritiesUpdate() {
-      return Stream.of(
-          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER, GroupRole.MEMBER),
-          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER, GroupRole.VIEWER));
     }
 
     @Test
@@ -1308,12 +1317,6 @@ public class GroupControllerUnitTest {
 
       // Then
       Assertions.assertThrows(ForbiddenRoleChangeException.class, lambda::run);
-    }
-
-    private static Stream<Arguments> FailingAuthoritiesToOwnerUpdate() {
-      return Stream.of(
-          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER, GroupRole.OWNER),
-          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER, GroupRole.OWNER));
     }
   }
 }

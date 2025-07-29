@@ -72,17 +72,21 @@ class TodoServiceTest {
 
       // Then
       Assertions.assertEquals(3, todoDTOs.size());
-      Assertions.assertTrue(
+      Assertions.assertEquals(
+          true,
           todoDTOs.stream().map(TodoDTO::status).allMatch(status -> status == TodoStatus.TO_DO));
-      Assertions.assertTrue(
+      Assertions.assertEquals(
+          true,
           todoDTOs.stream()
               .map(TodoDTO::groupId)
               .allMatch(groupId -> groupId.equals(group.getId())));
-      Assertions.assertTrue(
+      Assertions.assertEquals(
+          true,
           todoDTOs.stream()
               .map(TodoDTO::authorId)
               .allMatch(authorId -> authorId.equals(user.getId())));
-      Assertions.assertTrue(
+      Assertions.assertEquals(
+          true,
           todoDTOs.stream()
               .map(TodoDTO::title)
               .toList()
@@ -314,7 +318,7 @@ class TodoServiceTest {
 
       // Then
       Assertions.assertNotNull(todoDTO.order());
-      Assertions.assertFalse(todoDTO.order().isEmpty());
+      Assertions.assertEquals(false, todoDTO.order().isEmpty());
     }
   }
 
@@ -422,7 +426,7 @@ class TodoServiceTest {
       todoService.deleteTodo(todo.getId());
 
       // Then
-      Assertions.assertTrue(todoRepository.findById(todo.getId()).isEmpty());
+      Assertions.assertEquals(true, todoRepository.findById(todo.getId()).isEmpty());
     }
 
     @Test
@@ -458,14 +462,14 @@ class TodoServiceTest {
           entityFactory.insertTodo(
               user.getId(), user.getId(), trio.second().getId(), "t", "d", TodoStatus.TO_DO, false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
-      Assertions.assertTrue(todoRepository.starExistsById(user.getId(), todo.getId()));
+      Assertions.assertEquals(true, todoRepository.starExistsById(user.getId(), todo.getId()));
 
       // When
       todoService.deleteTodo(todo.getId());
 
       // Then
-      Assertions.assertTrue(todoRepository.findById(todo.getId()).isEmpty());
-      Assertions.assertFalse(todoRepository.starExistsById(user.getId(), todo.getId()));
+      Assertions.assertEquals(true, todoRepository.findById(todo.getId()).isEmpty());
+      Assertions.assertEquals(false, todoRepository.starExistsById(user.getId(), todo.getId()));
     }
   }
 
@@ -845,6 +849,13 @@ class TodoServiceTest {
             Arguments.of(GroupRole.VIEWER, GroupRole.VIEWER));
       }
 
+      private static Stream<Arguments> provideInsufficientRoles() {
+        return Stream.of(
+            Arguments.of(GroupRole.MEMBER, GroupRole.MANAGER),
+            Arguments.of(GroupRole.MEMBER, GroupRole.OWNER),
+            Arguments.of(GroupRole.VIEWER, GroupRole.MEMBER));
+      }
+
       @DisplayName("요구되는 역할보다 유저의 실제 역할이 같거나 높으면 예외가 발생하지 않는다")
       @ParameterizedTest
       @MethodSource("provideSufficientRoles")
@@ -889,14 +900,6 @@ class TodoServiceTest {
         // Then
         Assertions.assertThrows(
             rest.felix.back.user.exception.UserAccessDeniedException.class, lambda::run);
-      }
-
-      // 실패하는 역할 조합을 제공하는 Stream
-      private static Stream<Arguments> provideInsufficientRoles() {
-        return Stream.of(
-            Arguments.of(GroupRole.MEMBER, GroupRole.MANAGER),
-            Arguments.of(GroupRole.MEMBER, GroupRole.OWNER),
-            Arguments.of(GroupRole.VIEWER, GroupRole.MEMBER));
       }
 
       @Test
@@ -947,6 +950,23 @@ class TodoServiceTest {
   @Nested
   @DisplayName("Todo 메타데이터 수정 (updateTodoMetadata)")
   class UpdateTodoMetadata {
+    private static Stream<Arguments> isImportantParameter() {
+      return Stream.of(
+          Arguments.of(true, false),
+          Arguments.of(false, true),
+          Arguments.of(true, true),
+          Arguments.of(false, false));
+    }
+
+    private static Stream<Arguments> dueDateParameter() {
+      LocalDate now = LocalDate.now();
+      return Stream.of(
+          Arguments.of(now, now.plusDays(3)),
+          Arguments.of(null, now.minusDays(2)),
+          Arguments.of(now.minusDays(20), null),
+          Arguments.of(null, now.plusDays(30)));
+    }
+
     @Test
     @DisplayName("성공: Todo의 메타데이터(중요도, 마감일, 담당자)를 수정한다")
     void success_whenUpdatingAllMetadataFields() {
@@ -971,7 +991,7 @@ class TodoServiceTest {
 
       // Then
       Assertions.assertNotNull(result);
-      Assertions.assertTrue(result.isImportant());
+      Assertions.assertEquals(true, result.isImportant());
       Assertions.assertEquals(LocalDate.now(), result.dueDate());
       Assertions.assertEquals(assignee.getId(), result.assigneeId());
     }
@@ -999,14 +1019,6 @@ class TodoServiceTest {
 
       // Then
       Assertions.assertEquals(toUpdate, result.isImportant());
-    }
-
-    private static Stream<Arguments> isImportantParameter() {
-      return Stream.of(
-          Arguments.of(true, false),
-          Arguments.of(false, true),
-          Arguments.of(true, true),
-          Arguments.of(false, false));
     }
 
     @ParameterizedTest
@@ -1040,15 +1052,6 @@ class TodoServiceTest {
 
       // Then
       Assertions.assertEquals(toUpdate, result.dueDate());
-    }
-
-    private static Stream<Arguments> dueDateParameter() {
-      LocalDate now = LocalDate.now();
-      return Stream.of(
-          Arguments.of(now, now.plusDays(3)),
-          Arguments.of(null, now.minusDays(2)),
-          Arguments.of(now.minusDays(20), null),
-          Arguments.of(null, now.plusDays(30)));
     }
 
     @Test
@@ -1265,7 +1268,7 @@ class TodoServiceTest {
       // Then
       TodoDTO movedTodo = todoRepository.findById(targetTodo.getId()).orElseThrow();
       Assertions.assertEquals(TodoStatus.IN_PROGRESS, movedTodo.status());
-      Assertions.assertTrue(movedTodo.order().compareTo("b") > 0);
+      Assertions.assertEquals(true, movedTodo.order().compareTo("b") > 0);
     }
 
     @Test
@@ -1302,7 +1305,7 @@ class TodoServiceTest {
       // Then
       TodoDTO movedTodo = todoRepository.findById(targetTodo.getId()).orElseThrow();
       Assertions.assertEquals(TodoStatus.IN_PROGRESS, movedTodo.status());
-      Assertions.assertTrue(movedTodo.order().compareTo("c") < 0);
+      Assertions.assertEquals(true, movedTodo.order().compareTo("c") < 0);
     }
 
     @Test
@@ -1332,7 +1335,7 @@ class TodoServiceTest {
       // Then
       TodoDTO movedTodo = todoRepository.findById(targetTodo.getId()).orElseThrow();
       Assertions.assertEquals(TodoStatus.TO_DO, movedTodo.status());
-      Assertions.assertTrue(movedTodo.order().compareTo("a") < 0);
+      Assertions.assertEquals(true, movedTodo.order().compareTo("a") < 0);
     }
 
     @Test
@@ -1492,7 +1495,7 @@ class TodoServiceTest {
       // Then
       TodoDTO movedTodo = todoRepository.findById(todo1.getId()).orElseThrow();
       Assertions.assertEquals(TodoStatus.TO_DO, movedTodo.status());
-      Assertions.assertTrue(movedTodo.order().compareTo(todo2.getOrder()) > 0);
+      Assertions.assertEquals(true, movedTodo.order().compareTo(todo2.getOrder()) > 0);
     }
 
     @Test
@@ -1529,13 +1532,13 @@ class TodoServiceTest {
       Todo todo =
           entityFactory.insertTodo(
               user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
-      Assertions.assertFalse(todoRepository.starExistsById(user.getId(), todo.getId()));
+      Assertions.assertEquals(false, todoRepository.starExistsById(user.getId(), todo.getId()));
 
       // When
       todoService.starTodo(user.getId(), todo.getId());
 
       // Then
-      Assertions.assertTrue(todoRepository.starExistsById(user.getId(), todo.getId()));
+      Assertions.assertEquals(true, todoRepository.starExistsById(user.getId(), todo.getId()));
     }
 
     @Test
@@ -1549,13 +1552,13 @@ class TodoServiceTest {
           entityFactory.insertTodo(
               user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
-      Assertions.assertTrue(todoRepository.starExistsById(user.getId(), todo.getId()));
+      Assertions.assertEquals(true, todoRepository.starExistsById(user.getId(), todo.getId()));
 
       // When
       todoService.starTodo(user.getId(), todo.getId());
 
       // Then
-      Assertions.assertTrue(todoRepository.starExistsById(user.getId(), todo.getId()));
+      Assertions.assertEquals(true, todoRepository.starExistsById(user.getId(), todo.getId()));
     }
 
     @Test
@@ -1612,13 +1615,13 @@ class TodoServiceTest {
           entityFactory.insertTodo(
               user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
-      Assertions.assertTrue(todoRepository.starExistsById(user.getId(), todo.getId()));
+      Assertions.assertEquals(true, todoRepository.starExistsById(user.getId(), todo.getId()));
 
       // When
       todoService.unstarTodo(user.getId(), todo.getId());
 
       // Then
-      Assertions.assertFalse(todoRepository.starExistsById(user.getId(), todo.getId()));
+      Assertions.assertEquals(false, todoRepository.starExistsById(user.getId(), todo.getId()));
     }
 
     @Test
@@ -1631,13 +1634,13 @@ class TodoServiceTest {
       Todo todo =
           entityFactory.insertTodo(
               user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
-      Assertions.assertFalse(todoRepository.starExistsById(user.getId(), todo.getId()));
+      Assertions.assertEquals(false, todoRepository.starExistsById(user.getId(), todo.getId()));
 
       // When
       todoService.unstarTodo(user.getId(), todo.getId());
 
       // Then
-      Assertions.assertFalse(todoRepository.starExistsById(user.getId(), todo.getId()));
+      Assertions.assertEquals(false, todoRepository.starExistsById(user.getId(), todo.getId()));
     }
 
     @Test

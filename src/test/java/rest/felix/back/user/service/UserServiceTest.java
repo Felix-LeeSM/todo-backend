@@ -23,11 +23,10 @@ import rest.felix.back.user.repository.UserRepository;
 @ActiveProfiles("test")
 class UserServiceTest {
 
+  @Autowired private EntityFactory entityFactory;
   @Autowired private UserService userService;
   @Autowired private UserRepository userRepository;
   @Autowired private EntityManager em;
-  @Autowired EntityFactory entityFactory;
-
   @Autowired private TestHelper th;
 
   @BeforeEach
@@ -158,6 +157,6 @@ class UserServiceTest {
 
     // Then
 
-    Assertions.assertTrue(userDTO.isEmpty());
+    Assertions.assertEquals(true, userDTO.isEmpty());
   }
 }

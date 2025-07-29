@@ -49,9 +49,10 @@ class GroupInvitationServiceTest {
 
       // Then
       Assertions.assertNotNull(token);
-      Assertions.assertFalse(token.isEmpty());
+      Assertions.assertEquals(false, token.isEmpty());
       // Basic UUID format check (e.g., length, presence of hyphens)
-      Assertions.assertTrue(
+      Assertions.assertEquals(
+          true,
           token.matches(
               "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"));
     }

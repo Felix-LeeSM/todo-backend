@@ -29,8 +29,8 @@ public class GenericDeleter {
       String sql =
           String.format(
               """
-              DELETE FROM "%s" WHERE "%s" = :idValue
-              """,
+                                    DELETE FROM "%s" WHERE "%s" = :idValue
+                                    """,
               tableName, idColumnName);
       em.createNativeQuery(sql).setParameter("idValue", idValue).executeUpdate();
 

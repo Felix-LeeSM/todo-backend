@@ -1101,10 +1101,10 @@ public class TodoControllerWebTest {
       Todo updatedTodo =
           em.createQuery(
                   """
-                SELECT t
-                FROM Todo t
-                WHERE t.id = :todoId
-                """,
+                                            SELECT t
+                                            FROM Todo t
+                                            WHERE t.id = :todoId
+                                            """,
                   Todo.class)
               .setParameter("todoId", todo.getId())
               .getSingleResult();
@@ -1454,6 +1454,23 @@ public class TodoControllerWebTest {
   @Nested
   @DisplayName("투두 메타데이터 업데이트 테스트")
   class UpdateTodoMetadata {
+    private static Stream<Arguments> isImportantParameter() {
+      return Stream.of(
+          Arguments.of(true, false),
+          Arguments.of(true, true),
+          Arguments.of(false, false),
+          Arguments.of(false, true));
+    }
+
+    private static Stream<Arguments> dueDateParameter() {
+      LocalDate now = LocalDate.now();
+      return Stream.of(
+          Arguments.of(now, now.plusDays(3)),
+          Arguments.of(null, now.minusDays(2)),
+          Arguments.of(now.minusDays(20), null),
+          Arguments.of(null, now.minusDays(10)));
+    }
+
     @Test
     @DisplayName("성공 - 모든 필드 업데이트")
     void HappyPath_1() throws Exception {
@@ -1499,7 +1516,7 @@ public class TodoControllerWebTest {
       result.andExpect(jsonPath("$.assigneeId", equalTo(assignee.getId().intValue())));
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
-      Assertions.assertTrue(fetchedTodo.isImportant());
+      Assertions.assertEquals(true, fetchedTodo.isImportant());
       Assertions.assertEquals(LocalDate.now().plusDays(1), fetchedTodo.dueDate());
       Assertions.assertEquals(assignee.getId(), fetchedTodo.assigneeId());
     }
@@ -1547,14 +1564,6 @@ public class TodoControllerWebTest {
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
       Assertions.assertEquals(toUpdate, fetchedTodo.isImportant());
-    }
-
-    private static Stream<Arguments> isImportantParameter() {
-      return Stream.of(
-          Arguments.of(true, false),
-          Arguments.of(true, true),
-          Arguments.of(false, false),
-          Arguments.of(false, true));
     }
 
     @ParameterizedTest
@@ -1605,15 +1614,6 @@ public class TodoControllerWebTest {
 
       TodoDTO fetchedTodo = todoRepository.findById(todo.getId()).orElseThrow();
       Assertions.assertEquals(toUpdate, fetchedTodo.dueDate());
-    }
-
-    private static Stream<Arguments> dueDateParameter() {
-      LocalDate now = LocalDate.now();
-      return Stream.of(
-          Arguments.of(now, now.plusDays(3)),
-          Arguments.of(null, now.minusDays(2)),
-          Arguments.of(now.minusDays(20), null),
-          Arguments.of(null, now.minusDays(10)));
     }
 
     @Test

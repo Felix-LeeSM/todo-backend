@@ -31,13 +31,13 @@ public class TodoRepository {
     return em
         .createQuery(
             """
-            SELECT t
-            FROM Group g
-            JOIN g.todos t
-            JOIN FETCH t.author
-            WHERE g.id = :groupId
-            ORDER BY t.order ASC
-            """,
+                                SELECT t
+                                FROM Group g
+                                JOIN g.todos t
+                                JOIN FETCH t.author
+                                WHERE g.id = :groupId
+                                ORDER BY t.order ASC
+                                """,
             Todo.class)
         .setParameter("groupId", groupId)
         .getResultList()
@@ -50,26 +50,26 @@ public class TodoRepository {
   public List<TodoWithStarredStatusDTO> findByGroupIdWithStars(long userId, long groupId) {
     return em.createQuery(
             """
-            SELECT new rest.felix.back.todo.dto.TodoWithStarredStatusDTO(
-              t.id,
-              t.title,
-              t.description,
-              t.order,
-              t.todoStatus,
-              t.isImportant,
-              t.dueDate,
-              CASE WHEN uts.id IS NOT NULL THEN TRUE ELSE FALSE END,
-              au.id,
-              t.group.id,
-              asi.id
-            )
-            FROM Todo t
-            JOIN t.author au
-            LEFT JOIN t.assignee asi
-            LEFT JOIN UserTodoStar uts ON uts.todo.id = t.id AND uts.user.id = :userId
-            WHERE t.group.id = :groupId
-            ORDER BY t.order ASC
-            """,
+                                SELECT new rest.felix.back.todo.dto.TodoWithStarredStatusDTO(
+                                  t.id,
+                                  t.title,
+                                  t.description,
+                                  t.order,
+                                  t.todoStatus,
+                                  t.isImportant,
+                                  t.dueDate,
+                                  CASE WHEN uts.id IS NOT NULL THEN TRUE ELSE FALSE END,
+                                  au.id,
+                                  t.group.id,
+                                  asi.id
+                                )
+                                FROM Todo t
+                                JOIN t.author au
+                                LEFT JOIN t.assignee asi
+                                LEFT JOIN UserTodoStar uts ON uts.todo.id = t.id AND uts.user.id = :userId
+                                WHERE t.group.id = :groupId
+                                ORDER BY t.order ASC
+                                """,
             TodoWithStarredStatusDTO.class)
         .setParameter("groupId", groupId)
         .setParameter("userId", userId)
@@ -82,16 +82,16 @@ public class TodoRepository {
       return Optional.of(
           em.createQuery(
                   """
-              SELECT new rest.felix.back.todo.dto.TodoCountDTO(
-                  g.id,
-                  COUNT(t),
-                  SUM(CASE WHEN t.todoStatus = TodoStatus.DONE THEN 1 ELSE 0 END)
-              )
-              FROM Group g
-              LEFT JOIN g.todos t
-              WHERE g.id = :groupId
-              GROUP BY g.id
-              """,
+                                            SELECT new rest.felix.back.todo.dto.TodoCountDTO(
+                                                g.id,
+                                                COUNT(t),
+                                                SUM(CASE WHEN t.todoStatus = TodoStatus.DONE THEN 1 ELSE 0 END)
+                                            )
+                                            FROM Group g
+                                            LEFT JOIN g.todos t
+                                            WHERE g.id = :groupId
+                                            GROUP BY g.id
+                                            """,
                   TodoCountDTO.class)
               .setParameter("groupId", groupId)
               .getSingleResult());
@@ -106,16 +106,16 @@ public class TodoRepository {
     return em
         .createQuery(
             """
-            SELECT new rest.felix.back.todo.dto.TodoCountDTO(
-                g.id,
-                COUNT(t),
-                SUM(CASE WHEN t.todoStatus = TodoStatus.DONE THEN 1 ELSE 0 END)
-            )
-            FROM Group g
-            LEFT JOIN g.todos t
-            WHERE g.id IN :groupIds
-            GROUP BY g.id
-            """,
+                                SELECT new rest.felix.back.todo.dto.TodoCountDTO(
+                                    g.id,
+                                    COUNT(t),
+                                    SUM(CASE WHEN t.todoStatus = TodoStatus.DONE THEN 1 ELSE 0 END)
+                                )
+                                FROM Group g
+                                LEFT JOIN g.todos t
+                                WHERE g.id IN :groupIds
+                                GROUP BY g.id
+                                """,
             TodoCountDTO.class)
         .setParameter("groupIds", groupIds)
         .getResultList()
@@ -128,12 +128,12 @@ public class TodoRepository {
     return em
         .createQuery(
             """
-          SELECT t
-          FROM Group g
-          JOIN g.todos t
-          WHERE g.id = :groupId AND t.id = :todoId
-          ORDER BY t.order ASC
-          """,
+                                SELECT t
+                                FROM Group g
+                                JOIN g.todos t
+                                WHERE g.id = :groupId AND t.id = :todoId
+                                ORDER BY t.order ASC
+                                """,
             Todo.class)
         .setParameter("groupId", groupId)
         .setParameter("todoId", todoId)
@@ -185,16 +185,16 @@ public class TodoRepository {
   public void deleteById(long todoId) {
     em.createQuery(
             """
-          DELETE FROM UserTodoStar uts
-          WHERE uts.todo.id = :todoId
-          """)
+                                DELETE FROM UserTodoStar uts
+                                WHERE uts.todo.id = :todoId
+                                """)
         .setParameter("todoId", todoId)
         .executeUpdate();
     em.createQuery(
             """
-          DELETE FROM Todo t
-          WHERE t.id = :todoId
-          """)
+                                DELETE FROM Todo t
+                                WHERE t.id = :todoId
+                                """)
         .setParameter("todoId", todoId)
         .executeUpdate();
   }
@@ -214,17 +214,17 @@ public class TodoRepository {
   public void deleteByGroupId(long groupId) {
     em.createQuery(
             """
-          DELETE FROM UserTodoStar uts
-          WHERE uts.todo.id IN (
-            SELECT t.id FROM Todo t WHERE t.group.id = :groupId
-          )
-          """)
+                                DELETE FROM UserTodoStar uts
+                                WHERE uts.todo.id IN (
+                                  SELECT t.id FROM Todo t WHERE t.group.id = :groupId
+                                )
+                                """)
         .setParameter("groupId", groupId)
         .executeUpdate();
     em.createQuery(
             """
-          DELETE FROM Todo t WHERE t.group.id = :groupId
-          """)
+                                DELETE FROM Todo t WHERE t.group.id = :groupId
+                                """)
         .setParameter("groupId", groupId)
         .executeUpdate();
   }
@@ -343,10 +343,10 @@ public class TodoRepository {
   public boolean starExistsById(long userId, long todoId) {
     return !em.createQuery(
             """
-            SELECT 1L
-            FROM UserTodoStar uts
-            WHERE uts.user.id = :userId AND uts.todo.id = :todoId
-            """,
+                                SELECT 1L
+                                FROM UserTodoStar uts
+                                WHERE uts.user.id = :userId AND uts.todo.id = :todoId
+                                """,
             Long.class)
         .setParameter("userId", userId)
         .setParameter("todoId", todoId)
@@ -359,10 +359,10 @@ public class TodoRepository {
   public boolean starExistsById(long todoId) {
     return !em.createQuery(
             """
-            SELECT 1L
-            FROM UserTodoStar uts
-            WHERE uts.todo.id = :todoId
-            """,
+                                SELECT 1L
+                                FROM UserTodoStar uts
+                                WHERE uts.todo.id = :todoId
+                                """,
             Long.class)
         .setParameter("todoId", todoId)
         .setMaxResults(1)

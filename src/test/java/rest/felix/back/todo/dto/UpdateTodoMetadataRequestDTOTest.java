@@ -27,6 +27,13 @@ class UpdateTodoMetadataRequestDTOTest {
     validator = factory.getValidator();
   }
 
+  private static Stream<Arguments> atLeastOneExists() {
+    return Stream.of(
+        Arguments.of(new Present<>(true), new Absent<>(), new Absent<>()),
+        Arguments.of(new Absent<>(), new Present<>(LocalDate.now()), new Absent<>()),
+        Arguments.of(new Present<>(false), new Absent<>(), new Present<>(3)));
+  }
+
   @ParameterizedTest
   @MethodSource("atLeastOneExists")
   void Happy_Path(
@@ -43,13 +50,6 @@ class UpdateTodoMetadataRequestDTOTest {
 
     // Then
     Assertions.assertEquals(true, violations.isEmpty());
-  }
-
-  private static Stream<Arguments> atLeastOneExists() {
-    return Stream.of(
-        Arguments.of(new Present<>(true), new Absent<>(), new Absent<>()),
-        Arguments.of(new Absent<>(), new Present<>(LocalDate.now()), new Absent<>()),
-        Arguments.of(new Present<>(false), new Absent<>(), new Present<>(3)));
   }
 
   @Test

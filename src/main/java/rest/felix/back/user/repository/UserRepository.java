@@ -56,17 +56,17 @@ public class UserRepository {
     return em
         .createQuery(
             """
-            SELECT new rest.felix.back.group.dto.MemberDTO(
-                u.id,
-                u.nickname,
-                g.id,
-                ug.groupRole
-            )
-            FROM User u
-            JOIN UserGroup ug ON u.id = ug.user.id
-            JOIN Group g ON g.id = ug.group.id
-            WHERE g.id IN :groupIds
-            """,
+                                SELECT new rest.felix.back.group.dto.MemberDTO(
+                                    u.id,
+                                    u.nickname,
+                                    g.id,
+                                    ug.groupRole
+                                )
+                                FROM User u
+                                JOIN UserGroup ug ON u.id = ug.user.id
+                                JOIN Group g ON g.id = ug.group.id
+                                WHERE g.id IN :groupIds
+                                """,
             MemberDTO.class)
         .setParameter("groupIds", groupIds)
         .getResultList()
@@ -78,17 +78,17 @@ public class UserRepository {
   public List<MemberDTO> findMembersByGroupId(Long groupId) {
     return em.createQuery(
             """
-            SELECT new rest.felix.back.group.dto.MemberDTO(
-                u.id,
-                u.nickname,
-                g.id,
-                ug.groupRole
-            )
-            FROM User u
-            JOIN UserGroup ug ON u.id = ug.user.id
-            JOIN Group g ON g.id = ug.group.id
-            WHERE g.id = :groupId
-            """,
+                                SELECT new rest.felix.back.group.dto.MemberDTO(
+                                    u.id,
+                                    u.nickname,
+                                    g.id,
+                                    ug.groupRole
+                                )
+                                FROM User u
+                                JOIN UserGroup ug ON u.id = ug.user.id
+                                JOIN Group g ON g.id = ug.group.id
+                                WHERE g.id = :groupId
+                                """,
             MemberDTO.class)
         .setParameter("groupId", groupId)
         .getResultList();

@@ -41,12 +41,12 @@ public class GroupInvitationRepository {
   public Long countActiveUntil(long issuerId, long groupId, ZonedDateTime now) {
     return em.createQuery(
             """
-          SELECT COUNT(*)
-          FROM GroupInvitation gi
-          WHERE gi.issuer.id = :issuerId
-            AND gi.group.id = :groupId
-            AND :now < gi.expiresAt
-          """,
+                                SELECT COUNT(*)
+                                FROM GroupInvitation gi
+                                WHERE gi.issuer.id = :issuerId
+                                  AND gi.group.id = :groupId
+                                  AND :now < gi.expiresAt
+                                """,
             Long.class)
         .setParameter("issuerId", issuerId)
         .setParameter("groupId", groupId)
@@ -60,10 +60,10 @@ public class GroupInvitationRepository {
       return Optional.of(
               em.createQuery(
                       """
-          SELECT gi
-          FROM GroupInvitation gi
-          WHERE gi.token = :token
-          """,
+                                                    SELECT gi
+                                                    FROM GroupInvitation gi
+                                                    WHERE gi.token = :token
+                                                    """,
                       GroupInvitation.class)
                   .setParameter("token", token)
                   .getSingleResult())

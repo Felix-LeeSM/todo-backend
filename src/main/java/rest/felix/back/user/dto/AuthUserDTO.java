@@ -19,6 +19,14 @@ import rest.felix.back.user.entity.User;
 public class AuthUserDTO implements UserDetails {
   private Long userId;
 
+  public static AuthUserDTO of(User user) {
+    return new AuthUserDTO(user.getId());
+  }
+
+  public static AuthUserDTO of(UserDTO user) {
+    return new AuthUserDTO(user.id());
+  }
+
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
     return new ArrayList<>();
@@ -52,13 +60,5 @@ public class AuthUserDTO implements UserDetails {
   @Override
   public boolean isEnabled() {
     return true;
-  }
-
-  public static AuthUserDTO of(User user) {
-    return new AuthUserDTO(user.getId());
-  }
-
-  public static AuthUserDTO of(UserDTO user) {
-    return new AuthUserDTO(user.id());
   }
 }

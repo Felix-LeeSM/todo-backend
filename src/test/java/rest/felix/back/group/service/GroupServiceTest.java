@@ -125,13 +125,15 @@ class GroupServiceTest {
       Assertions.assertEquals(3, user1GroupDTOs.size());
       Assertions.assertEquals(3, user2GroupDTOs.size());
 
-      Assertions.assertTrue(
+      Assertions.assertEquals(
+          true,
           user1GroupDTOs.stream()
               .map(GroupDTO::name)
               .toList()
               .containsAll(List.of("user1 group1", "user1 group2", "user1 group3")));
 
-      Assertions.assertTrue(
+      Assertions.assertEquals(
+          true,
           user1GroupDTOs.stream()
               .map(GroupDTO::description)
               .toList()
@@ -141,13 +143,15 @@ class GroupServiceTest {
                       "user1 group2 description",
                       "user1 group3 description")));
 
-      Assertions.assertTrue(
+      Assertions.assertEquals(
+          true,
           user2GroupDTOs.stream()
               .map(GroupDTO::name)
               .toList()
               .containsAll(List.of("user2 group1", "user2 group2", "user2 group3")));
 
-      Assertions.assertTrue(
+      Assertions.assertEquals(
+          true,
           user2GroupDTOs.stream()
               .map(GroupDTO::description)
               .toList()
@@ -454,7 +458,7 @@ class GroupServiceTest {
 
       // Then
 
-      Assertions.assertTrue(userGroup.isEmpty());
+      Assertions.assertEquals(true, userGroup.isEmpty());
     }
 
     @Test
@@ -472,7 +476,7 @@ class GroupServiceTest {
 
       // Then
 
-      Assertions.assertTrue(userGroup.isEmpty());
+      Assertions.assertEquals(true, userGroup.isEmpty());
     }
 
     @Test
@@ -490,7 +494,7 @@ class GroupServiceTest {
 
       // Then
 
-      Assertions.assertTrue(userGroup.isEmpty());
+      Assertions.assertEquals(true, userGroup.isEmpty());
     }
   }
 
@@ -532,7 +536,7 @@ class GroupServiceTest {
 
       // Then
 
-      Assertions.assertTrue(groupDto.isEmpty());
+      Assertions.assertEquals(true, groupDto.isEmpty());
     }
   }
 
@@ -552,7 +556,7 @@ class GroupServiceTest {
 
       // Then
 
-      Assertions.assertTrue(groupRepository.findById(group.getId()).isEmpty());
+      Assertions.assertEquals(true, groupRepository.findById(group.getId()).isEmpty());
     }
 
     @Test
@@ -569,7 +573,7 @@ class GroupServiceTest {
 
       // Then
 
-      Assertions.assertTrue(groupRepository.findById(group.getId()).isEmpty());
+      Assertions.assertEquals(true, groupRepository.findById(group.getId()).isEmpty());
     }
   }
 
@@ -591,6 +595,16 @@ class GroupServiceTest {
           Arguments.of(GroupRole.VIEWER, GroupRole.VIEWER));
     }
 
+    private static Stream<Arguments> insufficientAuthorityTestCases() {
+      return Stream.of(
+          Arguments.of(GroupRole.MANAGER, GroupRole.OWNER),
+          Arguments.of(GroupRole.MEMBER, GroupRole.OWNER),
+          Arguments.of(GroupRole.MEMBER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.VIEWER, GroupRole.OWNER),
+          Arguments.of(GroupRole.VIEWER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.VIEWER, GroupRole.MEMBER));
+    }
+
     @ParameterizedTest(name = "성공 - 유저 역할: {0}, 요구 역할: {1}")
     @MethodSource("sufficientAuthorityTestCases")
     void HappyPath_SufficientAuthority(GroupRole userRole, GroupRole requiredRole) {
@@ -602,16 +616,6 @@ class GroupServiceTest {
       // When & Then
       Assertions.assertDoesNotThrow(
           () -> groupService.assertGroupAuthority(user.getId(), group.getId(), requiredRole));
-    }
-
-    private static Stream<Arguments> insufficientAuthorityTestCases() {
-      return Stream.of(
-          Arguments.of(GroupRole.MANAGER, GroupRole.OWNER),
-          Arguments.of(GroupRole.MEMBER, GroupRole.OWNER),
-          Arguments.of(GroupRole.MEMBER, GroupRole.MANAGER),
-          Arguments.of(GroupRole.VIEWER, GroupRole.OWNER),
-          Arguments.of(GroupRole.VIEWER, GroupRole.MANAGER),
-          Arguments.of(GroupRole.VIEWER, GroupRole.MEMBER));
     }
 
     @ParameterizedTest(name = "실패 - 유저 역할: {0}, 요구 역할: {1}")
@@ -742,9 +746,12 @@ class GroupServiceTest {
 
       // Verify members
       Assertions.assertEquals(3, info.members().size());
-      Assertions.assertTrue(info.members().stream().anyMatch(m -> m.id() == issuer.getId()));
-      Assertions.assertTrue(info.members().stream().anyMatch(m -> m.id() == member1.getId()));
-      Assertions.assertTrue(info.members().stream().anyMatch(m -> m.id() == member2.getId()));
+      Assertions.assertEquals(
+          true, info.members().stream().anyMatch(m -> m.id() == issuer.getId()));
+      Assertions.assertEquals(
+          true, info.members().stream().anyMatch(m -> m.id() == member1.getId()));
+      Assertions.assertEquals(
+          true, info.members().stream().anyMatch(m -> m.id() == member2.getId()));
     }
 
     @Test
@@ -923,8 +930,8 @@ class GroupServiceTest {
       groupService.deleteUserGroupById(user.getId(), group.getId());
 
       // Then
-      Assertions.assertTrue(
-          userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).isEmpty());
+      Assertions.assertEquals(
+          true, userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).isEmpty());
     }
 
     @Test

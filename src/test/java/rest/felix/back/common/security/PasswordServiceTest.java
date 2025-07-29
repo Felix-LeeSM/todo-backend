@@ -22,7 +22,7 @@ class PasswordServiceTest {
 
     // When
 
-    Assertions.assertTrue(passwordService.verifyPassword(rawPassword, hashedPassword));
-    Assertions.assertFalse(passwordService.verifyPassword("wrongPassword", hashedPassword));
+    Assertions.assertEquals(true, passwordService.verifyPassword(rawPassword, hashedPassword));
+    Assertions.assertEquals(false, passwordService.verifyPassword("wrongPassword", hashedPassword));
   }
 }
