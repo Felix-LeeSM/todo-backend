@@ -867,4 +867,120 @@ class GroupServiceTest {
       Assertions.assertThrows(DataIntegrityViolationException.class, lambda::run);
     }
   }
+
+  @Nested
+  @DisplayName("그룹 정보 수정 테스트")
+  class UpdateGroupTest {
+
+    @Test
+    @DisplayName("성공")
+    void happyPath() {
+      // Given
+      Group group = entityFactory.insertGroup("Original Name", "Original Desc");
+      UpdateGroupDTO updateGroupDTO =
+          new UpdateGroupDTO(group.getId(), "Updated Name", "Updated Desc");
+
+      // When
+      groupService.updateGroup(updateGroupDTO);
+
+      // Then
+      GroupDTO updatedGroup = groupRepository.findById(group.getId()).orElseThrow();
+      Assertions.assertEquals("Updated Name", updatedGroup.name());
+      Assertions.assertEquals("Updated Desc", updatedGroup.description());
+    }
+
+    @Test
+    @DisplayName("실패 - 존재하지 않는 그룹")
+    void failure_groupNotFound() {
+      // Given
+      Group group = entityFactory.insertGroup("group", "desc");
+      long groupId = group.getId();
+      th.delete(group);
+      UpdateGroupDTO updateGroupDTO =
+          new UpdateGroupDTO(group.getId(), "Updated Name", "Updated Desc");
+
+      // When
+      Runnable lambda = () -> groupService.updateGroup(updateGroupDTO);
+
+      // Then
+      Assertions.assertThrows(GroupNotFoundException.class, lambda::run);
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 멤버 추방 테스트")
+  class DeleteUserGroupTest {
+
+    @Test
+    @DisplayName("성공")
+    void happyPath() {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+
+      // When
+      groupService.deleteUserGroupById(user.getId(), group.getId());
+
+      // Then
+      Assertions.assertTrue(
+          userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).isEmpty());
+    }
+
+    @Test
+    @DisplayName("실패 - 존재하지 않는 멤버십")
+    void failure_membershipNotFound() {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      // User is not in the group
+
+      // When
+      Runnable lambda = () -> groupService.deleteUserGroupById(user.getId(), group.getId());
+
+      // Then
+      Assertions.assertDoesNotThrow(lambda::run);
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 멤버 역할 변경 테스트")
+  class UpdateUserGroupTest {
+
+    @Test
+    @DisplayName("성공")
+    void happyPath() {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
+      UpdateMemberDTO updateMemberDTO =
+          new UpdateMemberDTO(user.getId(), group.getId(), GroupRole.MANAGER);
+
+      // When
+      groupService.updateUserGroup(updateMemberDTO);
+
+      // Then
+      UserGroupDTO updatedUserGroup =
+          userGroupRepository.findByUserIdAndGroupId(user.getId(), group.getId()).orElseThrow();
+      Assertions.assertEquals(GroupRole.MANAGER, updatedUserGroup.groupRole());
+    }
+
+    @Test
+    @DisplayName("실패 - 존재하지 않는 멤버십")
+    void failure_membershipNotFound() {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      UpdateMemberDTO updateMemberDTO =
+          new UpdateMemberDTO(user.getId(), group.getId(), GroupRole.MANAGER);
+      // User is not in the group
+
+      // When
+      Runnable lambda = () -> groupService.updateUserGroup(updateMemberDTO);
+
+      // Then
+      Assertions.assertDoesNotThrow(lambda::run);
+    }
+  }
 }

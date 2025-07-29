@@ -119,7 +119,9 @@ public class GroupController {
     GroupRole memberRole =
         groupService.findUserRole(memberId, groupId).orElseThrow(MembershipNotFoundException::new);
 
-    if (!userRole.gt(memberRole)) throw new ForbiddenRoleChangeException();
+    if (userId == memberId
+        || userRole.lte(updateMemberRequestDTO.role())
+        || userRole.lte(memberRole)) throw new ForbiddenRoleChangeException();
 
     UpdateMemberDTO updateMemberDTO = UpdateMemberDTO.of(memberId, groupId, updateMemberRequestDTO);
     groupService.updateUserGroup(updateMemberDTO);

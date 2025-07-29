@@ -11,9 +11,12 @@ import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,10 +29,7 @@ import rest.felix.back.common.config.GroupConfig;
 import rest.felix.back.common.security.JwtTokenProvider;
 import rest.felix.back.common.util.EntityFactory;
 import rest.felix.back.common.util.TestHelper;
-import rest.felix.back.group.dto.CreateGroupRequestDTO;
-import rest.felix.back.group.dto.GroupInvitationInfoDTOResponse;
-import rest.felix.back.group.dto.MemberDTO;
-import rest.felix.back.group.dto.MemberResponseDTO;
+import rest.felix.back.group.dto.*;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
@@ -1098,7 +1098,7 @@ public class GroupControllerWebTest {
 
       // Verify members list
       List<MemberResponseDTO> expectedMembers =
-          List.of(
+          Stream.of(
                   MemberResponseDTO.of(
                       new MemberDTO(
                           issuer.getId(), issuer.getNickname(), group.getId(), GroupRole.OWNER)),
@@ -1114,7 +1114,6 @@ public class GroupControllerWebTest {
                   MemberResponseDTO.of(
                       new MemberDTO(
                           member3.getId(), member3.getNickname(), group.getId(), GroupRole.VIEWER)))
-              .stream()
               .sorted(Comparator.comparing(MemberResponseDTO::id))
               .toList();
 
@@ -1393,6 +1392,357 @@ public class GroupControllerWebTest {
       // Then
       result.andExpect(status().isConflict());
       result.andExpect(jsonPath("$.message", equalTo("User is already a member of the group.")));
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 정보 수정 테스트")
+  class UpdateGroupTest {
+
+    @ParameterizedTest
+    @MethodSource("SuccessfulAuthorities")
+    @DisplayName("성공")
+    void happyPath(GroupRole role) throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), role);
+      UpdateGroupRequestDTO requestDTO = new UpdateGroupRequestDTO("new name", "new desc");
+      String body = objectMapper.writeValueAsString(requestDTO);
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d", group.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path).cookie(cookie).content(body).contentType(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isOk());
+      result.andExpect(jsonPath("$.name").value("new name"));
+      result.andExpect(jsonPath("$.description").value("new desc"));
+    }
+
+    private static Stream<Arguments> SuccessfulAuthorities() {
+      return Stream.of(Arguments.of(GroupRole.OWNER), Arguments.of(GroupRole.MANAGER));
+    }
+
+    @ParameterizedTest
+    @MethodSource("FailingAuthorities")
+    @DisplayName("실패 - 권한 없음 (MEMBER, VIEWER)")
+    void failure_forbidden(GroupRole role) throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), role);
+      UpdateGroupRequestDTO requestDTO = new UpdateGroupRequestDTO("new name", "new desc");
+      String body = objectMapper.writeValueAsString(requestDTO);
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d", group.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path).cookie(cookie).content(body).contentType(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isForbidden());
+    }
+
+    private static Stream<Arguments> FailingAuthorities() {
+      return Stream.of(Arguments.of(GroupRole.MEMBER), Arguments.of(GroupRole.VIEWER));
+    }
+
+    @Test
+    @DisplayName("실패 - 존재하지 않는 그룹")
+    void failure_groupNotFound() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      UpdateGroupRequestDTO requestDTO = new UpdateGroupRequestDTO("new name", "new desc");
+      String body = objectMapper.writeValueAsString(requestDTO);
+      Cookie cookie = userCookie(user);
+      long groupId = group.getId();
+
+      th.delete(userGroup);
+      th.delete(group);
+
+      String path = String.format("/api/v1/group/%d", groupId);
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path).cookie(cookie).content(body).contentType(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("실패 - 유효성 검사 실패 (이름 누락)")
+    void failure_validationFailed() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      UpdateGroupRequestDTO requestDTO = new UpdateGroupRequestDTO(null, "new desc");
+      String body = objectMapper.writeValueAsString(requestDTO);
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d", group.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              put(path).cookie(cookie).content(body).contentType(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isBadRequest());
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 멤버 추방 테스트")
+  class DeleteUserGroupTest {
+
+    @ParameterizedTest
+    @MethodSource("SuccessfulAuthoritiesDelete")
+    @DisplayName("성공")
+    void happyPath(GroupRole userRole, GroupRole targetRole) throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
+      entityFactory.insertUserGroup(target.getId(), group.getId(), targetRole);
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/member/%d", group.getId(), target.getId());
+
+      // When
+      ResultActions result = mvc.perform(delete(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isNoContent());
+      Assertions.assertTrue(
+          userGroupRepository.findByUserIdAndGroupId(target.getId(), group.getId()).isEmpty());
+    }
+
+    private static Stream<Arguments> SuccessfulAuthoritiesDelete() {
+      return Stream.of(
+          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.OWNER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.OWNER, GroupRole.VIEWER));
+    }
+
+    @ParameterizedTest
+    @MethodSource("FailingAuthoritiesDelete")
+    @DisplayName("실패 - 권한 없음")
+    void failure_forbidden(GroupRole userRole, GroupRole targetRole) throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
+      entityFactory.insertUserGroup(target.getId(), group.getId(), targetRole);
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/member/%d", group.getId(), target.getId());
+
+      // When
+      ResultActions result = mvc.perform(delete(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isForbidden());
+    }
+
+    private static Stream<Arguments> FailingAuthoritiesDelete() {
+      return Stream.of(
+          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.MEMBER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.MEMBER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.VIEWER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.VIEWER, GroupRole.VIEWER));
+    }
+
+    @Test
+    @DisplayName("실패 - 자기 자신을 추방")
+    void failure_cannotRemoveSelf() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/member/%d", group.getId(), user.getId());
+
+      // When
+      ResultActions result = mvc.perform(delete(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("실패 - 존재하지 않는 멤버")
+    void failure_memberNotFound() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/member/%d", group.getId(), target.getId());
+
+      // When
+      ResultActions result = mvc.perform(delete(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isNotFound());
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 멤버 역할 변경 테스트")
+  class UpdateUserGroupTest {
+
+    @ParameterizedTest
+    @MethodSource("SuccessfulAuthoritiesUpdate")
+    @DisplayName("성공")
+    void happyPath(GroupRole userRole, GroupRole targetRole, GroupRole newRole) throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
+      entityFactory.insertUserGroup(target.getId(), group.getId(), targetRole);
+      UpdateMemberRequestDTO requestDTO = new UpdateMemberRequestDTO(newRole);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/member/%d", group.getId(), target.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              patch(path).cookie(cookie).content(body).contentType(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isOk());
+    }
+
+    private static Stream<Arguments> SuccessfulAuthoritiesUpdate() {
+      return Stream.of(
+          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.OWNER, GroupRole.MEMBER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.OWNER, GroupRole.MEMBER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.OWNER, GroupRole.VIEWER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.OWNER, GroupRole.VIEWER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.MEMBER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.VIEWER, GroupRole.MEMBER));
+    }
+
+    @ParameterizedTest
+    @MethodSource("FailingAuthoritiesUpdate")
+    @DisplayName("실패 - 권한 없음")
+    void failure_forbidden(GroupRole userRole, GroupRole targetRole, GroupRole newRole)
+        throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
+      entityFactory.insertUserGroup(target.getId(), group.getId(), targetRole);
+      UpdateMemberRequestDTO requestDTO = new UpdateMemberRequestDTO(newRole);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/member/%d", group.getId(), target.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              patch(path).cookie(cookie).content(body).contentType(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isForbidden());
+    }
+
+    private static Stream<Arguments> FailingAuthoritiesUpdate() {
+      return Stream.of(
+          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER, GroupRole.VIEWER));
+    }
+
+    @Test
+    @DisplayName("실패 - 자기 자신의 역할 변경 시도")
+    void failure_cannotUpdateSelf() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      UpdateMemberRequestDTO requestDTO = new UpdateMemberRequestDTO(GroupRole.MANAGER);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/member/%d", group.getId(), user.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              patch(path).cookie(cookie).content(body).contentType(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("실패 - 존재하지 않는 멤버")
+    void failure_memberNotFound() throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      UpdateMemberRequestDTO requestDTO = new UpdateMemberRequestDTO(GroupRole.MANAGER);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/member/%d", group.getId(), target.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              patch(path).cookie(cookie).content(body).contentType(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isNotFound());
+    }
+
+    @ParameterizedTest
+    @MethodSource("FailingAuthoritiesToOwnerUpdate")
+    @DisplayName("실패 - OWNER로 역할 변경 시도")
+    void failure_cannotPromoteToOwner(GroupRole userRole, GroupRole targetRole, GroupRole newRole)
+        throws Exception {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
+      entityFactory.insertUserGroup(target.getId(), group.getId(), targetRole);
+      UpdateMemberRequestDTO requestDTO = new UpdateMemberRequestDTO(newRole);
+      String body = objectMapper.writeValueAsString(requestDTO);
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/%d/member/%d", group.getId(), target.getId());
+
+      // When
+      ResultActions result =
+          mvc.perform(
+              patch(path).cookie(cookie).content(body).contentType(MediaType.APPLICATION_JSON));
+
+      // Then
+      result.andExpect(status().isForbidden());
+    }
+
+    private static Stream<Arguments> FailingAuthoritiesToOwnerUpdate() {
+      return Stream.of(
+          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER, GroupRole.OWNER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER, GroupRole.OWNER));
     }
   }
 }

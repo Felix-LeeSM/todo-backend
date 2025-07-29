@@ -10,12 +10,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import rest.felix.back.common.exception.ErrorResponseDTO;
 import rest.felix.back.common.exception.throwable.badrequest.BadRequestException;
 import rest.felix.back.common.exception.throwable.conflict.ConflictException;
+import rest.felix.back.common.exception.throwable.forbidden.ForbiddenException;
 import rest.felix.back.common.exception.throwable.gone.GoneException;
 import rest.felix.back.common.exception.throwable.notFound.NotFoundException;
-import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
 import rest.felix.back.common.exception.throwable.tooManyRequests.TooManyRequestsException;
 import rest.felix.back.common.exception.throwable.unauthorized.UnauthorizedException;
-import rest.felix.back.user.exception.UserAccessDeniedException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -52,16 +51,8 @@ public class GlobalExceptionHandler {
         .body(new ErrorResponseDTO(exception.getMessage()));
   }
 
-  @ExceptionHandler(UserAccessDeniedException.class)
-  public ResponseEntity<ErrorResponseDTO> handleUnauthorizedException(
-      UserAccessDeniedException exception) {
-    return ResponseEntity.status(exception.getStatusCode())
-        .body(new ErrorResponseDTO(exception.getMessage()));
-  }
-
-  @ExceptionHandler(ResourceNotFoundException.class)
-  public ResponseEntity<ErrorResponseDTO> handleResourceNotFoundException(
-      ResourceNotFoundException exception) {
+  @ExceptionHandler(ForbiddenException.class)
+  public ResponseEntity<ErrorResponseDTO> handleForbiddenException(ForbiddenException exception) {
     return ResponseEntity.status(exception.getStatusCode())
         .body(new ErrorResponseDTO(exception.getMessage()));
   }
@@ -96,6 +87,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponseDTO> handleException(Exception exception) {
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .body(new ErrorResponseDTO("Something went wrong, please try  later."));
+        .body(new ErrorResponseDTO(exception.getMessage()));
+    //        .body(new ErrorResponseDTO("Something went wrong, please try  later."));
   }
 }

@@ -7,6 +7,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
@@ -20,10 +23,7 @@ import rest.felix.back.group.dto.*;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.UserGroup;
 import rest.felix.back.group.entity.enumerated.GroupRole;
-import rest.felix.back.group.exception.AlreadyGroupMemberException;
-import rest.felix.back.group.exception.ExpiredInvitationException;
-import rest.felix.back.group.exception.NoInvitationException;
-import rest.felix.back.group.exception.TooManyInvitationsException;
+import rest.felix.back.group.exception.*;
 import rest.felix.back.group.repository.GroupRepository;
 import rest.felix.back.group.repository.UserGroupRepository;
 import rest.felix.back.todo.dto.TodoWithStarredStatusResponseDTO;
@@ -1008,6 +1008,312 @@ public class GroupControllerUnitTest {
 
       // Then
       Assertions.assertThrows(AlreadyGroupMemberException.class, lambda::run);
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 정보 수정 테스트")
+  class UpdateGroupTest {
+
+    @ParameterizedTest
+    @MethodSource("SuccessfulAuthorities")
+    @DisplayName("성공")
+    void happyPath(GroupRole role) {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), role);
+      UpdateGroupRequestDTO requestDTO = new UpdateGroupRequestDTO("new name", "new desc");
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      ResponseEntity<GroupResponseDTO> response =
+          groupController.updateGroup(authUserDTO, group.getId(), requestDTO);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+      GroupDTO updatedGroup = groupRepository.findById(group.getId()).orElseThrow();
+      Assertions.assertEquals("new name", updatedGroup.name());
+      Assertions.assertEquals("new desc", updatedGroup.description());
+    }
+
+    private static Stream<Arguments> SuccessfulAuthorities() {
+      return Stream.of(Arguments.of(GroupRole.OWNER), Arguments.of(GroupRole.MANAGER));
+    }
+
+    @ParameterizedTest
+    @MethodSource("FailingAuthorities")
+    @DisplayName("실패 - 권한 없음 (MEMBER, VIEWER)")
+    void failure_forbidden(GroupRole role) {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), role);
+      UpdateGroupRequestDTO requestDTO = new UpdateGroupRequestDTO("new name", "new desc");
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda = () -> groupController.updateGroup(authUserDTO, group.getId(), requestDTO);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    private static Stream<Arguments> FailingAuthorities() {
+      return Stream.of(Arguments.of(GroupRole.MEMBER), Arguments.of(GroupRole.VIEWER));
+    }
+
+    @Test
+    @DisplayName("실패 - 존재하지 않는 그룹")
+    void failure_groupNotFound() {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      UserGroup userGroup =
+          entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      UpdateGroupRequestDTO requestDTO = new UpdateGroupRequestDTO("new name", "new desc");
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      th.delete(userGroup);
+      th.delete(group);
+
+      // When
+      Runnable lambda = () -> groupController.updateGroup(authUserDTO, group.getId(), requestDTO);
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 멤버 추방 테스트")
+  class DeleteUserGroupTest {
+
+    @ParameterizedTest
+    @MethodSource("SuccessfulAuthorities")
+    @DisplayName("성공")
+    void happyPath(GroupRole userRole) {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
+      entityFactory.insertUserGroup(target.getId(), group.getId(), GroupRole.MANAGER);
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      ResponseEntity<Void> response =
+          groupController.deleteUserGroup(authUserDTO, group.getId(), target.getId());
+
+      // Then
+      Assertions.assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+      Assertions.assertTrue(
+          userGroupRepository.findByUserIdAndGroupId(target.getId(), group.getId()).isEmpty());
+    }
+
+    private static Stream<Arguments> SuccessfulAuthorities() {
+      return Stream.of(Arguments.of(GroupRole.OWNER));
+    }
+
+    @ParameterizedTest
+    @MethodSource("FailingAuthorities")
+    @DisplayName("실패 - 권한 없음")
+    void failure_forbidden(GroupRole userRole) {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
+      entityFactory.insertUserGroup(target.getId(), group.getId(), GroupRole.MEMBER);
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda =
+          () -> groupController.deleteUserGroup(authUserDTO, group.getId(), target.getId());
+
+      // Then
+      Assertions.assertThrows(UserAccessDeniedException.class, lambda::run);
+    }
+
+    private static Stream<Arguments> FailingAuthorities() {
+      return Stream.of(
+          Arguments.of(GroupRole.MANAGER),
+          Arguments.of(GroupRole.MEMBER),
+          Arguments.of(GroupRole.VIEWER));
+    }
+
+    @Test
+    @DisplayName("실패 - 자기 자신을 추방")
+    void failure_cannotRemoveSelf() {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda =
+          () -> groupController.deleteUserGroup(authUserDTO, group.getId(), user.getId());
+
+      // Then
+      Assertions.assertThrows(CannotRemoveSelfException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 존재하지 않는 멤버")
+    void failure_memberNotFound() {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      Runnable lambda =
+          () -> groupController.deleteUserGroup(authUserDTO, group.getId(), target.getId());
+
+      // Then
+      Assertions.assertThrows(MembershipNotFoundException.class, lambda::run);
+    }
+  }
+
+  @Nested
+  @DisplayName("그룹 멤버 역할 변경 테스트")
+  class UpdateUserGroupTest {
+
+    @ParameterizedTest
+    @MethodSource("SuccessfulAuthoritiesUpdate")
+    @DisplayName("성공")
+    void happyPath(GroupRole userRole, GroupRole targetRole, GroupRole newRole) {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
+      entityFactory.insertUserGroup(target.getId(), group.getId(), targetRole);
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+      UpdateMemberRequestDTO requestDTO = new UpdateMemberRequestDTO(newRole);
+
+      // When
+      ResponseEntity<Void> response =
+          groupController.updateUserGroup(authUserDTO, group.getId(), target.getId(), requestDTO);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+      UserGroupDTO updatedUserGroup =
+          userGroupRepository.findByUserIdAndGroupId(target.getId(), group.getId()).orElseThrow();
+      Assertions.assertEquals(newRole, updatedUserGroup.groupRole());
+    }
+
+    private static Stream<Arguments> SuccessfulAuthoritiesUpdate() {
+      return Stream.of(
+          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.OWNER, GroupRole.MEMBER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.OWNER, GroupRole.MEMBER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.OWNER, GroupRole.VIEWER, GroupRole.MANAGER),
+          Arguments.of(GroupRole.OWNER, GroupRole.VIEWER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.MEMBER, GroupRole.VIEWER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.VIEWER, GroupRole.MEMBER));
+    }
+
+    @ParameterizedTest
+    @MethodSource("FailingAuthoritiesUpdate")
+    @DisplayName("실패 - 권한 없음")
+    void failure_forbidden(GroupRole userRole, GroupRole targetRole, GroupRole newRole) {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
+      entityFactory.insertUserGroup(target.getId(), group.getId(), targetRole);
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+      UpdateMemberRequestDTO requestDTO = new UpdateMemberRequestDTO(newRole);
+
+      // When
+      Runnable lambda =
+          () ->
+              groupController.updateUserGroup(
+                  authUserDTO, group.getId(), target.getId(), requestDTO);
+
+      // Then
+      Assertions.assertThrows(ForbiddenRoleChangeException.class, lambda::run);
+    }
+
+    private static Stream<Arguments> FailingAuthoritiesUpdate() {
+      return Stream.of(
+          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER, GroupRole.MEMBER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER, GroupRole.VIEWER));
+    }
+
+    @Test
+    @DisplayName("실패 - 자기 자신의 역할 변경 시도")
+    void failure_cannotUpdateSelf() {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+      UpdateMemberRequestDTO requestDTO = new UpdateMemberRequestDTO(GroupRole.MANAGER);
+
+      // When
+      Runnable lambda =
+          () ->
+              groupController.updateUserGroup(authUserDTO, group.getId(), user.getId(), requestDTO);
+
+      // Then
+      Assertions.assertThrows(ForbiddenRoleChangeException.class, lambda::run);
+    }
+
+    @Test
+    @DisplayName("실패 - 존재하지 않는 멤버")
+    void failure_memberNotFound() {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.OWNER);
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+      UpdateMemberRequestDTO requestDTO = new UpdateMemberRequestDTO(GroupRole.MANAGER);
+
+      // When
+      Runnable lambda =
+          () ->
+              groupController.updateUserGroup(
+                  authUserDTO, group.getId(), target.getId(), requestDTO);
+
+      // Then
+      Assertions.assertThrows(MembershipNotFoundException.class, lambda::run);
+    }
+
+    @ParameterizedTest
+    @MethodSource("FailingAuthoritiesToOwnerUpdate")
+    @DisplayName("실패 - OWNER로 역할 변경 시도")
+    void failure_cannotPromoteToOwner(GroupRole userRole, GroupRole targetRole, GroupRole newRole) {
+      // Given
+      User user = entityFactory.insertUser("user", "pass", "nick");
+      User target = entityFactory.insertUser("target", "pass", "targetNick");
+      Group group = entityFactory.insertGroup("group", "desc");
+      entityFactory.insertUserGroup(user.getId(), group.getId(), userRole);
+      entityFactory.insertUserGroup(target.getId(), group.getId(), targetRole);
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+      UpdateMemberRequestDTO requestDTO = new UpdateMemberRequestDTO(newRole);
+
+      // When
+      Runnable lambda =
+          () ->
+              groupController.updateUserGroup(
+                  authUserDTO, group.getId(), target.getId(), requestDTO);
+
+      // Then
+      Assertions.assertThrows(ForbiddenRoleChangeException.class, lambda::run);
+    }
+
+    private static Stream<Arguments> FailingAuthoritiesToOwnerUpdate() {
+      return Stream.of(
+          Arguments.of(GroupRole.OWNER, GroupRole.MANAGER, GroupRole.OWNER),
+          Arguments.of(GroupRole.MANAGER, GroupRole.MANAGER, GroupRole.OWNER));
     }
   }
 }
