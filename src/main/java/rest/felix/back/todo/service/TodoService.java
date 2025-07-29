@@ -4,17 +4,15 @@ import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import lombok.AllArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.common.exception.throwable.notFound.ResourceNotFoundException;
 import rest.felix.back.group.dto.UserGroupDTO;
 import rest.felix.back.group.entity.enumerated.GroupRole;
 import rest.felix.back.group.repository.UserGroupRepository;
-import rest.felix.back.todo.dto.CreateTodoDTO;
-import rest.felix.back.todo.dto.TodoDTO;
-import rest.felix.back.todo.dto.UpdateTodoDTO;
-import rest.felix.back.todo.dto.UpdateTodoMetadataDTO;
-import rest.felix.back.todo.entity.enumerated.TodoStatus;
+import rest.felix.back.todo.dto.*;
+import rest.felix.back.todo.exception.DuplicateTodoOrderException;
 import rest.felix.back.todo.exception.TodoNotFoundException;
 import rest.felix.back.todo.repository.TodoRepository;
 import rest.felix.back.user.exception.UserAccessDeniedException;
@@ -107,8 +105,13 @@ public class TodoService {
   }
 
   @Transactional
-  public TodoDTO moveTodo(long targetId, Long destinationId, TodoStatus todoStatus) {
-    return todoRepository.moveTodo(targetId, destinationId, todoStatus);
+  public TodoDTO moveTodo(MoveTodoDTO moveTodoDTO) {
+    try {
+      return todoRepository.moveTodo(
+          moveTodoDTO.todoId(), moveTodoDTO.todoStatus(), moveTodoDTO.order());
+    } catch (DataIntegrityViolationException e) {
+      throw new DuplicateTodoOrderException();
+    }
   }
 
   @Transactional

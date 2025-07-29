@@ -2074,7 +2074,7 @@ public class TodoControllerWebTest {
   @DisplayName("투두 순서 및 상태 변경 테스트")
   class MoveTodo {
     @Test
-    @DisplayName("성공 - 상태만 변경 (맨 뒤로 이동)")
+    @DisplayName("성공 - 상태 및 순서 변경")
     void HappyPath_1() throws Exception {
       // Given
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
@@ -2091,19 +2091,18 @@ public class TodoControllerWebTest {
               TodoStatus.TO_DO,
               "a",
               false);
-
       entityFactory.insertTodo(
           user.getId(),
           user.getId(),
           group.getId(),
           "todo2",
           "desc2",
-          TodoStatus.TO_DO,
+          TodoStatus.IN_PROGRESS,
           "b",
           false);
 
       String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo1.getId());
-      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, "c");
       String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
       Cookie cookie = userCookie(user);
 
@@ -2120,63 +2119,12 @@ public class TodoControllerWebTest {
       result.andExpect(status().isOk());
       result.andExpect(jsonPath("$.id", equalTo(todo1.getId().intValue())));
       result.andExpect(jsonPath("$.status", equalTo("IN_PROGRESS")));
-      result.andExpect(jsonPath("$.order", notNullValue()));
-    }
-
-    @Test
-    @DisplayName("성공 - 상태 및 순서 변경")
-    void HappyPath_2() throws Exception {
-      // Given
-      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group name", "group description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
-
-      Todo todo1 =
-          entityFactory.insertTodo(
-              user.getId(),
-              user.getId(),
-              group.getId(),
-              "todo1",
-              "desc1",
-              TodoStatus.TO_DO,
-              "a",
-              false);
-      Todo todo2 =
-          entityFactory.insertTodo(
-              user.getId(),
-              user.getId(),
-              group.getId(),
-              "todo2",
-              "desc2",
-              TodoStatus.IN_PROGRESS,
-              "b",
-              false);
-
-      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo1.getId());
-      MoveTodoRequestDTO moveTodoRequestDTO =
-          new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, todo2.getId());
-      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
-      Cookie cookie = userCookie(user);
-
-      // When
-      ResultActions result =
-          mvc.perform(
-              put(path)
-                  .cookie(cookie)
-                  .accept(MediaType.APPLICATION_JSON)
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(body));
-
-      // Then
-      result.andExpect(status().isOk());
-      result.andExpect(jsonPath("$.id", equalTo(todo1.getId().intValue())));
-      result.andExpect(jsonPath("$.status", equalTo("IN_PROGRESS")));
-      result.andExpect(jsonPath("$.order", lessThan(todo2.getOrder())));
+      result.andExpect(jsonPath("$.order", equalTo("c")));
     }
 
     @Test
     @DisplayName("성공 - 순서를 여러회 변경 후 정렬 순서")
-    void HappyPath_3() throws Exception {
+    void HappyPath_2() throws Exception {
       // Given
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group name", "group description");
@@ -2213,27 +2161,22 @@ public class TodoControllerWebTest {
               "c",
               false);
 
-      // todo1 todo2 todo3 순
       Cookie cookie = userCookie(user);
 
-      // todo2를 todo1 앞으로 -> todo2 todo1 todo3 순
       mvc.perform(
           put(String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo2.getId()))
               .cookie(cookie)
               .accept(MediaType.APPLICATION_JSON)
               .contentType(MediaType.APPLICATION_JSON)
               .content(
-                  objectMapper.writeValueAsString(
-                      new MoveTodoRequestDTO(TodoStatus.TO_DO, todo1.getId()))));
-      // todo3을 todo1 앞으로 -> todo2 todo3 todo1순
+                  objectMapper.writeValueAsString(new MoveTodoRequestDTO(TodoStatus.TO_DO, "dd"))));
       mvc.perform(
           put(String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo3.getId()))
               .cookie(cookie)
               .accept(MediaType.APPLICATION_JSON)
               .contentType(MediaType.APPLICATION_JSON)
               .content(
-                  objectMapper.writeValueAsString(
-                      new MoveTodoRequestDTO(TodoStatus.TO_DO, todo1.getId()))));
+                  objectMapper.writeValueAsString(new MoveTodoRequestDTO(TodoStatus.TO_DO, "b"))));
       // When
       ResultActions result =
           mvc.perform(
@@ -2256,7 +2199,7 @@ public class TodoControllerWebTest {
               .collect(Collectors.toList());
 
       Assertions.assertIterableEquals(
-          List.of(todo2.getId(), todo3.getId(), todo1.getId()), actualIds);
+          List.of(todo1.getId(), todo3.getId(), todo2.getId()), actualIds);
     }
 
     @Test
@@ -2539,13 +2482,24 @@ public class TodoControllerWebTest {
     }
 
     @Test
-    @DisplayName("실패 - 대상과 destination이 일치하는 경우")
-    void Failure_InvalidDestination_1() throws Exception {
+    @DisplayName("실패 - 같은 order와 todoStatus의 todo가 존재할 경우.")
+    void Failure_DuplicateOrder() throws Exception {
       // Given
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group name", "group description");
+      Group group = entityFactory.insertGroup("group", "desc1");
       entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
-      Todo todo =
+      Todo todo1 =
+          entityFactory.insertTodo(
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "todo",
+              "desc",
+              TodoStatus.IN_PROGRESS,
+              "a",
+              false);
+
+      Todo todo2 =
           entityFactory.insertTodo(
               user.getId(),
               user.getId(),
@@ -2553,67 +2507,12 @@ public class TodoControllerWebTest {
               "todo",
               "desc",
               TodoStatus.TO_DO,
-              "a",
-              false);
-
-      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo.getId());
-      MoveTodoRequestDTO moveTodoRequestDTO =
-          new MoveTodoRequestDTO(TodoStatus.TO_DO, todo.getId());
-      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
-      Cookie cookie = userCookie(user);
-
-      // When
-      ResultActions result =
-          mvc.perform(
-              put(path)
-                  .cookie(cookie)
-                  .accept(MediaType.APPLICATION_JSON)
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(body));
-
-      // Then
-      result.andExpect(status().isBadRequest());
-      result.andExpect(
-          jsonPath(
-              "$.message",
-              equalTo(
-                  "Destination must be another todo in the same group with the same todo status.")));
-    }
-
-    @Test
-    @DisplayName("실패 - destination이 다른 그룹에 속한 경우")
-    void Failure_InvalidDestination_2() throws Exception {
-      // Given
-      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-      Group group1 = entityFactory.insertGroup("group1", "desc1");
-      Group group2 = entityFactory.insertGroup("group2", "desc2");
-      entityFactory.insertUserGroup(user.getId(), group1.getId(), GroupRole.MEMBER);
-      entityFactory.insertUserGroup(user.getId(), group2.getId(), GroupRole.MEMBER);
-      Todo todoInGroup1 =
-          entityFactory.insertTodo(
-              user.getId(),
-              user.getId(),
-              group1.getId(),
-              "todo1",
-              "desc1",
-              TodoStatus.TO_DO,
-              "a",
-              false);
-      Todo todoInGroup2 =
-          entityFactory.insertTodo(
-              user.getId(),
-              user.getId(),
-              group2.getId(),
-              "todo2",
-              "desc2",
-              TodoStatus.TO_DO,
               "b",
               false);
 
-      String path =
-          String.format("/api/v1/group/%d/todo/%d/move", group1.getId(), todoInGroup1.getId());
+      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo2.getId());
       MoveTodoRequestDTO moveTodoRequestDTO =
-          new MoveTodoRequestDTO(TodoStatus.TO_DO, todoInGroup2.getId());
+          new MoveTodoRequestDTO(todo1.getTodoStatus(), todo1.getOrder());
       String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
       Cookie cookie = userCookie(user);
 
@@ -2631,60 +2530,7 @@ public class TodoControllerWebTest {
       result.andExpect(
           jsonPath(
               "$.message",
-              equalTo(
-                  "Destination must be another todo in the same group with the same todo status.")));
-    }
-
-    @Test
-    @DisplayName("실패 - destination이 다른 todoStatus에 속한 경우")
-    void Failure_InvalidDestination_3() throws Exception {
-      // Given
-      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group name", "group description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
-      Todo todo1 =
-          entityFactory.insertTodo(
-              user.getId(),
-              user.getId(),
-              group.getId(),
-              "todo1",
-              "desc1",
-              TodoStatus.TO_DO,
-              "a",
-              false);
-      Todo todo2 =
-          entityFactory.insertTodo(
-              user.getId(),
-              user.getId(),
-              group.getId(),
-              "todo2",
-              "desc2",
-              TodoStatus.IN_PROGRESS,
-              "b",
-              false);
-
-      String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo1.getId());
-      MoveTodoRequestDTO moveTodoRequestDTO =
-          new MoveTodoRequestDTO(TodoStatus.TO_DO, todo2.getId());
-      String body = objectMapper.writeValueAsString(moveTodoRequestDTO);
-      Cookie cookie = userCookie(user);
-
-      // When
-      ResultActions result =
-          mvc.perform(
-              put(path)
-                  .cookie(cookie)
-                  .accept(MediaType.APPLICATION_JSON)
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(body));
-
-      // Then
-      result.andExpect(status().isBadRequest());
-      result.andExpect(
-          jsonPath(
-              "$.message",
-              equalTo(
-                  "Destination must be another todo in the same group with the same todo status.")));
+              equalTo("A todo with the same order value already exists within this status.")));
     }
   }
 

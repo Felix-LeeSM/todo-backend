@@ -8,14 +8,13 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.todo.dto.*;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.UserTodoStar;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
-import rest.felix.back.todo.exception.DestinationNotFoundException;
-import rest.felix.back.todo.exception.InvalidDestinationException;
 import rest.felix.back.todo.exception.TodoNotFoundException;
 import rest.felix.back.todo.service.OrderGenerator;
 import rest.felix.back.user.entity.User;
@@ -267,55 +266,14 @@ public class TodoRepository {
     }
   }
 
-  @Transactional
-  public TodoDTO moveTodo(long targetId, Long destinationId, TodoStatus todoStatus) {
-    Todo targetTodo = findEntityById(targetId).orElseThrow(TodoNotFoundException::new);
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public TodoDTO moveTodo(long targetId, TodoStatus todoStatus, String order) {
+    Todo todo = findEntityById(targetId).orElseThrow(TodoNotFoundException::new);
 
-    // destinationId가 있을 경우 검증 수행
-    if (destinationId != null) {
-      Todo destinationTodo = em.find(Todo.class, destinationId);
-      if (destinationTodo == null) throw new DestinationNotFoundException();
+    todo.setOrder(order);
+    todo.setTodoStatus(todoStatus);
 
-      if (!destinationTodo.getGroup().equals(targetTodo.getGroup()))
-        throw new InvalidDestinationException();
-
-      if (!destinationTodo.getTodoStatus().equals(todoStatus))
-        throw new InvalidDestinationException();
-
-      if (destinationId.equals(targetId)) throw new InvalidDestinationException();
-    }
-
-    targetTodo.setTodoStatus(todoStatus);
-
-    String newOrder;
-    if (destinationId == null) {
-      // 리스트 끝으로 이동
-      String maxOrder =
-          em.createQuery(
-                  "SELECT MAX(t.order) FROM Todo t WHERE t.group = :group AND t.todoStatus = :todoStatus",
-                  String.class)
-              .setParameter("group", targetTodo.getGroup())
-              .setParameter("todoStatus", todoStatus)
-              .getSingleResult();
-      newOrder = OrderGenerator.generate(maxOrder, null);
-    } else {
-      Todo destinationTodo = em.find(Todo.class, destinationId);
-      String destinationOrder = destinationTodo.getOrder();
-
-      String prevOrder =
-          em.createQuery(
-                  "SELECT MAX(t.order) FROM Todo t WHERE t.group = :group AND t.order < :destinationOrder AND t.todoStatus = :todoStatus",
-                  String.class)
-              .setParameter("group", targetTodo.getGroup())
-              .setParameter("destinationOrder", destinationOrder)
-              .setParameter("todoStatus", todoStatus)
-              .getSingleResult();
-
-      newOrder = OrderGenerator.generate(prevOrder, destinationOrder);
-    }
-
-    targetTodo.setOrder(newOrder);
-    return TodoDTO.of(targetTodo);
+    return TodoDTO.of(todo);
   }
 
   @Transactional

@@ -141,9 +141,7 @@ public class TodoController {
 
     todoService.assertTodoAuthority(userId, groupId, todoId, GroupRole.MEMBER);
 
-    TodoDTO todo =
-        todoService.moveTodo(
-            todoId, moveTodoRequestDTO.destinationId(), moveTodoRequestDTO.todoStatus());
+    TodoDTO todo = todoService.moveTodo(MoveTodoDTO.of(todoId, moveTodoRequestDTO));
 
     return ResponseEntity.ok().body(TodoResponseDTO.of(todo));
   }

@@ -1052,52 +1052,8 @@ public class TodoControllerUnitTest {
   @DisplayName("투두 순서 및 상태 변경 테스트")
   class MoveTodo {
     @Test
-    @DisplayName("성공 - 상태만 변경 (맨 뒤로 이동)")
-    void HappyPath_1() throws Exception {
-      // Given
-      User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
-      Group group = entityFactory.insertGroup("group name", "group description");
-      entityFactory.insertUserGroup(user.getId(), group.getId(), GroupRole.MEMBER);
-
-      Todo todo1 =
-          entityFactory.insertTodo(
-              user.getId(),
-              user.getId(),
-              group.getId(),
-              "todo1",
-              "desc1",
-              TodoStatus.TO_DO,
-              "a",
-              false);
-
-      entityFactory.insertTodo(
-          user.getId(),
-          user.getId(),
-          group.getId(),
-          "todo2",
-          "desc2",
-          TodoStatus.TO_DO,
-          "b",
-          false);
-
-      AuthUserDTO authUser = AuthUserDTO.of(user);
-      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, null);
-
-      // When
-      ResponseEntity<TodoResponseDTO> responseEntity =
-          todoController.moveTodo(authUser, group.getId(), todo1.getId(), moveTodoRequestDTO);
-
-      // Then
-      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
-      TodoResponseDTO todoResponseDTO = responseEntity.getBody();
-      Assertions.assertEquals(todo1.getId(), todoResponseDTO.id());
-      Assertions.assertEquals(TodoStatus.IN_PROGRESS, todoResponseDTO.status());
-      Assertions.assertNotNull(todoResponseDTO.order());
-    }
-
-    @Test
     @DisplayName("성공 - 상태 및 순서 변경")
-    void HappyPath_2() throws Exception {
+    void HappyPath_1() throws Exception {
       // Given
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group name", "group description");
@@ -1125,8 +1081,7 @@ public class TodoControllerUnitTest {
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
-      MoveTodoRequestDTO moveTodoRequestDTO =
-          new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, todo2.getId());
+      MoveTodoRequestDTO moveTodoRequestDTO = new MoveTodoRequestDTO(TodoStatus.IN_PROGRESS, "aa");
 
       // When
       ResponseEntity<TodoResponseDTO> responseEntity =
@@ -1135,14 +1090,15 @@ public class TodoControllerUnitTest {
       // Then
       Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
       TodoResponseDTO todoResponseDTO = responseEntity.getBody();
+      Assertions.assertNotNull(todoResponseDTO);
       Assertions.assertEquals(todo1.getId(), todoResponseDTO.id());
       Assertions.assertEquals(TodoStatus.IN_PROGRESS, todoResponseDTO.status());
-      Assertions.assertEquals(true, todoResponseDTO.order().compareTo(todo2.getOrder()) < 0);
+      Assertions.assertEquals("aa", todoResponseDTO.order());
     }
 
     @Test
     @DisplayName("성공 - 순서를 여러회 변경 후 정렬 순서")
-    void HappyPath_3() throws Exception {
+    void HappyPath_2() throws Exception {
       // Given
       User user = entityFactory.insertUser("username123", "hashedPassword", "nickname");
       Group group = entityFactory.insertGroup("group name", "group description");
@@ -1181,18 +1137,11 @@ public class TodoControllerUnitTest {
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
 
-      // todo2를 todo1 앞으로 -> todo2 todo1 todo3 순
       todoController.moveTodo(
-          authUser,
-          group.getId(),
-          todo2.getId(),
-          new MoveTodoRequestDTO(TodoStatus.TO_DO, todo1.getId()));
-      // todo3을 todo1 앞으로 -> todo2 todo3 todo1순
+          authUser, group.getId(), todo2.getId(), new MoveTodoRequestDTO(TodoStatus.TO_DO, "dd"));
+
       todoController.moveTodo(
-          authUser,
-          group.getId(),
-          todo3.getId(),
-          new MoveTodoRequestDTO(TodoStatus.TO_DO, todo1.getId()));
+          authUser, group.getId(), todo3.getId(), new MoveTodoRequestDTO(TodoStatus.TO_DO, "b"));
 
       // When
       ResponseEntity<List<TodoResponseDTO>> responseEntity =
@@ -1200,14 +1149,17 @@ public class TodoControllerUnitTest {
 
       // Then
       Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+
+      List<TodoResponseDTO> body = responseEntity.getBody();
+      Assertions.assertNotNull(body);
       List<Long> actualIds =
-          responseEntity.getBody().stream()
+          body.stream()
               .sorted(Comparator.comparing(TodoResponseDTO::order))
               .map(TodoResponseDTO::id)
               .collect(Collectors.toList());
 
       Assertions.assertIterableEquals(
-          List.of(todo2.getId(), todo3.getId(), todo1.getId()), actualIds);
+          List.of(todo1.getId(), todo3.getId(), todo2.getId()), actualIds);
     }
 
     @Test

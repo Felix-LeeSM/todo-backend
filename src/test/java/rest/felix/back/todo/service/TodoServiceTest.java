@@ -19,12 +19,10 @@ import rest.felix.back.common.util.NullableField;
 import rest.felix.back.common.util.TestHelper;
 import rest.felix.back.group.entity.Group;
 import rest.felix.back.group.entity.enumerated.GroupRole;
-import rest.felix.back.todo.dto.CreateTodoDTO;
-import rest.felix.back.todo.dto.TodoDTO;
-import rest.felix.back.todo.dto.UpdateTodoDTO;
-import rest.felix.back.todo.dto.UpdateTodoMetadataDTO;
+import rest.felix.back.todo.dto.*;
 import rest.felix.back.todo.entity.Todo;
 import rest.felix.back.todo.entity.enumerated.TodoStatus;
+import rest.felix.back.todo.exception.DuplicateTodoOrderException;
 import rest.felix.back.todo.exception.TodoNotFoundException;
 import rest.felix.back.todo.repository.TodoRepository;
 import rest.felix.back.user.entity.User;
@@ -1234,43 +1232,6 @@ class TodoServiceTest {
   @Nested
   @DisplayName("Todo 위치 및 상태 이동 (moveTodo)")
   class MoveTodo {
-
-    @Test
-    @DisplayName("성공: Todo를 다른 상태(column)의 가장 끝으로 이동시킨다")
-    void success_whenMovingTodoToEndOfAnotherStatus() {
-      // Given
-      var trio = entityFactory.insertUserGroup();
-      User user = trio.first();
-      Group group = trio.second();
-      Todo targetTodo =
-          entityFactory.insertTodo(
-              user.getId(),
-              user.getId(),
-              group.getId(),
-              "target",
-              "d",
-              TodoStatus.TO_DO,
-              "a",
-              false);
-      entityFactory.insertTodo(
-          user.getId(),
-          user.getId(),
-          group.getId(),
-          "other",
-          "d",
-          TodoStatus.IN_PROGRESS,
-          "b",
-          false);
-
-      // When
-      todoService.moveTodo(targetTodo.getId(), null, TodoStatus.IN_PROGRESS);
-
-      // Then
-      TodoDTO movedTodo = todoRepository.findById(targetTodo.getId()).orElseThrow();
-      Assertions.assertEquals(TodoStatus.IN_PROGRESS, movedTodo.status());
-      Assertions.assertEquals(true, movedTodo.order().compareTo("b") > 0);
-    }
-
     @Test
     @DisplayName("성공: Todo를 다른 상태(column)의 특정 위치로 이동시킨다")
     void success_whenMovingTodoToSpecificPositionInAnotherStatus() {
@@ -1299,13 +1260,15 @@ class TodoServiceTest {
               "c",
               false);
 
+      MoveTodoDTO moveTodoDTO = new MoveTodoDTO(targetTodo.getId(), TodoStatus.IN_PROGRESS, "b");
+
       // When
-      todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.IN_PROGRESS);
+      todoService.moveTodo(moveTodoDTO);
 
       // Then
       TodoDTO movedTodo = todoRepository.findById(targetTodo.getId()).orElseThrow();
       Assertions.assertEquals(TodoStatus.IN_PROGRESS, movedTodo.status());
-      Assertions.assertEquals(true, movedTodo.order().compareTo("c") < 0);
+      Assertions.assertEquals("b", movedTodo.order());
     }
 
     @Test
@@ -1325,17 +1288,16 @@ class TodoServiceTest {
               TodoStatus.TO_DO,
               "c",
               false);
-      Todo destTodo =
-          entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "dest", "d", TodoStatus.TO_DO, "a", false);
+
+      MoveTodoDTO moveTodoDTO = new MoveTodoDTO(targetTodo.getId(), TodoStatus.TO_DO, "d");
 
       // When
-      todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.TO_DO);
+      todoService.moveTodo(moveTodoDTO);
 
       // Then
       TodoDTO movedTodo = todoRepository.findById(targetTodo.getId()).orElseThrow();
       Assertions.assertEquals(TodoStatus.TO_DO, movedTodo.status());
-      Assertions.assertEquals(true, movedTodo.order().compareTo("a") < 0);
+      Assertions.assertEquals("d", movedTodo.order());
     }
 
     @Test
@@ -1354,148 +1316,47 @@ class TodoServiceTest {
               false);
       th.delete(todo);
 
+      MoveTodoDTO moveTodoDTO = new MoveTodoDTO(todo.getId(), TodoStatus.IN_PROGRESS, "b");
+
       // When
-      Runnable lambda = () -> todoService.moveTodo(todo.getId(), null, TodoStatus.IN_PROGRESS);
+      Runnable lambda = () -> todoService.moveTodo(moveTodoDTO);
 
       // Then
       Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
     }
 
     @Test
-    @DisplayName("실패: 목표 위치(destination) Todo를 찾을 수 없으면 예외가 발생한다")
-    void fail_whenDestinationTodoNotFound() {
+    @DisplayName("실패: 이동 대상 Todo를 찾을 수 없으면 예외가 발생한다")
+    void fail_whenDuplicatedOrderAndStatus() {
       // Given
       var trio = entityFactory.insertUserGroup();
-      User user = trio.first();
-      Group group = trio.second();
-      Todo targetTodo =
-          entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
-      Todo destTodo =
-          entityFactory.insertTodo(
-              user.getId(),
-              user.getId(),
-              group.getId(),
-              "t2",
-              "d2",
-              TodoStatus.IN_PROGRESS,
-              "b",
-              false);
-      th.delete(destTodo);
-
-      // When
-      Runnable lambda =
-          () -> todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.IN_PROGRESS);
-
-      // Then
-      Assertions.assertThrows(
-          rest.felix.back.todo.exception.DestinationNotFoundException.class, lambda::run);
-    }
-
-    @Test
-    @DisplayName("실패: 대상과 목표 위치의 그룹이 다르면 예외가 발생한다")
-    void fail_whenTargetAndDestinationInDifferentGroups() {
-      // Given
-      var trio1 = entityFactory.insertUserGroup();
-      User user1 = trio1.first();
-      Group group1 = trio1.second();
-      var trio2 = entityFactory.insertUserGroup();
-      User user2 = trio2.first();
-      Group group2 = trio2.second();
-
-      Todo targetTodo =
-          entityFactory.insertTodo(
-              user1.getId(),
-              user1.getId(),
-              group1.getId(),
-              "t1",
-              "d1",
-              TodoStatus.TO_DO,
-              "a",
-              false);
-      Todo destTodo =
-          entityFactory.insertTodo(
-              user2.getId(),
-              user2.getId(),
-              group2.getId(),
-              "t2",
-              "d2",
-              TodoStatus.TO_DO,
-              "b",
-              false);
-
-      // When
-      Runnable lambda =
-          () -> todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.TO_DO);
-
-      // Then
-      Assertions.assertThrows(
-          rest.felix.back.todo.exception.InvalidDestinationException.class, lambda::run);
-    }
-
-    @Test
-    @DisplayName("실패: 목표 위치의 상태가 이동하려는 상태와 다르면 예외가 발생한다")
-    void fail_whenDestinationStatusIsIncorrect() {
-      // Given
-      var trio = entityFactory.insertUserGroup();
-      User user = trio.first();
-      Group group = trio.second();
-      Todo targetTodo =
-          entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t1", "d1", TodoStatus.TO_DO, "a", false);
-      Todo destTodo =
-          entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t2", "d2", TodoStatus.DONE, "b", false);
-
-      // When
-      Runnable lambda =
-          () -> todoService.moveTodo(targetTodo.getId(), destTodo.getId(), TodoStatus.IN_PROGRESS);
-
-      // Then
-      Assertions.assertThrows(
-          rest.felix.back.todo.exception.InvalidDestinationException.class, lambda::run);
-    }
-
-    @Test
-    @DisplayName("실패: 대상과 목표 위치가 동일하면 예외가 발생한다")
-    void fail_whenTargetAndDestinationAreSame() {
-      // Given
-      var trio = entityFactory.insertUserGroup();
-      User user = trio.first();
-      Group group = trio.second();
-      Todo todo =
-          entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
-
-      // When
-      Runnable lambda = () -> todoService.moveTodo(todo.getId(), todo.getId(), TodoStatus.TO_DO);
-
-      // Then
-      Assertions.assertThrows(
-          rest.felix.back.todo.exception.InvalidDestinationException.class, lambda::run);
-    }
-
-    @Test
-    @DisplayName("성공: 같은 상태 내에서 Todo를 가장 끝으로 이동시킨다")
-    void success_whenMovingTodoToEndOfSameStatus() {
-      // Given
-      var trio = entityFactory.insertUserGroup();
-      User user = trio.first();
-      Group group = trio.second();
       Todo todo1 =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t1", "d1", TodoStatus.TO_DO, "a", false);
+              trio.first().getId(),
+              trio.first().getId(),
+              trio.second().getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              false);
+
       Todo todo2 =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t2", "d2", TodoStatus.TO_DO, "c", false);
+              trio.first().getId(),
+              trio.first().getId(),
+              trio.second().getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              false);
+
+      MoveTodoDTO moveTodoDTO = new MoveTodoDTO(todo2.getId(), TodoStatus.TO_DO, todo1.getOrder());
 
       // When
-      todoService.moveTodo(todo1.getId(), null, TodoStatus.TO_DO);
+      Runnable lambda = () -> todoService.moveTodo(moveTodoDTO);
 
       // Then
-      TodoDTO movedTodo = todoRepository.findById(todo1.getId()).orElseThrow();
-      Assertions.assertEquals(TodoStatus.TO_DO, movedTodo.status());
-      Assertions.assertEquals(true, movedTodo.order().compareTo(todo2.getOrder()) > 0);
+      Assertions.assertThrows(DuplicateTodoOrderException.class, lambda::run);
     }
 
     @Test
@@ -1510,8 +1371,10 @@ class TodoServiceTest {
               user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
       todoService.deleteTodo(todo.getId());
 
+      MoveTodoDTO moveTodoDTO = new MoveTodoDTO(todo.getId(), TodoStatus.TO_DO, "asdf");
+
       // When
-      Runnable lambda = () -> todoService.moveTodo(todo.getId(), null, TodoStatus.IN_PROGRESS);
+      Runnable lambda = () -> todoService.moveTodo(moveTodoDTO);
 
       // Then
       Assertions.assertThrows(TodoNotFoundException.class, lambda::run);
