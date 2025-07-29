@@ -122,6 +122,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "a",
+          null,
           false);
       entityFactory.insertTodo(
           otherUser1.getId(),
@@ -131,6 +132,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.DONE,
           "b",
+          null,
           false);
 
       entityFactory.insertTodo(
@@ -141,6 +143,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.DONE,
           "a",
+          null,
           false);
       entityFactory.insertTodo(
           otherUser1.getId(),
@@ -150,6 +153,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.DONE,
           "b",
+          null,
           false);
       entityFactory.insertTodo(
           otherUser2.getId(),
@@ -159,6 +163,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "c",
+          null,
           false);
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(mainUser);
@@ -224,6 +229,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "a",
+          null,
           false);
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(mainUser);
@@ -302,6 +308,7 @@ public class GroupControllerUnitTest {
               "Desc",
               TodoStatus.IN_PROGRESS,
               "a",
+              null,
               false);
       Todo todo2 =
           entityFactory.insertTodo(
@@ -312,6 +319,7 @@ public class GroupControllerUnitTest {
               "Desc",
               TodoStatus.DONE,
               "b",
+              null,
               false);
       entityFactory.insertTodo(
           memberUser2.getId(),
@@ -321,6 +329,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "c",
+          null,
           true);
       entityFactory.insertTodo(
           ownerUser.getId(),
@@ -329,6 +338,7 @@ public class GroupControllerUnitTest {
           "Owner Todo 2",
           "Desc",
           TodoStatus.DONE,
+          null,
           LocalDate.of(2023, 12, 10),
           false);
 
@@ -401,6 +411,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "a",
+          null,
           false);
       entityFactory.insertTodo(
           memberUser1.getId(),
@@ -410,6 +421,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.DONE,
           "b",
+          null,
           false);
       entityFactory.insertTodo(
           memberUser2.getId(),
@@ -419,6 +431,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "c",
+          null,
           false);
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(memberUser1);
@@ -470,6 +483,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.DONE,
           "a",
+          null,
           false);
       entityFactory.insertTodo(
           memberUser1.getId(),
@@ -479,6 +493,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.DONE,
           "b",
+          null,
           false);
       entityFactory.insertTodo(
           managerUser.getId(),
@@ -488,6 +503,7 @@ public class GroupControllerUnitTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "c",
+          null,
           false);
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(managerUser);
@@ -596,6 +612,7 @@ public class GroupControllerUnitTest {
           "todo description",
           TodoStatus.IN_PROGRESS,
           "todo order",
+          null,
           false);
 
       AuthUserDTO authUserDTO = AuthUserDTO.of(user);
@@ -642,6 +659,7 @@ public class GroupControllerUnitTest {
                     "todo description",
                     TodoStatus.IN_PROGRESS,
                     String.format("todo order %d", idx),
+                    null,
                     false);
 
                 AuthUserDTO authUserDTO = AuthUserDTO.of(user);

@@ -100,6 +100,7 @@ public class TodoControllerWebTest {
                 String.format("todo %d description", idx),
                 todoStatus,
                 order,
+                null,
                 false);
           });
 
@@ -713,6 +714,7 @@ public class TodoControllerWebTest {
               "todo description",
               TodoStatus.IN_PROGRESS,
               "todo order",
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -756,6 +758,7 @@ public class TodoControllerWebTest {
               "todo description",
               TodoStatus.IN_PROGRESS,
               "todo order",
+              null,
               false);
 
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
@@ -802,6 +805,7 @@ public class TodoControllerWebTest {
               "todo description",
               TodoStatus.IN_PROGRESS,
               "todo order",
+              null,
               false);
 
       th.delete(todo);
@@ -847,6 +851,7 @@ public class TodoControllerWebTest {
               "todo description",
               TodoStatus.IN_PROGRESS,
               "todo order",
+              null,
               false);
 
       th.delete(userGroup);
@@ -890,6 +895,7 @@ public class TodoControllerWebTest {
               "todo description",
               TodoStatus.IN_PROGRESS,
               "todo order",
+              null,
               false);
 
       th.delete(userGroup);
@@ -937,6 +943,7 @@ public class TodoControllerWebTest {
               "todo description",
               TodoStatus.IN_PROGRESS,
               "todo order",
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -978,6 +985,7 @@ public class TodoControllerWebTest {
               "todo description",
               TodoStatus.IN_PROGRESS,
               "todo order",
+              null,
               false);
 
       th.delete(todo);
@@ -1022,6 +1030,7 @@ public class TodoControllerWebTest {
               "todo description",
               TodoStatus.IN_PROGRESS,
               "todo order",
+              null,
               false);
 
       th.delete(todo);
@@ -1068,6 +1077,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.IN_PROGRESS,
+              null,
+              null,
               false);
 
       UpdateTodoRequestDTO updateTodoRequestDTO =
@@ -1135,6 +1146,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.IN_PROGRESS,
+              null,
+              null,
               false);
 
       th.delete(todo);
@@ -1185,6 +1198,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.IN_PROGRESS,
+              null,
+              null,
               false);
 
       th.delete(userGroup);
@@ -1232,6 +1247,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.IN_PROGRESS,
+              null,
+              null,
               false);
 
       UpdateTodoRequestDTO updateTodoRequestDTO =
@@ -1280,6 +1297,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.IN_PROGRESS,
+              null,
+              null,
               false);
 
       UpdateTodoRequestDTO updateTodoRequestDTO =
@@ -1326,6 +1345,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.IN_PROGRESS,
+              null,
+              null,
               false);
 
       th.delete(todo);
@@ -1374,6 +1395,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.IN_PROGRESS,
+              null,
+              null,
               false);
 
       th.delete(todo);
@@ -1423,6 +1446,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.IN_PROGRESS,
+              null,
+              null,
               false);
 
       UpdateTodoRequestDTO updateTodoRequestDTO =
@@ -1489,6 +1514,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -1538,6 +1565,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               current != null && current);
 
       Cookie cookie = userCookie(user);
@@ -1583,6 +1612,7 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
               current,
               false);
 
@@ -1634,6 +1664,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -1682,6 +1714,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -1726,6 +1760,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -1768,6 +1804,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -1806,6 +1844,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       Map<String, Object> requestBody = new HashMap<>();
@@ -1845,6 +1885,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -1886,6 +1928,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
       th.delete(userGroup);
 
@@ -1925,6 +1969,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -1963,6 +2009,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       long deletedGroupId = group.getId();
@@ -2006,6 +2054,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
       th.delete(todo);
 
@@ -2047,6 +2097,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -2090,6 +2142,7 @@ public class TodoControllerWebTest {
               "desc1",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       entityFactory.insertTodo(
           user.getId(),
@@ -2099,6 +2152,7 @@ public class TodoControllerWebTest {
           "desc2",
           TodoStatus.IN_PROGRESS,
           "b",
+          null,
           false);
 
       String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo1.getId());
@@ -2139,6 +2193,7 @@ public class TodoControllerWebTest {
               "desc1",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       Todo todo2 =
           entityFactory.insertTodo(
@@ -2149,6 +2204,7 @@ public class TodoControllerWebTest {
               "desc2",
               TodoStatus.TO_DO,
               "b",
+              null,
               false);
       Todo todo3 =
           entityFactory.insertTodo(
@@ -2159,6 +2215,7 @@ public class TodoControllerWebTest {
               "desc3",
               TodoStatus.TO_DO,
               "c",
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -2219,6 +2276,7 @@ public class TodoControllerWebTest {
               "desc1",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       entityFactory.insertTodo(
@@ -2229,6 +2287,7 @@ public class TodoControllerWebTest {
           "desc2",
           TodoStatus.TO_DO,
           "b",
+          null,
           false);
 
       String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo1.getId());
@@ -2265,6 +2324,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -2306,6 +2366,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo.getId());
@@ -2344,6 +2405,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       th.delete(group2);
@@ -2382,6 +2444,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo.getId());
@@ -2419,6 +2482,8 @@ public class TodoControllerWebTest {
               "todo title",
               "todo description",
               TodoStatus.ON_HOLD,
+              null,
+              null,
               false);
       th.delete(todo);
 
@@ -2459,6 +2524,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       String path =
@@ -2497,6 +2563,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.IN_PROGRESS,
               "a",
+              null,
               false);
 
       Todo todo2 =
@@ -2508,6 +2575,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "b",
+              null,
               false);
 
       String path = String.format("/api/v1/group/%d/todo/%d/move", group.getId(), todo2.getId());
@@ -2555,6 +2623,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
@@ -2583,6 +2652,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
 
@@ -2627,6 +2697,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -2660,6 +2731,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       Group wrongGroup = entityFactory.insertGroup("group name", "group description");
@@ -2692,6 +2764,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
@@ -2721,6 +2794,8 @@ public class TodoControllerWebTest {
               "worngTodo title",
               "todo description",
               TodoStatus.IN_PROGRESS,
+              null,
+              null,
               false);
       th.delete(worngTodo);
 
@@ -2754,6 +2829,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       String path =
@@ -2790,6 +2866,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
 
@@ -2819,6 +2896,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
@@ -2847,6 +2925,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
 
@@ -2877,6 +2956,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       Cookie cookie = userCookie(user);
@@ -2911,6 +2991,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       long wrongGroupId = group.getId() + 1;
@@ -2940,6 +3021,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       String path = String.format("/api/v1/group/%d/todo/%d/star", group.getId(), todo.getId());
@@ -2970,6 +3052,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       th.delete(wrongTodo);
@@ -3003,6 +3086,7 @@ public class TodoControllerWebTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       String path =

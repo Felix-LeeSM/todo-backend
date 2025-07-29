@@ -78,6 +78,7 @@ public class TodoControllerUnitTest {
               String.format("todo %d description", idx),
               todoStatus,
               order,
+              null,
               false);
         });
 
@@ -539,6 +540,7 @@ public class TodoControllerUnitTest {
             "todo description",
             TodoStatus.IN_PROGRESS,
             "todo order",
+            null,
             false);
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -575,6 +577,7 @@ public class TodoControllerUnitTest {
             "todo description",
             TodoStatus.IN_PROGRESS,
             "todo order",
+            null,
             false);
 
     th.delete(todo);
@@ -612,6 +615,7 @@ public class TodoControllerUnitTest {
             "todo description",
             TodoStatus.IN_PROGRESS,
             "todo order",
+            null,
             false);
 
     th.delete(userGroup);
@@ -646,6 +650,7 @@ public class TodoControllerUnitTest {
             "todo description",
             TodoStatus.IN_PROGRESS,
             "todo order",
+            null,
             false);
 
     AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -680,6 +685,7 @@ public class TodoControllerUnitTest {
             "todo description",
             TodoStatus.IN_PROGRESS,
             "todo order",
+            null,
             false);
 
     AuthUserDTO authUser = AuthUserDTO.of(author);
@@ -713,6 +719,7 @@ public class TodoControllerUnitTest {
             "todo description",
             TodoStatus.IN_PROGRESS,
             "todo order",
+            null,
             false);
 
     th.delete(todo);
@@ -749,6 +756,7 @@ public class TodoControllerUnitTest {
             "todo description",
             TodoStatus.IN_PROGRESS,
             "todo order",
+            null,
             false);
 
     th.delete(todo);
@@ -783,6 +791,7 @@ public class TodoControllerUnitTest {
             "todo description",
             TodoStatus.IN_PROGRESS,
             "todo order",
+            null,
             false);
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
@@ -835,6 +844,7 @@ public class TodoControllerUnitTest {
             "todo description",
             TodoStatus.IN_PROGRESS,
             "todo order",
+            null,
             false);
 
     th.delete(todo);
@@ -877,6 +887,7 @@ public class TodoControllerUnitTest {
             "todo description",
             TodoStatus.IN_PROGRESS,
             "todo order",
+            null,
             false);
 
     th.delete(userGroup);
@@ -916,6 +927,7 @@ public class TodoControllerUnitTest {
             "todo description",
             TodoStatus.IN_PROGRESS,
             "todo order",
+            null,
             false);
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
@@ -955,6 +967,7 @@ public class TodoControllerUnitTest {
             "todo description",
             TodoStatus.IN_PROGRESS,
             "todo order",
+            null,
             false);
 
     UpdateTodoRequestDTO updateTodoRequestDTO =
@@ -990,6 +1003,8 @@ public class TodoControllerUnitTest {
             "todo title",
             "todo description",
             TodoStatus.IN_PROGRESS,
+            null,
+            null,
             false);
 
     th.delete(todo);
@@ -1028,6 +1043,8 @@ public class TodoControllerUnitTest {
             "todo title",
             "todo description",
             TodoStatus.IN_PROGRESS,
+            null,
+            null,
             false);
 
     th.delete(todo);
@@ -1068,6 +1085,7 @@ public class TodoControllerUnitTest {
               "desc1",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       Todo todo2 =
           entityFactory.insertTodo(
@@ -1078,6 +1096,7 @@ public class TodoControllerUnitTest {
               "desc2",
               TodoStatus.IN_PROGRESS,
               "b",
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1113,6 +1132,7 @@ public class TodoControllerUnitTest {
               "desc1",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       Todo todo2 =
           entityFactory.insertTodo(
@@ -1123,6 +1143,7 @@ public class TodoControllerUnitTest {
               "desc2",
               TodoStatus.TO_DO,
               "b",
+              null,
               false);
       Todo todo3 =
           entityFactory.insertTodo(
@@ -1133,6 +1154,7 @@ public class TodoControllerUnitTest {
               "desc3",
               TodoStatus.TO_DO,
               "c",
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1178,6 +1200,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1208,6 +1231,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       th.delete(userGroup);
@@ -1240,6 +1264,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1269,6 +1294,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       th.delete(todo);
 
@@ -1301,6 +1327,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1355,6 +1382,8 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1401,6 +1430,7 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
               LocalDate.now(),
               current != null && current);
 
@@ -1446,6 +1476,7 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
               current,
               true);
 
@@ -1492,6 +1523,8 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1542,6 +1575,8 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1583,6 +1618,8 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1624,6 +1661,8 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1673,6 +1712,8 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1710,6 +1751,8 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
       th.delete(userGroup);
 
@@ -1745,6 +1788,8 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1779,6 +1824,8 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       long deletedGroupId = group.getId();
@@ -1819,6 +1866,8 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       th.delete(todo);
@@ -1857,6 +1906,8 @@ public class TodoControllerUnitTest {
               "todo title",
               "todo description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1897,6 +1948,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -1925,6 +1977,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
 
@@ -1955,6 +2008,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       th.delete(userGroup);
@@ -1985,6 +2039,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -2012,6 +2067,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       th.delete(todo);
@@ -2043,6 +2099,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -2077,6 +2134,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
 
@@ -2106,6 +2164,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -2135,6 +2194,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       long wrongGroupId = group.getId() + 1;
@@ -2166,6 +2226,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       AuthUserDTO authUser = AuthUserDTO.of(user);
@@ -2193,6 +2254,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       th.delete(todo);
@@ -2224,6 +2286,7 @@ public class TodoControllerUnitTest {
               "desc",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       entityFactory.insertUserTodoStar(user.getId(), todoInGroup2.getId());

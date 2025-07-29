@@ -228,6 +228,7 @@ class GroupServiceTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "a",
+          null,
           false);
       entityFactory.insertTodo(
           otherUser1.getId(),
@@ -237,6 +238,7 @@ class GroupServiceTest {
           "Desc",
           TodoStatus.DONE,
           "b",
+          null,
           false);
 
       entityFactory.insertTodo(
@@ -247,6 +249,7 @@ class GroupServiceTest {
           "Desc",
           TodoStatus.DONE,
           "a",
+          null,
           false);
       entityFactory.insertTodo(
           otherUser1.getId(),
@@ -256,6 +259,7 @@ class GroupServiceTest {
           "Desc",
           TodoStatus.DONE,
           "b",
+          null,
           false);
       entityFactory.insertTodo(
           otherUser2.getId(),
@@ -265,6 +269,7 @@ class GroupServiceTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "c",
+          null,
           false);
 
       // When
@@ -324,6 +329,7 @@ class GroupServiceTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "a",
+          null,
           false);
 
       // When
@@ -714,6 +720,7 @@ class GroupServiceTest {
           "Desc 1",
           TodoStatus.IN_PROGRESS,
           "a",
+          null,
           false);
       entityFactory.insertTodo(
           member1.getId(),
@@ -723,6 +730,7 @@ class GroupServiceTest {
           "Desc 2",
           TodoStatus.DONE,
           "b",
+          null,
           false);
 
       String token = "testToken";

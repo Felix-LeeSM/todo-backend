@@ -90,68 +90,14 @@ public class EntityFactory {
       String description,
       TodoStatus todoStatus,
       String order,
-      boolean isImportant) {
-    User author = entityManager.getReference(User.class, authorId);
-    User assignee = entityManager.getReference(User.class, assigneeId);
-    Group group = entityManager.getReference(Group.class, groupId);
-
-    Todo todo = new Todo();
-
-    todo.setAuthor(author);
-    todo.setAssignee(assignee);
-    todo.setGroup(group);
-    todo.setTitle(title);
-    todo.setDescription(description);
-    todo.setTodoStatus(todoStatus);
-    todo.setOrder(order);
-    todo.setImportant(isImportant);
-
-    entityManager.persist(todo);
-
-    return todo;
-  }
-
-  public Todo insertTodo(
-      Long authorId,
-      Long assigneeId,
-      Long groupId,
-      String title,
-      String description,
-      TodoStatus todoStatus,
-      boolean isImportant) {
-    User author = entityManager.getReference(User.class, authorId);
-    User assignee = assigneeId != null ? entityManager.getReference(User.class, assigneeId) : null;
-    Group group = entityManager.getReference(Group.class, groupId);
-
-    Todo todo = new Todo();
-
-    todo.setAuthor(author);
-    todo.setAssignee(assignee);
-    todo.setGroup(group);
-    todo.setTitle(title);
-    todo.setDescription(description);
-    todo.setTodoStatus(todoStatus);
-    todo.setOrder(UUID.randomUUID().toString());
-    todo.setImportant(isImportant);
-
-    entityManager.persist(todo);
-
-    return todo;
-  }
-
-  public Todo insertTodo(
-      Long authorId,
-      Long assigneeId,
-      Long groupId,
-      String title,
-      String description,
-      TodoStatus todoStatus,
       LocalDate dueDate,
       boolean isImportant) {
     User author = entityManager.getReference(User.class, authorId);
     User assignee = assigneeId != null ? entityManager.getReference(User.class, assigneeId) : null;
     Group group = entityManager.getReference(Group.class, groupId);
 
+    String orderWithDefault = order != null ? order : UUID.randomUUID().toString();
+
     Todo todo = new Todo();
 
     todo.setAuthor(author);
@@ -160,9 +106,9 @@ public class EntityFactory {
     todo.setTitle(title);
     todo.setDescription(description);
     todo.setTodoStatus(todoStatus);
-    todo.setOrder(UUID.randomUUID().toString());
-    todo.setImportant(isImportant);
+    todo.setOrder(orderWithDefault);
     todo.setDueDate(dueDate);
+    todo.setImportant(isImportant);
 
     entityManager.persist(todo);
 

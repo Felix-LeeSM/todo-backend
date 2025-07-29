@@ -62,6 +62,7 @@ class TodoServiceTest {
                     String.format("todo %d description", idx),
                     TodoStatus.TO_DO,
                     String.format("todo order %d", idx),
+                    null,
                     false);
               });
 
@@ -338,6 +339,7 @@ class TodoServiceTest {
               "d",
               TodoStatus.IN_PROGRESS,
               "o",
+              null,
               false);
 
       // When
@@ -366,6 +368,8 @@ class TodoServiceTest {
               "t",
               "d",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
       th.delete(todo);
 
@@ -392,6 +396,7 @@ class TodoServiceTest {
               "d",
               TodoStatus.IN_PROGRESS,
               "o",
+              null,
               false);
 
       // When
@@ -418,6 +423,8 @@ class TodoServiceTest {
               "t",
               "d",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       // When
@@ -440,6 +447,8 @@ class TodoServiceTest {
               "t",
               "d",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
       th.delete(todo);
 
@@ -458,7 +467,15 @@ class TodoServiceTest {
       User user = trio.first();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), trio.second().getId(), "t", "d", TodoStatus.TO_DO, false);
+              user.getId(),
+              user.getId(),
+              trio.second().getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              null,
+              null,
+              false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
       Assertions.assertEquals(true, todoRepository.starExistsById(user.getId(), todo.getId()));
 
@@ -487,6 +504,8 @@ class TodoServiceTest {
               "t",
               "d",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
       UpdateTodoDTO updateTodoDTO =
           new UpdateTodoDTO(todo.getId(), "todo updated title", "todo updated description");
@@ -517,6 +536,8 @@ class TodoServiceTest {
               "t",
               "d",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
       th.delete(todo);
       UpdateTodoDTO updateTodoDTO =
@@ -542,6 +563,8 @@ class TodoServiceTest {
               "original title",
               "original description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
       UpdateTodoDTO updateTodoDTO = new UpdateTodoDTO(todo.getId(), "updated title", null);
 
@@ -571,6 +594,8 @@ class TodoServiceTest {
               "original title",
               "original description",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
       UpdateTodoDTO updateTodoDTO = new UpdateTodoDTO(todo.getId(), null, "updated description");
 
@@ -604,7 +629,15 @@ class TodoServiceTest {
         Group group = trio.second();
         Todo todo =
             entityFactory.insertTodo(
-                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                user.getId(),
+                user.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
 
         // When
         Runnable lambda =
@@ -624,7 +657,15 @@ class TodoServiceTest {
         Group group = entityFactory.insertGroup("g", "d");
         Todo todo =
             entityFactory.insertTodo(
-                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                user.getId(),
+                user.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
 
         // When
         Runnable lambda =
@@ -646,7 +687,15 @@ class TodoServiceTest {
         Group group = trio.second();
         Todo todo =
             entityFactory.insertTodo(
-                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                user.getId(),
+                user.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
         th.delete(todo);
 
         // When
@@ -668,7 +717,15 @@ class TodoServiceTest {
         Group group = trio.second();
         Todo todo =
             entityFactory.insertTodo(
-                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                user.getId(),
+                user.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
 
         // When
         Runnable lambda =
@@ -698,7 +755,15 @@ class TodoServiceTest {
         entityFactory.insertUserGroup(admin.getId(), group.getId(), adminRole);
         Todo todo =
             entityFactory.insertTodo(
-                author.getId(), author.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                author.getId(),
+                author.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
 
         // When
         Runnable lambda =
@@ -719,7 +784,15 @@ class TodoServiceTest {
         entityFactory.insertUserGroup(member.getId(), group.getId(), GroupRole.MEMBER);
         Todo todo =
             entityFactory.insertTodo(
-                member.getId(), member.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                member.getId(),
+                member.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
 
         // When
         Runnable lambda =
@@ -746,7 +819,15 @@ class TodoServiceTest {
         entityFactory.insertUserGroup(viewer.getId(), group.getId(), viewerRole);
         Todo todo =
             entityFactory.insertTodo(
-                viewer.getId(), viewer.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                viewer.getId(),
+                viewer.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
 
         // When
         Runnable lambda =
@@ -769,7 +850,15 @@ class TodoServiceTest {
         entityFactory.insertUserGroup(member.getId(), group.getId(), GroupRole.MEMBER);
         Todo todo =
             entityFactory.insertTodo(
-                author.getId(), author.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                author.getId(),
+                author.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
 
         // When
         Runnable lambda =
@@ -793,7 +882,15 @@ class TodoServiceTest {
         Group group = entityFactory.insertGroup("g", "d");
         Todo todo =
             entityFactory.insertTodo(
-                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                user.getId(),
+                user.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
 
         // When
         Runnable lambda =
@@ -815,7 +912,15 @@ class TodoServiceTest {
         Group group = trio.second();
         Todo todo =
             entityFactory.insertTodo(
-                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                user.getId(),
+                user.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
         th.delete(todo);
 
         // When
@@ -864,7 +969,15 @@ class TodoServiceTest {
         entityFactory.insertUserGroup(user.getId(), group.getId(), userActualRole);
         Todo todo =
             entityFactory.insertTodo(
-                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                user.getId(),
+                user.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
 
         // When
         Runnable lambda =
@@ -887,7 +1000,15 @@ class TodoServiceTest {
         entityFactory.insertUserGroup(user.getId(), group.getId(), userActualRole);
         Todo todo =
             entityFactory.insertTodo(
-                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                user.getId(),
+                user.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
 
         // When
         Runnable lambda =
@@ -908,7 +1029,15 @@ class TodoServiceTest {
         Group group = entityFactory.insertGroup("g", "d");
         Todo todo =
             entityFactory.insertTodo(
-                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                user.getId(),
+                user.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
 
         // When
         Runnable lambda =
@@ -930,7 +1059,15 @@ class TodoServiceTest {
         Group group = trio.second();
         Todo todo =
             entityFactory.insertTodo(
-                user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+                user.getId(),
+                user.getId(),
+                group.getId(),
+                "t",
+                "d",
+                TodoStatus.TO_DO,
+                null,
+                null,
+                false);
         th.delete(todo);
 
         // When
@@ -976,7 +1113,15 @@ class TodoServiceTest {
       entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              null,
+              null,
+              false);
       UpdateTodoMetadataDTO requestDTO =
           new UpdateTodoMetadataDTO(
               todo.getId(),
@@ -1004,7 +1149,15 @@ class TodoServiceTest {
       Group group = trio.second();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, current);
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              null,
+              null,
+              current);
       UpdateTodoMetadataDTO requestDTO =
           new UpdateTodoMetadataDTO(
               todo.getId(),
@@ -1036,6 +1189,7 @@ class TodoServiceTest {
               "t",
               "d",
               TodoStatus.TO_DO,
+              null,
               current,
               false);
       UpdateTodoMetadataDTO requestDTO =
@@ -1063,7 +1217,15 @@ class TodoServiceTest {
       entityFactory.insertUserGroup(assignee.getId(), group.getId(), GroupRole.MEMBER);
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              null,
+              null,
+              false);
       UpdateTodoMetadataDTO requestDTO =
           new UpdateTodoMetadataDTO(
               todo.getId(),
@@ -1098,6 +1260,7 @@ class TodoServiceTest {
               "d",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       UpdateTodoMetadataDTO requestDTO =
           new UpdateTodoMetadataDTO(
@@ -1131,6 +1294,7 @@ class TodoServiceTest {
               "d",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       UpdateTodoMetadataDTO requestDTO =
           new UpdateTodoMetadataDTO(
@@ -1165,6 +1329,7 @@ class TodoServiceTest {
               "d",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
 
       UpdateTodoMetadataDTO requestDTO =
@@ -1212,7 +1377,15 @@ class TodoServiceTest {
       Group group = trio.second();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              null,
+              null,
+              false);
       UpdateTodoMetadataDTO requestDTO =
           new UpdateTodoMetadataDTO(
               todo.getId(),
@@ -1248,6 +1421,7 @@ class TodoServiceTest {
               "d",
               TodoStatus.TO_DO,
               "a",
+              null,
               false);
       Todo destTodo =
           entityFactory.insertTodo(
@@ -1258,6 +1432,7 @@ class TodoServiceTest {
               "d",
               TodoStatus.IN_PROGRESS,
               "c",
+              null,
               false);
 
       MoveTodoDTO moveTodoDTO = new MoveTodoDTO(targetTodo.getId(), TodoStatus.IN_PROGRESS, "b");
@@ -1287,6 +1462,7 @@ class TodoServiceTest {
               "d",
               TodoStatus.TO_DO,
               "c",
+              null,
               false);
 
       MoveTodoDTO moveTodoDTO = new MoveTodoDTO(targetTodo.getId(), TodoStatus.TO_DO, "d");
@@ -1313,6 +1489,8 @@ class TodoServiceTest {
               "t",
               "d",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
       th.delete(todo);
 
@@ -1338,6 +1516,8 @@ class TodoServiceTest {
               "t",
               "d",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       Todo todo2 =
@@ -1348,6 +1528,8 @@ class TodoServiceTest {
               "t",
               "d",
               TodoStatus.TO_DO,
+              null,
+              null,
               false);
 
       MoveTodoDTO moveTodoDTO = new MoveTodoDTO(todo2.getId(), TodoStatus.TO_DO, todo1.getOrder());
@@ -1368,7 +1550,15 @@ class TodoServiceTest {
       Group group = trio.second();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, "a", false);
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              "a",
+              null,
+              false);
       todoService.deleteTodo(todo.getId());
 
       MoveTodoDTO moveTodoDTO = new MoveTodoDTO(todo.getId(), TodoStatus.TO_DO, "asdf");
@@ -1394,7 +1584,15 @@ class TodoServiceTest {
       Group group = trio.second();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              null,
+              null,
+              false);
       Assertions.assertEquals(false, todoRepository.starExistsById(user.getId(), todo.getId()));
 
       // When
@@ -1413,7 +1611,15 @@ class TodoServiceTest {
       Group group = trio.second();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              null,
+              null,
+              false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
       Assertions.assertEquals(true, todoRepository.starExistsById(user.getId(), todo.getId()));
 
@@ -1432,7 +1638,15 @@ class TodoServiceTest {
       User user = trio.first();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), trio.second().getId(), "t", "d", TodoStatus.TO_DO, false);
+              user.getId(),
+              user.getId(),
+              trio.second().getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              null,
+              null,
+              false);
       th.delete(todo);
 
       // When
@@ -1451,7 +1665,15 @@ class TodoServiceTest {
       Group group = trio.second();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              null,
+              null,
+              false);
 
       todoService.deleteTodo(todo.getId());
 
@@ -1476,7 +1698,15 @@ class TodoServiceTest {
       Group group = trio.second();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              null,
+              null,
+              false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
       Assertions.assertEquals(true, todoRepository.starExistsById(user.getId(), todo.getId()));
 
@@ -1496,7 +1726,15 @@ class TodoServiceTest {
       Group group = trio.second();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), group.getId(), "t", "d", TodoStatus.TO_DO, false);
+              user.getId(),
+              user.getId(),
+              group.getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              null,
+              null,
+              false);
       Assertions.assertEquals(false, todoRepository.starExistsById(user.getId(), todo.getId()));
 
       // When
@@ -1514,7 +1752,15 @@ class TodoServiceTest {
       User user = trio.first();
       Todo todo =
           entityFactory.insertTodo(
-              user.getId(), user.getId(), trio.second().getId(), "t", "d", TodoStatus.TO_DO, false);
+              user.getId(),
+              user.getId(),
+              trio.second().getId(),
+              "t",
+              "d",
+              TodoStatus.TO_DO,
+              null,
+              null,
+              false);
       entityFactory.insertUserTodoStar(user.getId(), todo.getId());
       todoService.deleteTodo(todo.getId());
 

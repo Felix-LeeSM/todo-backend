@@ -222,6 +222,7 @@ public class GroupControllerWebTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "a",
+          null,
           false);
       entityFactory.insertTodo(
           otherUser1.getId(),
@@ -231,6 +232,7 @@ public class GroupControllerWebTest {
           "Desc",
           TodoStatus.DONE,
           "b",
+          null,
           false);
 
       entityFactory.insertTodo(
@@ -241,6 +243,7 @@ public class GroupControllerWebTest {
           "Desc",
           TodoStatus.DONE,
           "a",
+          null,
           false);
       entityFactory.insertTodo(
           otherUser1.getId(),
@@ -250,6 +253,7 @@ public class GroupControllerWebTest {
           "Desc",
           TodoStatus.DONE,
           "b",
+          null,
           false);
       entityFactory.insertTodo(
           otherUser2.getId(),
@@ -259,6 +263,7 @@ public class GroupControllerWebTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "c",
+          null,
           false);
 
       Cookie cookie = userCookie(mainUser);
@@ -308,6 +313,7 @@ public class GroupControllerWebTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "a",
+          null,
           false);
 
       Cookie cookie = userCookie(mainUser);
@@ -390,6 +396,7 @@ public class GroupControllerWebTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "a",
+          null,
           false);
       entityFactory.insertTodo(
           memberUser1.getId(),
@@ -399,6 +406,7 @@ public class GroupControllerWebTest {
           "Desc",
           TodoStatus.DONE,
           "b",
+          null,
           false);
       entityFactory.insertTodo(
           memberUser2.getId(),
@@ -408,6 +416,7 @@ public class GroupControllerWebTest {
           "Desc",
           TodoStatus.IN_PROGRESS,
           "c",
+          null,
           false);
       entityFactory.insertTodo(
           ownerUser.getId(),
@@ -417,6 +426,7 @@ public class GroupControllerWebTest {
           "Desc",
           TodoStatus.DONE,
           "d",
+          null,
           false);
 
       Cookie cookie = userCookie(ownerUser);
@@ -672,6 +682,7 @@ public class GroupControllerWebTest {
           "todo description",
           TodoStatus.IN_PROGRESS,
           "todo order",
+          null,
           false);
 
       Cookie cookie = userCookie(user);
@@ -1027,6 +1038,7 @@ public class GroupControllerWebTest {
           "Desc A",
           TodoStatus.IN_PROGRESS,
           "a",
+          null,
           false);
       entityFactory.insertTodo(
           member1.getId(),
@@ -1036,6 +1048,7 @@ public class GroupControllerWebTest {
           "Desc B",
           TodoStatus.DONE,
           "b",
+          null,
           false);
       entityFactory.insertTodo(
           member2.getId(),
@@ -1045,6 +1058,7 @@ public class GroupControllerWebTest {
           "Desc C",
           TodoStatus.IN_PROGRESS,
           "c",
+          null,
           false);
       entityFactory.insertTodo(
           member3.getId(),
@@ -1054,6 +1068,7 @@ public class GroupControllerWebTest {
           "Desc D",
           TodoStatus.DONE,
           "d",
+          null,
           false);
       entityFactory.insertTodo(
           issuer.getId(),
@@ -1063,6 +1078,7 @@ public class GroupControllerWebTest {
           "Desc E",
           TodoStatus.IN_PROGRESS,
           "e",
+          null,
           false);
 
       String token = "validToken";
