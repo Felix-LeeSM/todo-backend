@@ -10,7 +10,7 @@ public record CreateTodoDTO(
     long groupId,
     Long assigneeId) {
 
-  public static CreateTodoDTO of(CreateTodoRequestDTO dto, long authorId, long groupId) {
+  public static CreateTodoDTO of(long authorId, long groupId, CreateTodoRequestDTO dto) {
     return new CreateTodoDTO(
         dto.title(), dto.description(), dto.dueDate(), authorId, groupId, dto.assigneeId());
   }

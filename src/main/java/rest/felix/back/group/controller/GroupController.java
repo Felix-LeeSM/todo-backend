@@ -150,8 +150,6 @@ public class GroupController {
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
 
     groupService.assertGroupAuthority(userId, groupId, GroupRole.MANAGER);
-    groupInvitationService.assertInvitationCountLimitation(
-        userId, groupId, groupConfig.getLimit(), now);
 
     // 기본적으로 하루만 지속되는 토큰을 만듦
     String token = groupInvitationService.createInvitationToken();
@@ -173,15 +171,17 @@ public class GroupController {
     long userId = authUser.getUserId();
     ZonedDateTime now = ZonedDateTime.now();
 
-    GroupInvitationDTO groupInvitation = groupInvitationService.findValidInvitation(token, now);
+    GroupInvitationDTO groupInvitation = groupInvitationService.findInvitation(token);
 
-    if (groupService.findUserRole(userId, groupInvitation.groupId()).isPresent())
-      throw new AlreadyGroupMemberException();
+    boolean isMember = groupService.findUserRole(userId, groupInvitation.groupId()).isPresent();
 
     GroupInvitationInfoDTO groupInvitationInfo =
         groupService.findGroupInvitationInfo(groupInvitation);
 
-    return ResponseEntity.ok().body(GroupInvitationInfoDTOResponse.of(groupInvitationInfo));
+    boolean isExpired = now.isBefore(groupInvitationInfo.expiresAt());
+
+    return ResponseEntity.ok()
+        .body(GroupInvitationInfoDTOResponse.of(isMember, isExpired, groupInvitationInfo));
   }
 
   @PostMapping("/invitation/{token}/accept")

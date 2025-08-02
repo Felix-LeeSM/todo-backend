@@ -50,7 +50,7 @@ public class TodoController {
           .findUserRole(createTodoRequestDTO.assigneeId(), groupId)
           .orElseThrow(UserNotFoundException::new);
 
-    CreateTodoDTO createTodoDTO = CreateTodoDTO.of(createTodoRequestDTO, userId, groupId);
+    CreateTodoDTO createTodoDTO = CreateTodoDTO.of(userId, groupId, createTodoRequestDTO);
 
     TodoDTO todoDTO = todoService.createTodo(createTodoDTO);
 

@@ -51,4 +51,9 @@ public class GroupInvitationService {
 
     return groupInvitation;
   }
+
+  @Transactional(readOnly = true)
+  public GroupInvitationDTO findInvitation(String token) {
+    return groupInvitationRepository.findByToken(token).orElseThrow(NoInvitationException::new);
+  }
 }

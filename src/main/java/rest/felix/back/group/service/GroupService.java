@@ -1,6 +1,5 @@
 package rest.felix.back.group.service;
 
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -165,8 +164,6 @@ public class GroupService {
             .findFirst()
             .orElseThrow(ResourceNotFoundException::new);
 
-    ZonedDateTime activeUntil = groupInvitation.expiresAt();
-
     return new GroupInvitationInfoDTO(
         groupId,
         groupDTO.name(),
@@ -176,7 +173,7 @@ public class GroupService {
         members.size(),
         issuer,
         members,
-        activeUntil);
+        groupInvitation.expiresAt());
   }
 
   @Transactional
