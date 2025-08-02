@@ -893,6 +893,38 @@ public class GroupControllerUnitTest {
     }
 
     @Test
+    @DisplayName("성공 - 만료된 초대")
+    public void HappyPath_3() {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "expiredToken";
+      entityFactory.insertGroupInvitation(
+              issuer.getId(), group.getId(), token, ZonedDateTime.now().minusDays(1));
+
+      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
+
+      // When
+      ResponseEntity<GroupInvitationInfoDTOResponse> responseEntity =
+              groupController.getInvitationInfo(authUserDTO, token);
+
+      // Then
+      Assertions.assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+
+      GroupInvitationInfoDTOResponse response = responseEntity.getBody();
+      Assertions.assertNotNull(response);
+
+      Assertions.assertEquals(group.getName(), response.name());
+      Assertions.assertEquals(group.getDescription(), response.description());
+      Assertions.assertNotNull(response.expiresAt());
+      Assertions.assertEquals(issuer.getId(), response.issuer().id());
+      Assertions.assertEquals(true, response.isExpired());
+    }
+
+    @Test
     @DisplayName("실패 - 없는 초대")
     public void Failure_NoInvitation() {
       // Given
@@ -908,27 +940,7 @@ public class GroupControllerUnitTest {
       Assertions.assertThrows(NoInvitationException.class, lambda::run);
     }
 
-    @Test
-    @DisplayName("실패 - 만료된 초대")
-    public void Failure_ExpiredInvitation() {
-      // Given
-      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
-      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
-      Group group = entityFactory.insertGroup("group name", "group description");
-      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
 
-      String token = "expiredToken";
-      entityFactory.insertGroupInvitation(
-          issuer.getId(), group.getId(), token, ZonedDateTime.now().minusDays(1));
-
-      AuthUserDTO authUserDTO = AuthUserDTO.of(user);
-
-      // When
-      Runnable lambda = () -> groupController.getInvitationInfo(authUserDTO, token);
-
-      // Then
-      Assertions.assertThrows(ExpiredInvitationException.class, lambda::run);
-    }
   }
 
   @Nested

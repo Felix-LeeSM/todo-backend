@@ -1142,6 +1142,36 @@ public class GroupControllerWebTest {
     }
 
     @Test
+    @DisplayName("성공 - 만료된 초대")
+    public void HappyPath_3() throws Exception {
+      // Given
+      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
+      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
+      Group group = entityFactory.insertGroup("group name", "group description");
+      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
+
+      String token = "expiredToken";
+      entityFactory.insertGroupInvitation(
+              issuer.getId(), group.getId(), token, ZonedDateTime.now().minusDays(1));
+
+      Cookie cookie = userCookie(user);
+      String path = String.format("/api/v1/group/invitation/%s", token);
+
+      // When
+      ResultActions result = mvc.perform(get(path).cookie(cookie));
+
+      // Then
+      result.andExpect(status().isOk());
+
+      String responseString = result.andReturn().getResponse().getContentAsString();
+      GroupInvitationInfoDTOResponse responseDTO =
+              objectMapper.readValue(responseString, GroupInvitationInfoDTOResponse.class);
+      Assertions.assertEquals(true, responseDTO.isExpired());
+    }
+  }
+
+
+    @Test
     @DisplayName("실패 - 로그인 하지 않은 상태")
     public void Failure_NoCookie() throws Exception {
       // Given
@@ -1208,30 +1238,7 @@ public class GroupControllerWebTest {
       result.andExpect(jsonPath("$.message", equalTo("초대가 존재하지 않습니다.")));
     }
 
-    @Test
-    @DisplayName("실패 - 만료된 초대")
-    public void Failure_ExpiredInvitation() throws Exception {
-      // Given
-      User issuer = entityFactory.insertUser("issuer", "hashedPassword", "issuerNick");
-      User user = entityFactory.insertUser("user", "hashedPassword", "userNick");
-      Group group = entityFactory.insertGroup("group name", "group description");
-      entityFactory.insertUserGroup(issuer.getId(), group.getId(), GroupRole.OWNER);
 
-      String token = "expiredToken";
-      entityFactory.insertGroupInvitation(
-          issuer.getId(), group.getId(), token, ZonedDateTime.now().minusDays(1));
-
-      Cookie cookie = userCookie(user);
-      String path = String.format("/api/v1/group/invitation/%s", token);
-
-      // When
-      ResultActions result = mvc.perform(get(path).cookie(cookie));
-
-      // Then
-      result.andExpect(status().isGone());
-      result.andExpect(jsonPath("$.message", equalTo("만료된 초대입니다. 더 이상 사용할 수 없습니다.")));
-    }
-  }
 
   @Nested
   @DisplayName("그룹 초대 수락 테스트")

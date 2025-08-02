@@ -178,7 +178,7 @@ public class GroupController {
     GroupInvitationInfoDTO groupInvitationInfo =
         groupService.findGroupInvitationInfo(groupInvitation);
 
-    boolean isExpired = now.isBefore(groupInvitationInfo.expiresAt());
+    boolean isExpired = groupInvitationInfo.expiresAt().isBefore(now);
 
     return ResponseEntity.ok()
         .body(GroupInvitationInfoDTOResponse.of(isMember, isExpired, groupInvitationInfo));
